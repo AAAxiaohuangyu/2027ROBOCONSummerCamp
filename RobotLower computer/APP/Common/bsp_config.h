@@ -9,10 +9,11 @@
 #include "fdcan.h"
 #include "usart.h"
 
-/* FDCAN 总线 1：模块间/整车通信总线，四个模块共用 */
-#define CANBUS1_HANDLE      hfdcan1
+/* FDCAN 总线 1：通信总线，四个模块共用 */
+#define CANBUS1_HANDLE &hfdcan1
 
 /* USART 1：调试打印口 */
-#define DEBUG_UART_HANDLE   huart1
+#define DEBUG_UART_HANDLE &huart1
+#define DEBUG_UART_INSTANCE USART1
 
 #endif /* __BSP_CONFIG_H__ */
