@@ -1,7 +1,7 @@
 #include "fdcan_common.h"
 
-//列表模式过滤器配置,以及中断的启用和fdcan的开启,
-void FDCANStandardInit(FDCAN_HandleTypeDef *FDCAN_Handle,int StartID,int EndID)
+// 列表模式过滤器配置,以及中断的启用和fdcan的开启,默认使用fifo0
+void FDCANStandardInit(FDCAN_HandleTypeDef *FDCAN_Handle, int StartID, int EndID)
 {
     FDCAN_FilterTypeDef sfilter0 = {0};
     sfilter0.IdType = FDCAN_STANDARD_ID;
