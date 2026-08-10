@@ -1,0 +1,9 @@
+#ifndef __FDCAN_COMMON_H_
+#define __FDCAN_COMMON_H_
+
+#include "fdcan.h"
+
+void FDCANSendStandard(FDCAN_HandleTypeDef *FDCAN_Handle, uint16_t std_id, uint8_t *data, uint8_t length);
+void FDCANStandardInit(FDCAN_HandleTypeDef *FDCAN_Handle, int StartID, int EndID);
+
+#endif
