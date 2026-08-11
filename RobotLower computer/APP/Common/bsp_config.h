@@ -10,7 +10,7 @@
 #include "usart.h"
 
 /* FDCAN 总线 1：通信总线，四个模块共用 */
-#define CANBUS1_HANDLE &hfdcan1
+#define CANBUS1_HANDLE &hfdcan2
 
 /* USART 1：调试打印口 */
 #define DEBUG_UART_HANDLE &huart1

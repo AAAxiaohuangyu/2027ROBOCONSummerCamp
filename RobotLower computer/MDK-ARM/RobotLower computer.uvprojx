@@ -336,7 +336,7 @@
               <MiscControls></MiscControls>
               <Define>USE_PWR_LDO_SUPPLY,USE_HAL_DRIVER,STM32H723xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../APP/Common</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../APP/Common;../APP/Test</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -928,7 +928,27 @@
             <File>
               <FileName>StrategyAlgorithm.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../APP/Common/StrategyAlgorithm.c</FilePath>
+              <FilePath>..\APP\Common\StrategyAlgorithm.c</FilePath>
+            </File>
+            <File>
+              <FileName>GO_M8010.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Common\GO_M8010.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Test</GroupName>
+          <Files>
+            <File>
+              <FileName>DJIMotor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Test\DJIMotor.c</FilePath>
+            </File>
+            <File>
+              <FileName>Test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Test\Test.c</FilePath>
             </File>
             <File>
               <FileName>GO_M8010.c</FileName>
