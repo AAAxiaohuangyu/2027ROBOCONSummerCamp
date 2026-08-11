@@ -242,3 +242,35 @@ void GOM8010MotorParseFeedback(GOM8010MotorFeedback_TypeDef *motor_r, uint16_t s
 
     GOM8010ParseFeedbackFrame(motor_r);
 }
+
+void GOM8010PositionControlInit(GOM8010PositionControl_TypeDef *pc, uint8_t id, UART_HandleTypeDef *huart)
+{
+    GOM8010MotorInit(&pc->cmd, &pc->fb, id, huart);
+    SpeedPlanInit(&pc->plan, GO_M8010_POS_CTRL_A_MAX, GO_M8010_POS_CTRL_V_MAX, GO_M8010_POS_CTRL_J);
+
+    pc->cmd.kp = GO_M8010_POS_CTRL_KP;
+    pc->cmd.kd = GO_M8010_POS_CTRL_KD;
+    pc->position_target = 0.0f;
+}
+
+void GOM8010PositionControlSetTarget(GOM8010PositionControl_TypeDef *pc, float position_target)
+{
+    pc->position_target = position_target;
+    pc->plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
+}
+
+void GOM8010PositionControlUpdate(GOM8010PositionControl_TypeDef *pc)
+{
+    float position_actual = pc->fb.position; /* 电机RS485反馈的真实位置 */
+
+    SpeedPlanUpdate(&pc->plan, position_actual, pc->position_target);
+
+    /* 力位速混合控制:torque前馈为0,由kp/kd跟踪规划轨迹给出的position/speed */
+    pc->cmd.mode = 1u; /* FOC闭环,力位速混合控制 */
+    pc->cmd.timeout = 0u;
+    pc->cmd.torque = 0.0f;
+    pc->cmd.position = pc->plan.position_initial + pc->plan.direction_flag * pc->plan.s;
+    pc->cmd.speed = pc->plan.v * pc->plan.direction_flag;
+
+    GOM8010MotorSendControl(&pc->cmd);
+}
