@@ -925,6 +925,11 @@
               <FileType>1</FileType>
               <FilePath>../APP/Common/ControlAlgorithm.c</FilePath>
             </File>
+            <File>
+              <FileName>StrategyAlgorithm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../APP/Common/StrategyAlgorithm.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
