@@ -42,7 +42,8 @@ typedef struct
     float kp;
     float kd;
     SpeedPlan_TypeDef plan;
-    float position_target; /* 输出端目标位置 */
+    float position_target;     /* 输出端目标位置 */
+    float torque_feedforward;  /* 输出端前馈扭矩,由上层指定,叠加到kp/kd跟踪输出上 */
     GOM8010ControlPacket_TypeDef packet;
 } GOM8010Control_TypeDef;
 
@@ -75,6 +76,9 @@ void GOM8010MotorInit(GOM8010Motor_TypeDef *motor, uint8_t id, UART_HandleTypeDe
 
 /* 下发新的目标位置,(重新)触发规划;运动中调用即为打断 */
 void GOM8010MotorSetTarget(GOM8010Motor_TypeDef *motor, float position_target);
+
+/* 下发前馈扭矩(输出端),叠加到kp/kd跟踪规划轨迹的输出上;默认0 */
+void GOM8010MotorSetTorqueFeedforward(GOM8010Motor_TypeDef *motor, float torque_feedforward);
 
 /* 解析反馈帧:接收由上层空闲线中断驱动(HAL_UARTEx_ReceiveToIdle_IT接收至motor->feedback.packet.bytes,
    在HAL_UARTEx_RxEventCallback中取得Size后调用本函数),本驱动不包含中断回调 */

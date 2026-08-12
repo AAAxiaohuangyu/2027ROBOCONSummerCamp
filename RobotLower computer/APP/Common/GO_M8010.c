@@ -251,6 +251,11 @@ void GOM8010MotorSetTarget(GOM8010Motor_TypeDef *motor, float position_target)
     motor->control.plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
 }
 
+void GOM8010MotorSetTorqueFeedforward(GOM8010Motor_TypeDef *motor, float torque_feedforward)
+{
+    motor->control.torque_feedforward = torque_feedforward;
+}
+
 void GOM8010MotorUpdate(GOM8010Motor_TypeDef *motor)
 {
     GOM8010Control_TypeDef *control = &motor->control;
@@ -258,10 +263,10 @@ void GOM8010MotorUpdate(GOM8010Motor_TypeDef *motor)
 
     SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
 
-    /* 力位速混合控制:torque前馈为0,由kp/kd跟踪规划轨迹给出的position/speed */
+    /* 力位速混合控制:torque前馈由上层指定,叠加到kp/kd跟踪规划轨迹给出的position/speed上 */
     control->mode = 1u; /* FOC闭环,力位速混合控制 */
     control->timeout = 0u;
-    control->torque = 0.0f;
+    control->torque = control->torque_feedforward;
     control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
     control->speed = control->plan.v * control->plan.direction_flag;
 
