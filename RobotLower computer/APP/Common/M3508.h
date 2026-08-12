@@ -30,17 +30,17 @@ DJI C620电调CAN通信协议(适用于C610/C620 + M2006/M3508系列电机)
 #define M3508_CURRENT_RAW_MAX 16384 /* 电流给定值幅值上限,对应20A */
 
 /* 双环(速度环+电流环)速度控制默认参数,调参从这里改 */
-#define M3508_SPEED_KP         0.0f /* 速度环kp,误差单位rpm,输出为电流环的目标电流(raw) */
-#define M3508_SPEED_KI         0.0f
-#define M3508_SPEED_KD         0.0f
-#define M3508_SPEED_MAX_OUT    0.0f /* 速度环输出限幅 */
-#define M3508_SPEED_MAX_IOUT   0.0f /* 速度环积分限幅,抗积分饱和 */
+#define M3508_SPEED_KP         9.0f    /* 速度环kp,误差单位rpm,输出为电流环的目标电流(raw) */
+#define M3508_SPEED_KI         0.02f
+#define M3508_SPEED_KD         9.0f
+#define M3508_SPEED_MAX_OUT    16384.0f /* 速度环输出限幅 */
+#define M3508_SPEED_MAX_IOUT   650.0f   /* 速度环积分限幅,抗积分饱和 */
 
-#define M3508_CURRENT_KP       0.0f /* 电流环kp,误差为raw电流,输出为最终电流给定(raw) */
-#define M3508_CURRENT_KI       0.0f
-#define M3508_CURRENT_KD       0.0f
-#define M3508_CURRENT_MAX_OUT  0.0f /* 电流环输出限幅,略低于协议满量程16384以留裕量 */
-#define M3508_CURRENT_MAX_IOUT 0.0f /* 电流环积分限幅 */
+#define M3508_CURRENT_KP       0.9f    /* 电流环kp,误差为raw电流,输出为最终电流给定(raw) */
+#define M3508_CURRENT_KI       0.0002f
+#define M3508_CURRENT_KD       0.1f
+#define M3508_CURRENT_MAX_OUT  16384.0f /* 电流环输出限幅,协议满量程16384 */
+#define M3508_CURRENT_MAX_IOUT 1500.0f  /* 电流环积分限幅 */
 
 #define M3508_GROUP_SIZE 4u /* DJI协议下1~4号、5~8号电调各共享一帧控制帧,每帧最多4台 */
 

@@ -79,8 +79,8 @@ J60关节电机CAN通信协议(标准帧,DLC 8):
 #define J60_POS_CTRL_A_MAX 6.0f /* 加速度上限 */
 #define J60_POS_CTRL_V_MAX 3.0f /* 速度上限 */
 #define J60_POS_CTRL_J 24.0f    /* 加加速度(jerk)上限 */
-#define J60_POS_CTRL_KP 0.0f    /* 位置环增益kp */
-#define J60_POS_CTRL_KD 0.0f    /* 速度环增益kd */
+#define J60_POS_CTRL_KP 12.0f   /* 位置环增益kp */
+#define J60_POS_CTRL_KD 2.5f    /* 速度环增益kd */
 
 /* 力位速混合控制的控制侧:内置速度规划(SpeedPlan),把"目标位置"闭环为torque前馈为0、kp/kd跟踪的
    position/speed指令,周期打包为控制帧发送 */

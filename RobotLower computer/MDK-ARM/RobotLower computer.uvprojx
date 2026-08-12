@@ -935,6 +935,21 @@
               <FileType>1</FileType>
               <FilePath>../APP/Common/GO_M8010.c</FilePath>
             </File>
+            <File>
+              <FileName>bsp_callback.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Common\bsp_callback.c</FilePath>
+            </File>
+            <File>
+              <FileName>J60.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Common\J60.c</FilePath>
+            </File>
+            <File>
+              <FileName>M3508.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Common\M3508.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
