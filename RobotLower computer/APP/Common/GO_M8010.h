@@ -30,24 +30,24 @@ typedef struct
     uint8_t bytes[GO_M8010_FEEDBACK_FRAME_SIZE];
 } GOM8010FeedbackPacket_TypeDef;
 
+/* 力位速混合控制的控制侧:内置速度规划(SpeedPlan),把"目标位置"闭环为torque前馈+kp/kd跟踪的position/speed指令,
+   最终打包为待发送的控制帧 */
 typedef struct
 {
-    UART_HandleTypeDef *huart; /* 该电机挂载的RS485串口实例,支持同一份驱动挂多路总线 */
-    uint8_t id;
-    uint8_t mode;
+    uint8_t mode;    /* 0=锁定,1=FOC闭环(力位速混合控制,常用模式),2=编码器校准 */
     uint8_t timeout;
     float torque;   /* 输出端扭矩,驱动内部换算为转子侧后再打包 */
     float speed;    /* 输出端转速,驱动内部换算为转子侧后再打包 */
     float position; /* 输出端位置,驱动内部换算为转子侧后再打包 */
     float kp;
     float kd;
+    SpeedPlan_TypeDef plan;
+    float position_target; /* 输出端目标位置 */
     GOM8010ControlPacket_TypeDef packet;
-} GOM8010MotorCmd_TypeDef;
+} GOM8010Control_TypeDef;
 
 typedef struct
 {
-    UART_HandleTypeDef *huart;
-    uint8_t id;
     uint8_t mode;
     uint8_t timeout;
     int8_t temp;
@@ -60,34 +60,27 @@ typedef struct
     uint32_t bad_msg;
     uint8_t valid;
     GOM8010FeedbackPacket_TypeDef packet;
-} GOM8010MotorFeedback_TypeDef;
+} GOM8010Feedback_TypeDef;
 
-/* 初始化指令/反馈句柄;huart为该电机挂载的RS485串口实例(如&huart1) */
-void GOM8010MotorInit(GOM8010MotorCmd_TypeDef *motor_c, GOM8010MotorFeedback_TypeDef *motor_f, uint8_t id, UART_HandleTypeDef *huart);
-
-/* 打包控制帧并通过DMA发送,不阻塞调用者 */
-void GOM8010MotorSendControl(GOM8010MotorCmd_TypeDef *motor);
-
-/* 解析反馈帧:接收由上层空闲线中断驱动(HAL_UARTEx_ReceiveToIdle_IT接收至motor_r->packet.bytes,
-   在HAL_UARTEx_RxEventCallback中取得Size后调用本函数),本驱动不包含中断回调 */
-void GOM8010MotorParseFeedback(GOM8010MotorFeedback_TypeDef *motor_r, uint16_t size);
-
-/* 力位速混合控制的位置环:内置速度规划(SpeedPlan),把"目标位置"闭环为torque前馈+kp/kd跟踪的position/speed指令 */
 typedef struct
 {
-    GOM8010MotorCmd_TypeDef cmd;
-    GOM8010MotorFeedback_TypeDef fb;
-    SpeedPlan_TypeDef plan;
-    float position_target;
-} GOM8010PositionControl_TypeDef;
+    uint8_t id;                 /* 电机RS485地址 */
+    UART_HandleTypeDef *huart;  /* 该电机挂载的RS485串口实例,支持同一份驱动挂多路总线 */
+    GOM8010Control_TypeDef control;
+    GOM8010Feedback_TypeDef feedback;
+} GOM8010Motor_TypeDef;
 
-/* 初始化位置环:电机句柄+规划器均按GO_M8010_POS_CTRL_*默认参数初始化 */
-void GOM8010PositionControlInit(GOM8010PositionControl_TypeDef *pc, uint8_t id, UART_HandleTypeDef *huart);
+/* 初始化电机:control(含plan、按GO_M8010_POS_CTRL_*默认参数)、feedback均在此一并初始化 */
+void GOM8010MotorInit(GOM8010Motor_TypeDef *motor, uint8_t id, UART_HandleTypeDef *huart);
 
 /* 下发新的目标位置,(重新)触发规划;运动中调用即为打断 */
-void GOM8010PositionControlSetTarget(GOM8010PositionControl_TypeDef *pc, float position_target);
+void GOM8010MotorSetTarget(GOM8010Motor_TypeDef *motor, float position_target);
 
-/* 周期调用:推进规划并发送一次控制帧;调用前需已通过GOM8010MotorParseFeedback更新pc->fb */
-void GOM8010PositionControlUpdate(GOM8010PositionControl_TypeDef *pc);
+/* 解析反馈帧:接收由上层空闲线中断驱动(HAL_UARTEx_ReceiveToIdle_IT接收至motor->feedback.packet.bytes,
+   在HAL_UARTEx_RxEventCallback中取得Size后调用本函数),本驱动不包含中断回调 */
+void GOM8010MotorParseFeedback(GOM8010Motor_TypeDef *motor, uint16_t size);
+
+/* 周期调用:推进规划并发送一次控制帧;调用前需已通过GOM8010MotorParseFeedback更新motor->feedback */
+void GOM8010MotorUpdate(GOM8010Motor_TypeDef *motor);
 
 #endif /* __GO_M8010_H__ */

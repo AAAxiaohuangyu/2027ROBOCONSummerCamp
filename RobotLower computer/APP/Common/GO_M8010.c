@@ -117,17 +117,18 @@ static float go_m8010_position_rotor_to_output(float position_rotor)
 }
 
 /* 按GO-M8010-6协议打包17字节控制帧,限幅后转换为定点数,不回写调用者原始指令 */
-static void GOM8010PackControlFrame(GOM8010MotorCmd_TypeDef *motor_s)
+static void GOM8010PackControlFrame(GOM8010Motor_TypeDef *motor)
 {
-    uint8_t *frame = motor_s->packet.bytes;
-    uint8_t id = motor_s->id;
-    uint8_t mode = motor_s->mode;
-    uint8_t timeout = motor_s->timeout;
-    float torque = go_m8010_torque_output_to_rotor(motor_s->torque);
-    float speed = go_m8010_speed_output_to_rotor(motor_s->speed);
-    float position = go_m8010_position_output_to_rotor(motor_s->position);
-    float kp = motor_s->kp;
-    float kd = motor_s->kd;
+    GOM8010Control_TypeDef *control = &motor->control;
+    uint8_t *frame = control->packet.bytes;
+    uint8_t id = motor->id;
+    uint8_t mode = control->mode;
+    uint8_t timeout = control->timeout;
+    float torque = go_m8010_torque_output_to_rotor(control->torque);
+    float speed = go_m8010_speed_output_to_rotor(control->speed);
+    float position = go_m8010_position_output_to_rotor(control->position);
+    float kp = control->kp;
+    float kd = control->kd;
     int16_t torque_raw;
     int16_t speed_raw;
     int32_t position_raw;
@@ -169,27 +170,27 @@ static void GOM8010PackControlFrame(GOM8010MotorCmd_TypeDef *motor_s)
 }
 
 /* 解析16字节反馈帧:校验帧头与CRC后提取torque/speed/position及状态量 */
-static void GOM8010ParseFeedbackFrame(GOM8010MotorFeedback_TypeDef *motor_r)
+static void GOM8010ParseFeedbackFrame(GOM8010Feedback_TypeDef *feedback)
 {
-    const uint8_t *frame = motor_r->packet.bytes;
+    const uint8_t *frame = feedback->packet.bytes;
     uint16_t received_crc;
     uint16_t status_force;
     int16_t torque_raw;
     int16_t speed_raw;
     int32_t position_raw;
 
-    motor_r->valid = 0U;
+    feedback->valid = 0U;
     if ((frame[0] != 0xFDU) || (frame[1] != 0xEEU)) /* 反馈帧帧头 */
     {
-        motor_r->bad_msg++;
+        feedback->bad_msg++;
         return;
     }
 
-    motor_r->calc_crc = crc_ccitt(0U, frame, 14U); /* CRC覆盖前14字节 */
+    feedback->calc_crc = crc_ccitt(0U, frame, 14U); /* CRC覆盖前14字节 */
     received_crc = go_m8010_get_u16_le(&frame[14]);
-    if (received_crc != motor_r->calc_crc)
+    if (received_crc != feedback->calc_crc)
     {
-        motor_r->bad_msg++;
+        feedback->bad_msg++;
         return;
     }
 
@@ -198,79 +199,71 @@ static void GOM8010ParseFeedbackFrame(GOM8010MotorFeedback_TypeDef *motor_r)
     position_raw = (int32_t)go_m8010_get_u32_le(&frame[7]);
     status_force = go_m8010_get_u16_le(&frame[12]);
 
-    motor_r->id = frame[2] & 0x0FU;
-    motor_r->mode = (frame[2] >> 4) & 0x07U;
-    motor_r->timeout = (frame[2] >> 7) & 0x01U;
-    motor_r->temp = (int8_t)frame[11];
-    motor_r->error = status_force & 0x07U;          /* 低3位:故障码 */
-    motor_r->force = (status_force >> 3) & 0x0FFFU; /* 高12位:末端力传感器读数 */
-    motor_r->torque = go_m8010_torque_rotor_to_output((float)torque_raw / 256.0f);
-    motor_r->speed = go_m8010_speed_rotor_to_output((float)speed_raw / 256.0f * PI2);
-    motor_r->position = go_m8010_position_rotor_to_output((float)position_raw / 32768.0f * PI2);
-    motor_r->valid = 1U;
+    feedback->mode = (frame[2] >> 4) & 0x07U;
+    feedback->timeout = (frame[2] >> 7) & 0x01U;
+    feedback->temp = (int8_t)frame[11];
+    feedback->error = status_force & 0x07U;          /* 低3位:故障码 */
+    feedback->force = (status_force >> 3) & 0x0FFFU; /* 高12位:末端力传感器读数 */
+    feedback->torque = go_m8010_torque_rotor_to_output((float)torque_raw / 256.0f);
+    feedback->speed = go_m8010_speed_rotor_to_output((float)speed_raw / 256.0f * PI2);
+    feedback->position = go_m8010_position_rotor_to_output((float)position_raw / 32768.0f * PI2);
+    feedback->valid = 1U;
 }
 
-void GOM8010MotorInit(GOM8010MotorCmd_TypeDef *motor_c, GOM8010MotorFeedback_TypeDef *motor_f, uint8_t id, UART_HandleTypeDef *huart)
-{
-    memset(motor_c, 0, sizeof(*motor_c));
-    memset(motor_f, 0, sizeof(*motor_f));
-
-    motor_c->id = id;
-    motor_c->huart = huart;
-    motor_c->mode = 1U; /* 默认FOC闭环(力位速混合控制),GO电机通常无需切换其他模式 */
-
-    motor_f->id = id;
-    motor_f->huart = huart;
-}
-
-void GOM8010MotorSendControl(GOM8010MotorCmd_TypeDef *motor)
+static void GOM8010MotorSendControl(GOM8010Motor_TypeDef *motor)
 {
     GOM8010PackControlFrame(motor);
-    HAL_UART_Transmit_DMA(motor->huart, motor->packet.bytes, GO_M8010_CONTROL_FRAME_SIZE);
+    HAL_UART_Transmit_DMA(motor->huart, motor->control.packet.bytes, GO_M8010_CONTROL_FRAME_SIZE);
 }
 
 /* 供上层在空闲线中断(HAL_UARTEx_RxEventCallback)中调用:size为该次事件收到的字节数,
-   上层应将数据直接接收到motor_r->packet.bytes中(缓冲区大小GO_M8010_FEEDBACK_FRAME_SIZE) */
-void GOM8010MotorParseFeedback(GOM8010MotorFeedback_TypeDef *motor_r, uint16_t size)
+   上层应将数据直接接收到motor->feedback.packet.bytes中(缓冲区大小GO_M8010_FEEDBACK_FRAME_SIZE) */
+void GOM8010MotorParseFeedback(GOM8010Motor_TypeDef *motor, uint16_t size)
 {
     if (size != GO_M8010_FEEDBACK_FRAME_SIZE)
     {
-        motor_r->valid = 0U;
-        motor_r->bad_msg++;
+        motor->feedback.valid = 0U;
+        motor->feedback.bad_msg++;
         return;
     }
 
-    GOM8010ParseFeedbackFrame(motor_r);
+    GOM8010ParseFeedbackFrame(&motor->feedback);
 }
 
-void GOM8010PositionControlInit(GOM8010PositionControl_TypeDef *pc, uint8_t id, UART_HandleTypeDef *huart)
+void GOM8010MotorInit(GOM8010Motor_TypeDef *motor, uint8_t id, UART_HandleTypeDef *huart)
 {
-    GOM8010MotorInit(&pc->cmd, &pc->fb, id, huart);
-    SpeedPlanInit(&pc->plan, GO_M8010_POS_CTRL_A_MAX, GO_M8010_POS_CTRL_V_MAX, GO_M8010_POS_CTRL_J);
+    memset(&motor->control, 0, sizeof(motor->control));
+    memset(&motor->feedback, 0, sizeof(motor->feedback));
 
-    pc->cmd.kp = GO_M8010_POS_CTRL_KP;
-    pc->cmd.kd = GO_M8010_POS_CTRL_KD;
-    pc->position_target = 0.0f;
+    motor->id = id;
+    motor->huart = huart;
+    motor->control.mode = 1U; /* 默认FOC闭环(力位速混合控制),GO电机通常无需切换其他模式 */
+
+    SpeedPlanInit(&motor->control.plan, GO_M8010_POS_CTRL_A_MAX, GO_M8010_POS_CTRL_V_MAX, GO_M8010_POS_CTRL_J);
+    motor->control.kp = GO_M8010_POS_CTRL_KP;
+    motor->control.kd = GO_M8010_POS_CTRL_KD;
+    motor->control.position_target = 0.0f;
 }
 
-void GOM8010PositionControlSetTarget(GOM8010PositionControl_TypeDef *pc, float position_target)
+void GOM8010MotorSetTarget(GOM8010Motor_TypeDef *motor, float position_target)
 {
-    pc->position_target = position_target;
-    pc->plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
+    motor->control.position_target = position_target;
+    motor->control.plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
 }
 
-void GOM8010PositionControlUpdate(GOM8010PositionControl_TypeDef *pc)
+void GOM8010MotorUpdate(GOM8010Motor_TypeDef *motor)
 {
-    float position_actual = pc->fb.position; /* 电机RS485反馈的真实位置 */
+    GOM8010Control_TypeDef *control = &motor->control;
+    float position_actual = motor->feedback.position; /* 电机RS485反馈的真实位置 */
 
-    SpeedPlanUpdate(&pc->plan, position_actual, pc->position_target);
+    SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
 
     /* 力位速混合控制:torque前馈为0,由kp/kd跟踪规划轨迹给出的position/speed */
-    pc->cmd.mode = 1u; /* FOC闭环,力位速混合控制 */
-    pc->cmd.timeout = 0u;
-    pc->cmd.torque = 0.0f;
-    pc->cmd.position = pc->plan.position_initial + pc->plan.direction_flag * pc->plan.s;
-    pc->cmd.speed = pc->plan.v * pc->plan.direction_flag;
+    control->mode = 1u; /* FOC闭环,力位速混合控制 */
+    control->timeout = 0u;
+    control->torque = 0.0f;
+    control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
+    control->speed = control->plan.v * control->plan.direction_flag;
 
-    GOM8010MotorSendControl(&pc->cmd);
+    GOM8010MotorSendControl(motor);
 }
