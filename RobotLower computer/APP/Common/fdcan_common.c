@@ -1,41 +1,89 @@
 #include "fdcan_common.h"
 
-// 列表模式过滤器配置,以及中断的启用和fdcan的开启,默认使用fifo0
-void FDCANStandardInit(FDCAN_HandleTypeDef *FDCAN_Handle, int StartID, int EndID)
+void FDCANStandardInit(
+    FDCAN_HandleTypeDef *fdcan_handle,
+    uint16_t start_id,
+    uint16_t end_id)
 {
-    FDCAN_FilterTypeDef sfilter0 = {0};
-    sfilter0.IdType = FDCAN_STANDARD_ID;
-    sfilter0.FilterIndex = 0;
-    sfilter0.FilterType = FDCAN_FILTER_RANGE;
-    sfilter0.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-    sfilter0.FilterID1 = StartID;
-    sfilter0.FilterID2 = EndID;
-    HAL_FDCAN_ConfigFilter(FDCAN_Handle, &sfilter0);
+    FDCAN_FilterTypeDef filter = {0};
 
-    HAL_FDCAN_ActivateNotification(FDCAN_Handle, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
+    if ((fdcan_handle == 0) || (start_id > end_id))
+    {
+        return;
+    }
 
-    HAL_FDCAN_Start(FDCAN_Handle);
+    filter.IdType = FDCAN_STANDARD_ID;
+    filter.FilterIndex = 0U;
+    filter.FilterType = FDCAN_FILTER_RANGE;
+    filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
+    filter.FilterID1 = start_id;
+    filter.FilterID2 = end_id;
+
+    if (HAL_FDCAN_ConfigFilter(fdcan_handle, &filter) != HAL_OK)
+    {
+        return;
+    }
+    if (HAL_FDCAN_ActivateNotification(
+            fdcan_handle,
+            FDCAN_IT_RX_FIFO0_NEW_MESSAGE,
+            0U) != HAL_OK)
+    {
+        return;
+    }
+    (void)HAL_FDCAN_Start(fdcan_handle);
 }
 
-void FDCANSendStandard(FDCAN_HandleTypeDef *FDCAN_Handle, uint16_t std_id, uint8_t *data, uint8_t length)
+void FDCANSendStandard(
+    FDCAN_HandleTypeDef *fdcan_handle,
+    uint16_t std_id,
+    const uint8_t *data,
+    uint8_t length)
 {
-    FDCAN_TxHeaderTypeDef TxHeader = {0};
-    TxHeader.Identifier = std_id;
-    TxHeader.IdType = FDCAN_STANDARD_ID;
-    TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-    TxHeader.DataLength = (length == 8) ? FDCAN_DLC_BYTES_8 : (length == 7) ? FDCAN_DLC_BYTES_7
-                                                          : (length == 6)   ? FDCAN_DLC_BYTES_6
-                                                          : (length == 5)   ? FDCAN_DLC_BYTES_5
-                                                          : (length == 4)   ? FDCAN_DLC_BYTES_4
-                                                          : (length == 3)   ? FDCAN_DLC_BYTES_3
-                                                          : (length == 2)   ? FDCAN_DLC_BYTES_2
-                                                          : (length == 1)   ? FDCAN_DLC_BYTES_1
-                                                                            : FDCAN_DLC_BYTES_0;
-    TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-    TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-    TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
-    TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-    TxHeader.MessageMarker = 0;
+    FDCAN_TxHeaderTypeDef tx_header = {0};
 
-    HAL_FDCAN_AddMessageToTxFifoQ(FDCAN_Handle, &TxHeader, data);
+    if ((fdcan_handle == 0) || (data == 0) || (length > 8U))
+    {
+        return;
+    }
+
+    tx_header.Identifier = std_id;
+    tx_header.IdType = FDCAN_STANDARD_ID;
+    tx_header.TxFrameType = FDCAN_DATA_FRAME;
+    switch (length)
+    {
+        case 0U:
+            tx_header.DataLength = FDCAN_DLC_BYTES_0;
+            break;
+        case 1U:
+            tx_header.DataLength = FDCAN_DLC_BYTES_1;
+            break;
+        case 2U:
+            tx_header.DataLength = FDCAN_DLC_BYTES_2;
+            break;
+        case 3U:
+            tx_header.DataLength = FDCAN_DLC_BYTES_3;
+            break;
+        case 4U:
+            tx_header.DataLength = FDCAN_DLC_BYTES_4;
+            break;
+        case 5U:
+            tx_header.DataLength = FDCAN_DLC_BYTES_5;
+            break;
+        case 6U:
+            tx_header.DataLength = FDCAN_DLC_BYTES_6;
+            break;
+        case 7U:
+            tx_header.DataLength = FDCAN_DLC_BYTES_7;
+            break;
+        default:
+            tx_header.DataLength = FDCAN_DLC_BYTES_8;
+            break;
+    }
+    tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+    tx_header.BitRateSwitch = FDCAN_BRS_OFF;
+    tx_header.FDFormat = FDCAN_CLASSIC_CAN;
+    tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+    tx_header.MessageMarker = 0U;
+
+    (void)HAL_FDCAN_AddMessageToTxFifoQ(fdcan_handle, &tx_header, (uint8_t *)data);
 }
