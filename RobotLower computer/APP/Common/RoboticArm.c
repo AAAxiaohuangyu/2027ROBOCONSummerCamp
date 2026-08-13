@@ -14,9 +14,9 @@ RoboticArmUpdateStateFromFeedback(RoboticArm_TypeDef *arm)
 }
 
 void RoboticArmInit(RoboticArm_TypeDef *arm,
-                     FDCAN_HandleTypeDef *lift_FDCAN_Handle, uint8_t lift_id,
-                     UART_HandleTypeDef *forward_huart, uint8_t forward_id,
-                     UART_HandleTypeDef *rotate_huart, uint8_t rotate_id)
+                    FDCAN_HandleTypeDef *lift_FDCAN_Handle, uint8_t lift_id,
+                    UART_HandleTypeDef *forward_huart, uint8_t forward_id,
+                    UART_HandleTypeDef *rotate_huart, uint8_t rotate_id)
 {
     J60MotorInit(&arm->lift_motor, lift_FDCAN_Handle, lift_id);
     GOM8010MotorInit(&arm->forward_motor, forward_id, forward_huart);
@@ -44,11 +44,14 @@ void RoboticArmSetRodRotation(RoboticArm_TypeDef *arm, float rotation_target)
 
 void RoboticArmUpdate(RoboticArm_TypeDef *arm)
 {
-    J60MotorUpdate(&arm->lift_motor);
-    GOM8010MotorUpdate(&arm->forward_motor);
-    GOM8010MotorUpdate(&arm->rotate_motor);
+    while (1)
+    {
+        J60MotorUpdate(&arm->lift_motor);
+        GOM8010MotorUpdate(&arm->forward_motor);
+        GOM8010MotorUpdate(&arm->rotate_motor);
 
-    RoboticArmUpdateStateFromFeedback(arm);
+        RoboticArmUpdateStateFromFeedback(arm);
+    }
 }
 
 void RoboticArmEnable(RoboticArm_TypeDef *arm)

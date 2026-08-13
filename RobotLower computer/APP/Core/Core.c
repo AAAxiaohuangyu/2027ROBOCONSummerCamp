@@ -13,8 +13,19 @@ void RobotInit(void)
     /* TODO: 底盘(Chassis)等其余子系统init待补充 */
 }
 
-void RobotStateUpdate(void)
+void RobotStateUpdate(Robot_TypeDef *Robot)
 {
-    /* TODO: 占位,后续补充 */
+    while (1)
+    {
+        switch (Robot->flip_state)
+        {
+        case ROBOT_STATE_IDLE:
+            /* code */
+            break;
+        
+        default:
+            break;
+        }
+    }
 }
 
