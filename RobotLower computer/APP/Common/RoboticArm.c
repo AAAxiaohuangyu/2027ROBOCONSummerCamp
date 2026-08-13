@@ -63,3 +63,38 @@ void RoboticArmDisable(RoboticArm_TypeDef *arm)
 {
     J60MotorDisable(&arm->lift_motor);
 }
+
+uint8_t PositionReached(RoboticArm_TypeDef *arm,
+                        float target_x,
+                        float target_z, float x_position_tolerance, float z_position_tolrance)
+{
+    /* 使用末端反馈坐标判断 x/z 目标是否到位。 */
+    float dx = arm->end_x - target_x;
+    float dz = arm->end_z - target_z;
+
+    if (dx < 0.0f)
+    {
+        dx = -dx;
+    }
+
+    if (dz < 0.0f)
+    {
+        dz = -dz;
+    }
+
+    return (dx <= x_position_tolerance &&
+            dz <= z_position_tolrance);
+}
+
+uint8_t RotationReached(RoboticArm_TypeDef *arm,
+                        float target_rotation, float rotation_tolerance)
+{
+    float error = arm->rod_rotation - target_rotation;
+
+    if (error < 0.0f)
+    {
+        error = -error;
+    }
+
+    return (error <= rotation_tolerance);
+}

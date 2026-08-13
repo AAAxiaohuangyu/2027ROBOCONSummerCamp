@@ -13,14 +13,15 @@
                 "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\Drivers\\CMSIS\\Include",
                 "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\APP\\Common",
                 "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\APP\\Core",
+                "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\APP\\Flip",
+                "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\APP\\Pickup",
                 "F:\\Keil5\\ARM\\ARMCC\\include",
                 "F:\\Keil5\\ARM\\ARMCC\\include\\rw",
                 "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\MDK-ARM",
                 "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\Core\\Src",
                 "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\Drivers\\STM32H7xx_HAL_Driver\\Src",
                 "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\Middlewares\\Third_Party\\FreeRTOS\\Source",
-                "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\Middlewares\\Third_Party\\FreeRTOS\\Source\\portable\\MemMang",
-                "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\APP\\Flip"
+                "g:\\ROBOCON2027\\SummerCamp\\RobotLower computer\\Middlewares\\Third_Party\\FreeRTOS\\Source\\portable\\MemMang"
             ],
             "defines": [
                 "USE_PWR_LDO_SUPPLY",

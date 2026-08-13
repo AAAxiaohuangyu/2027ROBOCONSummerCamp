@@ -35,10 +35,10 @@ ROBOTICARM_FORWARD_K、ROBOTICARM_FORWARD_THRESHOLD、ROBOTICARM_ROD_LENGTH、RO
 #define ROBOTICARM_BASE_X (0.0f) /* 升降机构安装点在底盘坐标系下的x坐标,待标定 */
 #define ROBOTICARM_BASE_Y (0.0f) /* 升降机构安装点在底盘坐标系下的y坐标,待标定 */
 
-#define ROBOTICARM_LIFT_K         (0.00955f) /* 升降机构:height = LIFT_K * theta + LIFT_THRESHOLD,待标定 */
+#define ROBOTICARM_LIFT_K (0.00955f)     /* 升降机构:height = LIFT_K * theta + LIFT_THRESHOLD,待标定 */
 #define ROBOTICARM_LIFT_THRESHOLD (0.0f) /* 升降机构:theta=0时对应的初始高度,待标定 */
 
-#define ROBOTICARM_FORWARD_K (0.00955f)       /* 前后机构:distance = FORWARD_K * theta + FORWARD_THRESHOLD,待标定 */
+#define ROBOTICARM_FORWARD_K (0.00955f)     /* 前后机构:distance = FORWARD_K * theta + FORWARD_THRESHOLD,待标定 */
 #define ROBOTICARM_FORWARD_THRESHOLD (0.0f) /* 前后机构:theta=0时对应的初始前伸距离,待标定 */
 
 #define ROBOTICARM_ROD_LENGTH (0.0f) /* 末端固定杆长度,沿y轴方向,待标定 */
@@ -47,23 +47,23 @@ ROBOTICARM_FORWARD_K、ROBOTICARM_FORWARD_THRESHOLD、ROBOTICARM_ROD_LENGTH、RO
 
 typedef struct
 {
-    J60Motor_TypeDef lift_motor;        /* 升降机构电机,控制高度end_z */
-    GOM8010Motor_TypeDef forward_motor; /* 前后平移机构电机,控制前伸距离,进而控制end_x */
-    GOM8010Motor_TypeDef rotate_motor;  /* 杆自转电机,转角与rod_rotation直接相等,不影响末端坐标 */
+   J60Motor_TypeDef lift_motor;        /* 升降机构电机,控制高度end_z */
+   GOM8010Motor_TypeDef forward_motor; /* 前后平移机构电机,控制前伸距离,进而控制end_x */
+   GOM8010Motor_TypeDef rotate_motor;  /* 杆自转电机,转角与rod_rotation直接相等,不影响末端坐标 */
 
-    float end_x; /* 末端点x坐标(底盘坐标系),由前后机构位置换算得到 */
-    float end_y; /* 末端点y坐标(底盘坐标系),由安装位置与杆长固定,不受电机控制 */
-    float end_z; /* 末端点z坐标(底盘坐标系),即升降高度height */
-    float rod_rotation; /* 杆绕自身轴线的自转角度,与rotate_motor转角直接相等 */
+   float end_x;        /* 末端点x坐标(底盘坐标系),由前后机构位置换算得到 */
+   float end_y;        /* 末端点y坐标(底盘坐标系),由安装位置与杆长固定,不受电机控制 */
+   float end_z;        /* 末端点z坐标(底盘坐标系),即升降高度height */
+   float rod_rotation; /* 杆绕自身轴线的自转角度,与rotate_motor转角直接相等 */
 } RoboticArm_TypeDef;
 
 /* 初始化机械臂:依次初始化升降(J60/FDCAN)、前后(GO/RS485)、自转(GO/RS485)三个电机驱动,并按
    当前反馈位置(初始为0)计算一次末端坐标与rod_rotation;本函数不下发使能,升降机构使用前需
    额外调用RoboticArmEnable */
 void RoboticArmInit(RoboticArm_TypeDef *arm,
-                     FDCAN_HandleTypeDef *lift_FDCAN_Handle, uint8_t lift_id,
-                     UART_HandleTypeDef *forward_huart, uint8_t forward_id,
-                     UART_HandleTypeDef *rotate_huart, uint8_t rotate_id);
+                    FDCAN_HandleTypeDef *lift_FDCAN_Handle, uint8_t lift_id,
+                    UART_HandleTypeDef *forward_huart, uint8_t forward_id,
+                    UART_HandleTypeDef *rotate_huart, uint8_t rotate_id);
 
 /* 下发末端目标坐标(end_x, end_z),内部按几何关系反解为两个电机的目标转角并下发;
    end_y由安装位置与杆长固定,不可控,故不作为参数 */
@@ -79,5 +79,11 @@ void RoboticArmUpdate(RoboticArm_TypeDef *arm);
 /* 使能/失能升降机构(J60);前后、自转机构(GO电机)无需单独使能 */
 void RoboticArmEnable(RoboticArm_TypeDef *arm);
 void RoboticArmDisable(RoboticArm_TypeDef *arm);
+
+uint8_t PositionReached(RoboticArm_TypeDef *arm,
+                        float target_x,
+                        float target_z, float x_position_tolerance, float z_position_tolrance);
+uint8_t RotationReached(RoboticArm_TypeDef *arm,
+                        float target_rotation, float rotation_tolerance);
 
 #endif
