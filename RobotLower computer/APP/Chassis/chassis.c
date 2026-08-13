@@ -72,8 +72,18 @@ void ChassisSetTranslation(Chassis_TypeDef *chassis, float dx_m, float dy_m)
 
     chassis->velocity_mode = 0U;
     chassis->displacement_plan.translation_target_m = distance_m;
-    chassis->displacement_plan.translation_direction_x = dx_m / distance_m;
-    chassis->displacement_plan.translation_direction_y = dy_m / distance_m;
+
+    if (distance_m > 0.0f)
+    {
+        chassis->displacement_plan.translation_direction_x = dx_m / distance_m;
+        chassis->displacement_plan.translation_direction_y = dy_m / distance_m;
+    }
+    else
+    {
+        /* dx_m、dy_m同时为0:目标位移为0,不存在方向,避免0/0产生NaN */
+        chassis->displacement_plan.translation_direction_x = 0.0f;
+        chassis->displacement_plan.translation_direction_y = 0.0f;
+    }
 
     chassis->displacement_plan.translation.state = init;
 }

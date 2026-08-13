@@ -8,20 +8,21 @@
 #define flip_start_z (0.0f)
 #define flip_start_rotation (0.0f)
 
-/* 动作距离及角度，根据实际机械结构修改 */
+/* 动作距离及角度，根据实际机械结构修改；旋转量与RoboticArmSetRodRotation/
+   RotationReached保持一致，单位为rad(电机转角直接相等，见RoboticArm.h) */
 #define FLIP_UP_DISTANCE_1 (0.050f)
 #define FLIP_FORWARD_DISTANCE_1 (0.100f)
-#define FLIP_ROTATION_ANGLE_1 (180.0f)
+#define FLIP_ROTATION_ANGLE_1 (PI2 / 2.0f) /* 180度 */
 #define FLIP_FORWARD_DISTANCE_2 (0.100f)
 #define FLIP_FORWARD_DISTANCE_3 (0.100f)
 #define FLIP_UP_DISTANCE_2 (0.050f)
 #define FLIP_BACKWARD_DISTANCE (0.100f)
 #define FLIP_DOWN_DISTANCE (0.050f)
-#define FLIP_ROTATION_ANGLE_2 (180.0f)
+#define FLIP_ROTATION_ANGLE_2 (PI2 / 2.0f) /* 180度 */
 
 #define FLIP_POSITION_TOLERANCE_X (0.005f)
 #define FLIP_POSITION_TOLERANCE_Z (0.005f)
-#define FLIP_ROTATION_TOLERANCE (2.0f)
+#define FLIP_ROTATION_TOLERANCE (PI2 / 180.0f) /* 2度 */
 
 typedef enum
 {

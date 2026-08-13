@@ -5,12 +5,13 @@
 #include "chassis.h"
 #include "zigbee.h"
 #include "flip.h"
+#include "Pickup.h"
 
 /* 机器人整体状态机状态,占位,具体状态由后续任务流程补充 */
 typedef enum
 {
     ROBOT_STATE_IDLE = 0,
-    
+
 } RobotState_TypeDef;
 
 /* 机器人整体状态,占位,具体字段(各子系统状态、标志位等)由后续补充 */
@@ -21,6 +22,7 @@ typedef struct
     Chassis_TypeDef chassis;
     ZigbeeHandle_TypeDef zigbee;
     FlipState_TypeDef flip_state;
+    PickupState_TypeDef pick_state;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
