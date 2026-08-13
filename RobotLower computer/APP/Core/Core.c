@@ -10,7 +10,7 @@ void RobotInit(void)
                     ROBOTICARM_FORWARD_UART_HANDLE, ROBOTICARM_FORWARD_ID,
                     ROBOTICARM_ROTATE_UART_HANDLE, ROBOTICARM_ROTATE_ID);
 
-    /* TODO: 底盘(Chassis)等其余子系统init待补充 */
+    ChassisInit(&Robot.chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
 }
 
 void RobotStateUpdate(Robot_TypeDef *Robot)

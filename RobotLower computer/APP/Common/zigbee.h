@@ -40,7 +40,7 @@ typedef struct
     int16_t speed;             /**< 底盘平动速度大小 */
     int16_t direction_angle;   /**< 平动速度与规定正方向的夹角 */
     int16_t omega;             /**< 旋转速度 */
-} Chassis_TypeDef;
+} ZigbeeChassisCmd_TypeDef;
 
 typedef struct
 {
@@ -59,7 +59,7 @@ typedef struct
 
 typedef struct
 {
-    Chassis_TypeDef chassis;   /**< 底盘控制 */
+    ZigbeeChassisCmd_TypeDef chassis;   /**< 底盘控制 */
     Joint_TypeDef   joint;     /**< 机械臂控制 */
     Command_TypeDef command;   /**< 功能指令 */
 } ZigbeeData_TypeDef;
@@ -99,6 +99,11 @@ HAL_StatusTypeDef Zigbee_Receive(ZigbeeHandle_TypeDef *zigbee, ZigbeeData_TypeDe
  */
 void Zigbee_ErrorHandler(ZigbeeHandle_TypeDef *zigbee);
 void Zigbee_SendAT(ZigbeeHandle_TypeDef *zigbee, const char *command);
+
+/* 供上层在HAL_UARTEx_RxEventCallback中调用(huart匹配ZIGBEE_UART_HANDLE时):解析本次DMA空闲线
+   事件收到的数据并重新挂起下一次接收;HAL回调全局唯一,不能在本文件内直接实现,由bsp_callback.c
+   统一分发 */
+void Zigbee_RxEventHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *huart, uint16_t Size);
 
 const ZigbeeStatus_TypeDef *Zigbee_GetStatus(const ZigbeeHandle_TypeDef *zigbee);
 const uint8_t *Zigbee_GetATResponse(const ZigbeeHandle_TypeDef *zigbee);

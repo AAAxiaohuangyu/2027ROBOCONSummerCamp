@@ -27,4 +27,10 @@
 #define ROBOTICARM_ROTATE_UART_HANDLE  NULL /* 自转电机(GO)RS485串口句柄,占位待定 */
 #define ROBOTICARM_ROTATE_ID           0u   /* 自转电机(GO)RS485地址,占位待定 */
 
+/* 底盘(Chassis)四台M3508电调组挂载外设句柄与控制帧ID,占位:CubeMX尚未分配对应FDCAN外设、
+   控制帧ID(M3508_CTRL_ID_1TO4/M3508_CTRL_ID_5TO8)也未确定,暂不接实际句柄,待确定后直接
+   改这里的宏值即可 */
+#define CHASSIS_FDCAN_HANDLE NULL /* 底盘四台M3508电调组FDCAN句柄,占位待定 */
+#define CHASSIS_CTRL_ID      0u   /* 底盘电调组控制帧ID,占位待定 */
+
 #endif /* __BSP_CONFIG_H__ */

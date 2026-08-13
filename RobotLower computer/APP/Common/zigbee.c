@@ -16,7 +16,6 @@
  *   2. printf("Zigbee response: %s\r\n", (const char *)Zigbee_GetATResponse(&Robot.zigbee));
  */
 #include "zigbee.h"
-#include "Core.h"
 #include "usart.h"
 #include <string.h>
 
@@ -232,12 +231,10 @@ void Zigbee_SendAT(ZigbeeHandle_TypeDef *zigbee, const char *command)
     HAL_UARTEx_ReceiveToIdle(&ZIGBEE_UART_HANDLE, zigbee->at_response, sizeof(zigbee->at_response) - 1U, &rx_len, 1000U);
 }
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+void Zigbee_RxEventHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *huart, uint16_t Size)
 {
-    if (huart->Instance != ZIGBEE_UART_HANDLE.Instance) return;
+    frame_parse(zigbee, zigbee->rx_dma_buf, Size);
 
-    frame_parse(&Robot.zigbee, Robot.zigbee.rx_dma_buf, Size);
-
-    HAL_UARTEx_ReceiveToIdle_DMA(huart, Robot.zigbee.rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
+    HAL_UARTEx_ReceiveToIdle_DMA(huart, zigbee->rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
     __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
 }

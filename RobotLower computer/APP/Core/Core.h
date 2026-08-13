@@ -2,6 +2,7 @@
 #define __CORE_H_
 
 #include "RoboticArm.h"
+#include "chassis.h"
 #include "zigbee.h"
 #include "flip.h"
 
@@ -17,6 +18,7 @@ typedef struct
 {
     RobotState_TypeDef state;
     RoboticArm_TypeDef roboticarm;
+    Chassis_TypeDef chassis;
     ZigbeeHandle_TypeDef zigbee;
     FlipState_TypeDef flip_state;
 } Robot_TypeDef;
