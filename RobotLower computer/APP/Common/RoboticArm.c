@@ -8,7 +8,7 @@ static void RoboticArmUpdateStateFromFeedback(RoboticArm_TypeDef *arm)
 
     arm->end_x = ROBOTICARM_BASE_X + distance;
     arm->end_y = ROBOTICARM_BASE_Y + ROBOTICARM_ROD_LENGTH;
-    arm->end_z = height;
+    arm->end_z = height + ROBOTICARM_END_Z_OFFSET;
     arm->rod_rotation = arm->rotate_motor.feedback.position; /* 电机转角与杆自转角度直接相等 */
 }
 
@@ -27,7 +27,7 @@ void RoboticArmInit(RoboticArm_TypeDef *arm,
 void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float end_z_target)
 {
     float distance_target = end_x_target - ROBOTICARM_BASE_X;
-    float height_target = end_z_target;
+    float height_target = end_z_target - ROBOTICARM_END_Z_OFFSET;
 
     float theta_forward_target = (distance_target - ROBOTICARM_FORWARD_THRESHOLD) / ROBOTICARM_FORWARD_K;
     float theta_lift_target = (height_target - ROBOTICARM_LIFT_THRESHOLD) / ROBOTICARM_LIFT_K;

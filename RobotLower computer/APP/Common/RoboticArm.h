@@ -17,30 +17,33 @@
        distance = ROBOTICARM_FORWARD_K * theta_forward + ROBOTICARM_FORWARD_THRESHOLD
    该点位于(ROBOTICARM_BASE_X + distance, ROBOTICARM_BASE_Y, height)。
 
-3. 该点固连一根长度为ROBOTICARM_ROD_LENGTH、沿y轴方向的刚性杆,杆末端(执行末端)坐标:
+3. 该点固连一根长度为ROBOTICARM_ROD_LENGTH、沿y轴方向的刚性杆;机械结构上杆末端(执行末端)
+   在z方向相对该点始终高出ROBOTICARM_END_Z_OFFSET,故末端坐标:
        end_x = ROBOTICARM_BASE_X + distance
        end_y = ROBOTICARM_BASE_Y + ROBOTICARM_ROD_LENGTH
-       end_z = height
+       end_z = height + ROBOTICARM_END_Z_OFFSET
    可见end_y由安装位置和杆长唯一确定,不受电机控制;可控自由度为end_x、end_z。
 
 4. 另有一个GO电机驱动该杆绕自身轴线自转(如末端夹持器的roll),该电机转角与杆自转角度
    rod_rotation直接相等,不经过任何线性换算,且自转不改变end_x/end_y/end_z。
 
 以上ROBOTICARM_BASE_X、ROBOTICARM_BASE_Y、ROBOTICARM_LIFT_K、ROBOTICARM_LIFT_THRESHOLD、
-ROBOTICARM_FORWARD_K、ROBOTICARM_FORWARD_THRESHOLD、ROBOTICARM_ROD_LENGTH均为待实测标定的
-安装、机械参数,当前为占位值,标定后请在此处直接改数值。
+ROBOTICARM_FORWARD_K、ROBOTICARM_FORWARD_THRESHOLD、ROBOTICARM_ROD_LENGTH、ROBOTICARM_END_Z_OFFSET
+均为待实测标定的安装、机械参数,当前为占位值,标定后请在此处直接改数值。
 */
 
 #define ROBOTICARM_BASE_X (0.0f) /* 升降机构安装点在底盘坐标系下的x坐标,待标定 */
 #define ROBOTICARM_BASE_Y (0.0f) /* 升降机构安装点在底盘坐标系下的y坐标,待标定 */
 
-#define ROBOTICARM_LIFT_K         (1.0f) /* 升降机构:height = LIFT_K * theta + LIFT_THRESHOLD,待标定 */
+#define ROBOTICARM_LIFT_K         (0.00955f) /* 升降机构:height = LIFT_K * theta + LIFT_THRESHOLD,待标定 */
 #define ROBOTICARM_LIFT_THRESHOLD (0.0f) /* 升降机构:theta=0时对应的初始高度,待标定 */
 
-#define ROBOTICARM_FORWARD_K         (1.0f) /* 前后机构:distance = FORWARD_K * theta + FORWARD_THRESHOLD,待标定 */
+#define ROBOTICARM_FORWARD_K (0.00955f)       /* 前后机构:distance = FORWARD_K * theta + FORWARD_THRESHOLD,待标定 */
 #define ROBOTICARM_FORWARD_THRESHOLD (0.0f) /* 前后机构:theta=0时对应的初始前伸距离,待标定 */
 
 #define ROBOTICARM_ROD_LENGTH (0.0f) /* 末端固定杆长度,沿y轴方向,待标定 */
+
+#define ROBOTICARM_END_Z_OFFSET (0.084f) /* 杆末端相对(BASE_X, BASE_Y, height)在z方向的固定高出量,已实测84mm */
 
 typedef struct
 {
