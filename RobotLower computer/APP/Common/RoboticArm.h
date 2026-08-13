@@ -57,8 +57,6 @@ typedef struct
     float rod_rotation; /* 杆绕自身轴线的自转角度,与rotate_motor转角直接相等 */
 } RoboticArm_TypeDef;
 
-extern RoboticArm_TypeDef RoboticArm;
-
 /* 初始化机械臂:依次初始化升降(J60/FDCAN)、前后(GO/RS485)、自转(GO/RS485)三个电机驱动,并按
    当前反馈位置(初始为0)计算一次末端坐标与rod_rotation;本函数不下发使能,升降机构使用前需
    额外调用RoboticArmEnable */
