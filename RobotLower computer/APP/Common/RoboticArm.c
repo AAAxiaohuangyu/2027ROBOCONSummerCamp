@@ -1,4 +1,5 @@
 #include "RoboticArm.h"
+#include "cmsis_os2.h"
 
 /* 根据三电机当前反馈转角,按几何关系正解出末端坐标与杆自转角度,写回arm对应字段 */
 static void
@@ -51,6 +52,7 @@ void RoboticArmUpdate(RoboticArm_TypeDef *arm)
         GOM8010MotorUpdate(&arm->rotate_motor);
 
         RoboticArmUpdateStateFromFeedback(arm);
+        osDelay(5);
     }
 }
 
