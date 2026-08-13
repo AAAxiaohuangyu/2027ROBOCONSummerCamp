@@ -1,7 +1,10 @@
 #include "RoboticArm.h"
 
+RoboticArm_TypeDef RoboticArm;
+
 /* 根据三电机当前反馈转角,按几何关系正解出末端坐标与杆自转角度,写回arm对应字段 */
-static void RoboticArmUpdateStateFromFeedback(RoboticArm_TypeDef *arm)
+static void
+RoboticArmUpdateStateFromFeedback(RoboticArm_TypeDef *arm)
 {
     float height = ROBOTICARM_LIFT_K * arm->lift_motor.feedback.position + ROBOTICARM_LIFT_THRESHOLD;
     float distance = ROBOTICARM_FORWARD_K * arm->forward_motor.feedback.position + ROBOTICARM_FORWARD_THRESHOLD;
