@@ -2,6 +2,8 @@
 #define __CORE_H_
 
 #include "RoboticArm.h"
+#include "zigbee.h"
+#include "flip.h"
 
 /* 机器人整体状态机状态,占位,具体状态由后续任务流程补充 */
 typedef enum
@@ -14,6 +16,8 @@ typedef struct
 {
     RobotState_TypeDef state;
     RoboticArm_TypeDef roboticarm;
+    ZigbeeHandle_TypeDef zigbee;
+    FlipState_TypeDef flip_state;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
