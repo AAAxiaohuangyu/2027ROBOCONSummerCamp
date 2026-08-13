@@ -45,6 +45,8 @@ ROBOTICARM_FORWARD_K、ROBOTICARM_FORWARD_THRESHOLD、ROBOTICARM_ROD_LENGTH、RO
 
 #define ROBOTICARM_END_Z_OFFSET (0.084f) /* 杆末端相对(BASE_X, BASE_Y, height)在z方向的固定高出量,已实测84mm */
 
+#define ROBOTICARM_CONTROL_PERIOD_MS (3U)
+
 typedef struct
 {
    J60Motor_TypeDef lift_motor;        /* 升降机构电机,控制高度end_z */

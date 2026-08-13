@@ -52,7 +52,7 @@ void RoboticArmUpdate(RoboticArm_TypeDef *arm)
         GOM8010MotorUpdate(&arm->rotate_motor);
 
         RoboticArmUpdateStateFromFeedback(arm);
-        osDelay(5);
+        osDelay(ROBOTICARM_CONTROL_PERIOD_MS);
     }
 }
 

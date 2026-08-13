@@ -336,7 +336,7 @@
               <MiscControls></MiscControls>
               <Define>USE_PWR_LDO_SUPPLY,USE_HAL_DRIVER,STM32H723xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../APP/Common;../APP/Core;../APP/Flip;../APP/Pickup</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../APP/Common;../APP/Core;../APP/Flip;../APP/Pickup;..\APP\Chassis;..\APP\Roboticarm</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -960,10 +960,30 @@
               <FileType>1</FileType>
               <FilePath>..\APP\Common\zigbee.c</FilePath>
             </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Roboticarm</GroupName>
+          <Files>
             <File>
               <FileName>RoboticArm.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\APP\Common\RoboticArm.c</FilePath>
+              <FilePath>..\APP\Roboticarm\RoboticArm.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Chassis</GroupName>
+          <Files>
+            <File>
+              <FileName>chassis.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Chassis\chassis.c</FilePath>
+            </File>
+            <File>
+              <FileName>chassis_mecanum.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Chassis\chassis_mecanum.c</FilePath>
             </File>
           </Files>
         </Group>
