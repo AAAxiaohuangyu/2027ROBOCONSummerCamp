@@ -1,5 +1,6 @@
 #include "bsp_callback.h"
 #include "Core.h"
+#include "bsp_config.h"
 
 /* FDCAN FIFO0收到新报文:按hfdcan实例匹配到挂载在该总线上的电机/电调组,解析反馈;
    命中J60(升降)后即返回,否则再尝试M3508电调组(底盘),避免不同子系统误解析对方的帧 */
@@ -36,6 +37,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     if (huart->Instance == ZIGBEE_UART_HANDLE.Instance)
     {
         Zigbee_RxEventHandler(&Robot.zigbee, huart, Size);
+        return;
+    }
+
+    if (VISION_UART_HANDLE != NULL && huart->Instance == VISION_UART_HANDLE->Instance)
+    {
+        Vision_RxEventHandler(&Robot.vision, huart, Size);
         return;
     }
 

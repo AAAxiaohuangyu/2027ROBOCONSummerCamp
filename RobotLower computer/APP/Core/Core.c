@@ -12,22 +12,6 @@ static const uint8_t kfs_height_table[ROBOT_KFS_COUNT] = {
     PICKUP_HEIGHT_LOW,
 };
 
-/* 视觉请求/结果的默认占位存储,仅供下面两个弱函数的默认实现使用 */
-static uint8_t s_vision_default_index = 1U;
-
-__weak void RobotVisionRequestKfsIndex(uint8_t default_index)
-{
-    /* 视觉判断留空,记录默认值供下面的默认实现直接采用 */
-    s_vision_default_index = default_index;
-}
-
-__weak uint8_t RobotVisionKfsIndexReady(uint8_t *result)
-{
-    /* 视觉判断留空,请求后视为立即完成,直接采用顺序推荐的默认序号 */
-    *result = s_vision_default_index;
-    return 1U;
-}
-
 /* kfs_index为0表示仍在启动区,1~ROBOT_KFS_COUNT为对应KFS工位相对启动区的位置 */
 static float RobotKfsPositionX(uint8_t kfs_index)
 {
@@ -71,6 +55,10 @@ void RobotInit(void)
        DMA接收(HAL_UARTEx_ReceiveToIdle_DMA);huart1由CubeMX固定分配,非占位句柄,无需判空 */
     Zigbee_Init(&Robot.zigbee);
 
+    /* VISION_UART_HANDLE在CubeMX完成分配前于bsp_config.h中为NULL占位,Vision_Init内部
+       自行判空,无需在此额外判断 */
+    Vision_Init(&Robot.vision);
+
     /* 各外设句柄在CubeMX完成分配前于bsp_config.h中为NULL占位,逐个判空后再启动,
        句柄补齐后无需再改这里 */
     if (Robot.roboticarm.lift_motor.FDCAN_Handle != NULL)
@@ -104,7 +92,6 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
         case ROBOT_STATE_IDLE:
             Robot->pickup.kfs_last_index = 0U;
             Robot->pickup.kfs_target_index = 0U;
-            Robot->pickup.vision_request_sent = 0U;
             RoboticArmEnable(&Robot->roboticarm);
             Robot->state = ROBOT_STATE_MOVE1;
             break;
@@ -129,27 +116,21 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             if (ChassisTranslationReached(&Robot->chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
             {
                 Robot->pickup.vision_next_state = ROBOT_STATE_MOVE3;
-                Robot->pickup.vision_request_sent = 0U;
                 Robot->state = ROBOT_STATE_VISION_WAIT;
             }
             break;
 
         case ROBOT_STATE_VISION_WAIT:
-            /* 等待视觉判断下一个KFS是否需要抓取,判断结果就绪前底盘/机械臂均保持当前状态不动 */
-            if (!Robot->pickup.vision_request_sent)
+            /* 等待视觉判断下一个KFS是否需要抓取,判断结果就绪前底盘/机械臂均保持当前状态不动;
+               next_colour仍为KFS_COLOUR_UNKNOWN(尚未收到有效视觉帧)时继续等待 */
+            if (Robot->vision.next_colour != KFS_COLOUR_UNKNOWN)
             {
                 uint8_t default_index = (Robot->pickup.vision_next_state == ROBOT_STATE_MOVE3) ? 1U : (uint8_t)(Robot->pickup.kfs_last_index + 1U);
-                RobotVisionRequestKfsIndex(default_index);
-                Robot->pickup.vision_request_sent = 1U;
-            }
-            else
-            {
-                uint8_t result;
-                if (RobotVisionKfsIndexReady(&result))
-                {
-                    Robot->pickup.kfs_target_index = result;
-                    Robot->state = Robot->pickup.vision_next_state;
-                }
+
+                /* next_colour与VISION_CORRECT_COLOUR相符则该候选工位就是需要抓取的目标;
+                   不符则说明该工位颜色错误,需跳过,顺延到下一个工位 */
+                Robot->pickup.kfs_target_index = (Robot->vision.next_colour == VISION_CORRECT_COLOUR) ? default_index : (uint8_t)(default_index + 1U);
+                Robot->state = Robot->pickup.vision_next_state;
             }
             break;
 
@@ -193,7 +174,6 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
                 if (Robot->pickup.pickup_return_state != ROBOT_STATE_MOVE6)
                 {
                     Robot->pickup.vision_next_state = Robot->pickup.pickup_return_state;
-                    Robot->pickup.vision_request_sent = 0U;
                     Robot->state = ROBOT_STATE_VISION_WAIT;
                 }
                 else
