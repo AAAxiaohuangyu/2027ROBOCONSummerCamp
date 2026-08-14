@@ -3,8 +3,7 @@
 
 #include "main.h"
 #include <stdint.h>
-
-#define ZIGBEE_UART_HANDLE          (huart1)
+#include "bsp_config.h"
 
 /* DMA 接收缓冲区大小 */
 #define ZIGBEE_RX_BUF_SIZE          64U

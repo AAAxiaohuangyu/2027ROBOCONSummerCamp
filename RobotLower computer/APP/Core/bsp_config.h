@@ -37,4 +37,6 @@
    待确定后直接改这里的宏值即可 */
 #define VISION_UART_HANDLE ((UART_HandleTypeDef *)NULL)
 
+#define ZIGBEE_UART_HANDLE (huart1)
+
 #endif /* __BSP_CONFIG_H__ */
