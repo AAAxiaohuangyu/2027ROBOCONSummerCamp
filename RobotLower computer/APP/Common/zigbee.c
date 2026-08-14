@@ -39,13 +39,13 @@ static void data_pack(uint8_t *buf, const ZigbeeData_TypeDef *data)
 {
     uint8_t command_byte = 0U;
 
-    /* 底盘平动速度 */
-    buf[0] = (uint8_t)((uint16_t)data->chassis.speed >> 8U);
-    buf[1] = (uint8_t)((uint16_t)data->chassis.speed);
+    /* 底盘平动x轴速度 */
+    buf[0] = (uint8_t)((uint16_t)data->chassis.speed_vx >> 8U);
+    buf[1] = (uint8_t)((uint16_t)data->chassis.speed_vx);
 
-    /* 底盘平动方向夹角 */
-    buf[2] = (uint8_t)((uint16_t)data->chassis.direction_angle >> 8U);
-    buf[3] = (uint8_t)((uint16_t)data->chassis.direction_angle);
+    /* 底盘平动y轴速度 */
+    buf[2] = (uint8_t)((uint16_t)data->chassis.speed_vy >> 8U);
+    buf[3] = (uint8_t)((uint16_t)data->chassis.speed_vy);
 
     /* 底盘旋转速度 */
     buf[4] = (uint8_t)((uint16_t)data->chassis.omega >> 8U);
@@ -81,14 +81,15 @@ static void data_pack(uint8_t *buf, const ZigbeeData_TypeDef *data)
 /* 从 buf（19 字节）按大端字节序解析到 ZigbeeData_TypeDef */
 static void data_unpack(ZigbeeData_TypeDef *data, const uint8_t *buf)
 {
-    /* 底盘平动速度 */
-    data->chassis.speed =
+    /* 底盘x轴平动速度 */
+    data->chassis.speed_vx =
         (int16_t)(((uint16_t)buf[0] << 8U) | buf[1]);
 
-    /* 底盘平动方向夹角 */
-    data->chassis.direction_angle =
+    /* 底盘y轴平动速度 */
+    data->chassis.speed_vy =
         (int16_t)(((uint16_t)buf[2] << 8U) | buf[3]);
 
+    /* 底盘旋转速度 */
     data->chassis.omega =
         (int16_t)(((uint16_t)buf[4] << 8U) | buf[5]);
 

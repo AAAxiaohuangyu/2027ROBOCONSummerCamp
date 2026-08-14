@@ -20,8 +20,8 @@
 
 /*
  * 有效载荷：
- * chassis.speed           2字节
- * chassis.direction_angle 2字节
+ * chassis.speed_vx        2字节
+ * chassis.speed_vy        2字节
  * chassis.omega           2字节
  * joint.front_back        2字节
  * joint.up_down           2字节
@@ -37,8 +37,8 @@
 
 typedef struct
 {
-    int16_t speed;             /**< 底盘平动速度大小 */
-    int16_t direction_angle;   /**< 平动速度与规定正方向的夹角 */
+    int16_t speed_vx;          /**< 平动x轴速度 */
+    int16_t speed_vy;          /**< 平动y轴速度 */
     int16_t omega;             /**< 旋转速度 */
 } ZigbeeChassisCmd_TypeDef;
 
