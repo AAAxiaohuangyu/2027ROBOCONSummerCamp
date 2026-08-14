@@ -52,8 +52,8 @@ static float RobotKfsPositionY(uint8_t kfs_index)
 /* 下发从kfs_last_index当前所在位置移动到target_index的相对位移 */
 static void RobotMoveToKfs(Robot_TypeDef *Robot, uint8_t target_index)
 {
-    float dx = RobotKfsPositionX(target_index) - RobotKfsPositionX(Robot->kfs_last_index);
-    float dy = RobotKfsPositionY(target_index) - RobotKfsPositionY(Robot->kfs_last_index);
+    float dx = RobotKfsPositionX(target_index) - RobotKfsPositionX(Robot->pickup.kfs_last_index);
+    float dy = RobotKfsPositionY(target_index) - RobotKfsPositionY(Robot->pickup.kfs_last_index);
 
     ChassisSetTranslation(&Robot->chassis, dx, dy);
 }
@@ -111,9 +111,9 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
         switch (Robot->state)
         {
         case ROBOT_STATE_IDLE:
-            Robot->kfs_last_index = 0U;
-            Robot->kfs_target_index = 0U;
-            Robot->vision_request_sent = 0U;
+            Robot->pickup.kfs_last_index = 0U;
+            Robot->pickup.kfs_target_index = 0U;
+            Robot->pickup.vision_request_sent = 0U;
             RoboticArmEnable(&Robot->roboticarm);
             Robot->state = ROBOT_STATE_MOVE1;
             break;
@@ -137,27 +137,27 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             ChassisSetTranslation(&Robot->chassis, ROBOT_MOVE_FLIP_TO_START_X, ROBOT_MOVE_FLIP_TO_START_Y);
             if (ChassisTranslationReached(&Robot->chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
             {
-                Robot->vision_next_state = ROBOT_STATE_MOVE3;
-                Robot->vision_request_sent = 0U;
+                Robot->pickup.vision_next_state = ROBOT_STATE_MOVE3;
+                Robot->pickup.vision_request_sent = 0U;
                 Robot->state = ROBOT_STATE_VISION_WAIT;
             }
             break;
 
         case ROBOT_STATE_VISION_WAIT:
             /* 等待视觉判断下一个KFS是否需要抓取,判断结果就绪前底盘/机械臂均保持当前状态不动 */
-            if (!Robot->vision_request_sent)
+            if (!Robot->pickup.vision_request_sent)
             {
-                uint8_t default_index = (Robot->vision_next_state == ROBOT_STATE_MOVE3) ? 1U : (uint8_t)(Robot->kfs_last_index + 1U);
+                uint8_t default_index = (Robot->pickup.vision_next_state == ROBOT_STATE_MOVE3) ? 1U : (uint8_t)(Robot->pickup.kfs_last_index + 1U);
                 RobotVisionRequestKfsIndex(default_index);
-                Robot->vision_request_sent = 1U;
+                Robot->pickup.vision_request_sent = 1U;
             }
             else
             {
                 uint8_t result;
                 if (RobotVisionKfsIndexReady(&result))
                 {
-                    Robot->kfs_target_index = result;
-                    Robot->state = Robot->vision_next_state;
+                    Robot->pickup.kfs_target_index = result;
+                    Robot->state = Robot->pickup.vision_next_state;
                 }
             }
             break;
@@ -166,32 +166,48 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
         case ROBOT_STATE_MOVE4:
         case ROBOT_STATE_MOVE5:
             /* 运动到当前目标KFS工位,到位后执行PICKUP,完成后返回的状态按MOVE3/4/5依次递进 */
-            RobotMoveToKfs(Robot, Robot->kfs_target_index);
+            RobotMoveToKfs(Robot, Robot->pickup.kfs_target_index);
             if (ChassisTranslationReached(&Robot->chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
             {
-                Robot->pickup_return_state = (Robot->state == ROBOT_STATE_MOVE3) ? ROBOT_STATE_MOVE4 : (Robot->state == ROBOT_STATE_MOVE4) ? ROBOT_STATE_MOVE5
+                Robot->pickup.pickup_return_state = (Robot->state == ROBOT_STATE_MOVE3) ? ROBOT_STATE_MOVE4 : (Robot->state == ROBOT_STATE_MOVE4) ? ROBOT_STATE_MOVE5
                                                                                                                                            : ROBOT_STATE_MOVE6;
-                Robot->pick_state = PICKUP_STATE_RAISE;
+                Robot->pickup.pick_state = PICKUP_STATE_RAISE;
                 Robot->state = ROBOT_STATE_PICKUP;
             }
             break;
 
         case ROBOT_STATE_PICKUP:
-            /* 拾取当前目标KFS,高度由KFS序号(1~4:高低高低)查表决定 */
-            RoboticArmPickupMotion(&Robot->roboticarm, &Robot->pick_state,
-                                   kfs_height_table[Robot->kfs_target_index - 1U]);
-            if (Robot->pick_state == PICKUP_STATE_VOID)
+            /* 拾取当前目标KFS,吸取高度由KFS序号(1~4:高低高低)查表决定;
+               本轮第1/2/3次拾取动作固定为存底层/存上层/保持真空(由pickup_return_state区分次序) */
+            if (Robot->pickup.pickup_return_state == ROBOT_STATE_MOVE4)
             {
-                Robot->kfs_last_index = Robot->kfs_target_index;
-                if (Robot->pickup_return_state != ROBOT_STATE_MOVE6)
+                RoboticArmPickupStoreLowMotion(&Robot->roboticarm, &Robot->pickup.pick_state,
+                                               kfs_height_table[Robot->pickup.kfs_target_index - 1U]);
+            }
+            else if (Robot->pickup.pickup_return_state == ROBOT_STATE_MOVE5)
+            {
+                RoboticArmPickupStoreHighMotion(&Robot->roboticarm, &Robot->pickup.pick_state,
+                                                kfs_height_table[Robot->pickup.kfs_target_index - 1U]);
+            }
+            else
+            {
+                RoboticArmPickupHoldMotion(&Robot->roboticarm, &Robot->pickup.pick_state,
+                                           kfs_height_table[Robot->pickup.kfs_target_index - 1U]);
+            }
+
+            /* StoreLow/StoreHigh完成后回到VOID;Hold完成后停在HOLD,同样视为本次拾取完成 */
+            if (Robot->pickup.pick_state == PICKUP_STATE_VOID || Robot->pickup.pick_state == PICKUP_STATE_HOLD)
+            {
+                Robot->pickup.kfs_last_index = Robot->pickup.kfs_target_index;
+                if (Robot->pickup.pickup_return_state != ROBOT_STATE_MOVE6)
                 {
-                    Robot->vision_next_state = Robot->pickup_return_state;
-                    Robot->vision_request_sent = 0U;
+                    Robot->pickup.vision_next_state = Robot->pickup.pickup_return_state;
+                    Robot->pickup.vision_request_sent = 0U;
                     Robot->state = ROBOT_STATE_VISION_WAIT;
                 }
                 else
                 {
-                    Robot->state = Robot->pickup_return_state;
+                    Robot->state = Robot->pickup.pickup_return_state;
                 }
             }
             break;

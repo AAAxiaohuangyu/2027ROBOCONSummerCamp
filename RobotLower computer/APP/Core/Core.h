@@ -44,14 +44,9 @@ typedef enum
 /* 顶层状态机周期,单位ms */
 #define ROBOT_STATE_UPDATE_PERIOD_MS (5U)
 
-/* 机器人整体状态,占位,具体字段(各子系统状态、标志位等)由后续补充 */
+/* KFS拾取流程相关状态,集中存放拾取动作、KFS序号及视觉判断请求的进度 */
 typedef struct
 {
-    RobotState_TypeDef state;
-    RoboticArm_TypeDef roboticarm;
-    Chassis_TypeDef chassis;
-    ZigbeeHandle_TypeDef zigbee;
-    FlipState_TypeDef flip_state;
     PickupState_TypeDef pick_state;
 
     uint8_t kfs_last_index;         /* 上一次到位的KFS序号,1~ROBOT_KFS_COUNT,0表示仍在启动区 */
@@ -60,6 +55,17 @@ typedef struct
 
     RobotState_TypeDef vision_next_state; /* VISION_WAIT判断完成后应跳转的状态(MOVE3/MOVE4/MOVE5) */
     uint8_t vision_request_sent;    /* 本轮视觉判断请求是否已发出,避免重复请求 */
+} RobotPickup_TypeDef;
+
+/* 机器人整体状态,占位,具体字段(各子系统状态、标志位等)由后续补充 */
+typedef struct
+{
+    RobotState_TypeDef state;
+    RoboticArm_TypeDef roboticarm;
+    Chassis_TypeDef chassis;
+    ZigbeeHandle_TypeDef zigbee;
+    FlipState_TypeDef flip_state;
+    RobotPickup_TypeDef pickup;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;

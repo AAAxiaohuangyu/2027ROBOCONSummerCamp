@@ -1,5 +1,12 @@
 #include "Pickup.h"
 
+typedef enum
+{
+    PICKUP_OPERATION_STORE_LOW = 0, /* 放至储存区底层。 */
+    PICKUP_OPERATION_STORE_HIGH,    /* 放至储存区上层。 */
+    PICKUP_OPERATION_HOLD           /* 只吸附，不进入储存区。 */
+} PickupOperation_TypeDef;
+
 static float PickupGetTargetZ(uint8_t pickup_height)
 {
     if (pickup_height == PICKUP_HEIGHT_HIGH)
@@ -10,9 +17,20 @@ static float PickupGetTargetZ(uint8_t pickup_height)
     return PICKUP_TARGET_Z_LOW;
 }
 
-void RoboticArmPickupMotion(RoboticArm_TypeDef *arm,
-                            PickupState_TypeDef *pickup_state,
-                            uint8_t pickup_height)
+static float PickupGetStorageZ(PickupOperation_TypeDef operation)
+{
+    if (operation == PICKUP_OPERATION_STORE_HIGH)
+    {
+        return PICKUP_STORAGE_Z + PICKUP_STORAGE_STACK_HEIGHT;
+    }
+
+    return PICKUP_STORAGE_Z;
+}
+
+static void PickupRun(RoboticArm_TypeDef *arm,
+                      PickupState_TypeDef *pickup_state,
+                      uint8_t pickup_height,
+                      PickupOperation_TypeDef operation)
 {
     float target_x;
     float target_z;
@@ -22,7 +40,7 @@ void RoboticArmPickupMotion(RoboticArm_TypeDef *arm,
     switch (*pickup_state)
     {
     case PICKUP_STATE_VOID:
-        /* 空闲状态不输出新的动作，等待主控启动下一次抓取。 */
+        /* 空闲状态不输出动作，等待主控启动下一次抓取。 */
         break;
 
     case PICKUP_STATE_RAISE:
@@ -51,9 +69,17 @@ void RoboticArmPickupMotion(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_GRIP:
-        /* 末端执行器闭合后立即进入收回流程。 */
+        /* 第 3 件不进入储存区，保持真空；前两件分别存入底层和高层。 */
         RoboticArmGripMotion();
-        *pickup_state = PICKUP_STATE_RETRACT;
+        if (operation == PICKUP_OPERATION_HOLD)
+        {
+            /* 第三个 KFS 停在抓取点，吸盘持续开启。 */
+            *pickup_state = PICKUP_STATE_HOLD;
+        }
+        else
+        {
+            *pickup_state = PICKUP_STATE_RETRACT;
+        }
         break;
 
     case PICKUP_STATE_RETRACT:
@@ -64,9 +90,10 @@ void RoboticArmPickupMotion(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_PLACE:
-        /* 下降或上升至标定的存放高度。 */
-        RoboticArmSetEndPosition(arm, PICKUP_STORAGE_X, PICKUP_STORAGE_Z);
-        if (PositionReached(arm, PICKUP_STORAGE_X, PICKUP_STORAGE_Z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
+        /* 第 1、2 件分别落在堆叠底层和上层。 */
+        target_z = PickupGetStorageZ(operation);
+        RoboticArmSetEndPosition(arm, PICKUP_STORAGE_X, target_z);
+        if (PositionReached(arm, PICKUP_STORAGE_X, target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
             *pickup_state = PICKUP_STATE_RELEASE;
         break;
 
@@ -83,9 +110,37 @@ void RoboticArmPickupMotion(RoboticArm_TypeDef *arm,
             *pickup_state = PICKUP_STATE_VOID;
         break;
 
+    case PICKUP_STATE_HOLD:
+        /* 保持吸盘开启；由后续任务显式释放第三个 KFS。 */
+        break;
+
     default:
         /* 非法状态恢复为空闲状态。 */
         *pickup_state = PICKUP_STATE_VOID;
         break;
     }
+}
+
+void RoboticArmPickupStoreLowMotion(RoboticArm_TypeDef *arm,
+                                    PickupState_TypeDef *pickup_state,
+                                    uint8_t pickup_height)
+{
+    /* 主控选择的第一种存放动作：使用储存区底层 z。 */
+    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_STORE_LOW);
+}
+
+void RoboticArmPickupStoreHighMotion(RoboticArm_TypeDef *arm,
+                                     PickupState_TypeDef *pickup_state,
+                                     uint8_t pickup_height)
+{
+    /* 主控选择的第二种存放动作：使用底层 z 加堆叠高度。 */
+    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_STORE_HIGH);
+}
+
+void RoboticArmPickupHoldMotion(RoboticArm_TypeDef *arm,
+                                PickupState_TypeDef *pickup_state,
+                                uint8_t pickup_height)
+{
+    /* 主控选择的第三种动作：吸附后保持真空，不执行放置或复位。 */
+    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_HOLD);
 }
