@@ -102,6 +102,8 @@ void RobotInit(void)
                                     Robot.roboticarm.rotate_motor.feedback.packet.bytes,
                                     GO_M8010_FEEDBACK_FRAME_SIZE);
     }
+
+    RoboticArmEnable(&Robot.roboticarm);
 }
 
 void RobotStateUpdate(Robot_TypeDef *Robot)
