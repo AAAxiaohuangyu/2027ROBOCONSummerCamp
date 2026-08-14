@@ -6,11 +6,6 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, FlipState_TypeDef *flip_state
     float target_z;
     float target_rotation;
 
-    if (*flip_state == FLIP_STATE_DONE)
-    {
-        *flip_state = FLIP_STATE_UP;
-    }
-
     switch (*flip_state)
     {
     case FLIP_STATE_UP:
