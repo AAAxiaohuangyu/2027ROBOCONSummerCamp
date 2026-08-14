@@ -28,9 +28,9 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     }
 }
 
-/* UART空闲线收到一帧:按huart实例分发给ZigBee或对应的GO电机(前后平移/自转),解析反馈后
-   按各自驱动的接收方式重新挂起下一次接收;HAL回调全局唯一,故所有使用该机制的模块都需
-   经本函数分发,不能各自定义 */
+/* UART空闲线收到一帧:按huart实例分发。ZigBee走独立处理;forward/rotate两个GO电机可能共享
+   同一路RS485(huart),该情况由GOM8010GroupRxEvent内部按其仲裁表匹配处理,本函数不关心其
+   电机内部字段。HAL回调全局唯一,故所有使用该机制的模块都需经本函数分发,不能各自定义 */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart->Instance == ZIGBEE_UART_HANDLE.Instance)
@@ -39,19 +39,5 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         return;
     }
 
-    if (Robot.roboticarm.forward_motor.huart != NULL &&
-        huart->Instance == Robot.roboticarm.forward_motor.huart->Instance)
-    {
-        GOM8010MotorParseFeedback(&Robot.roboticarm.forward_motor, Size);
-        HAL_UARTEx_ReceiveToIdle_IT(huart, Robot.roboticarm.forward_motor.feedback.packet.bytes, GO_M8010_FEEDBACK_FRAME_SIZE);
-        return;
-    }
-
-    if (Robot.roboticarm.rotate_motor.huart != NULL &&
-        huart->Instance == Robot.roboticarm.rotate_motor.huart->Instance)
-    {
-        GOM8010MotorParseFeedback(&Robot.roboticarm.rotate_motor, Size);
-        HAL_UARTEx_ReceiveToIdle_IT(huart, Robot.roboticarm.rotate_motor.feedback.packet.bytes, GO_M8010_FEEDBACK_FRAME_SIZE);
-        return;
-    }
+    GOM8010GroupRxEvent(&Robot.roboticarm.go_motors, huart, Size);
 }

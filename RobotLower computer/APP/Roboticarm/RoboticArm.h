@@ -47,16 +47,22 @@ ROBOTICARM_FORWARD_K、ROBOTICARM_FORWARD_THRESHOLD、ROBOTICARM_ROD_LENGTH、RO
 
 #define ROBOTICARM_CONTROL_PERIOD_MS (3U)
 
+/* go_motors组内电机下标:0=前后平移机构(控制end_x),1=杆自转机构(控制rod_rotation) */
+enum
+{
+   ROBOTICARM_GO_FORWARD = 0,
+   ROBOTICARM_GO_ROTATE = 1,
+};
+
 typedef struct
 {
-   J60Motor_TypeDef lift_motor;        /* 升降机构电机,控制高度end_z */
-   GOM8010Motor_TypeDef forward_motor; /* 前后平移机构电机,控制前伸距离,进而控制end_x */
-   GOM8010Motor_TypeDef rotate_motor;  /* 杆自转电机,转角与rod_rotation直接相等,不影响末端坐标 */
+   J60Motor_TypeDef lift_motor;    /* 升降机构电机,控制高度end_z */
+   GOM8010Group_TypeDef go_motors; /* 前后平移+杆自转两个GO电机,下标见ROBOTICARM_GO_* */
 
    float end_x;        /* 末端点x坐标(底盘坐标系),由前后机构位置换算得到 */
    float end_y;        /* 末端点y坐标(底盘坐标系),由安装位置与杆长固定,不受电机控制 */
    float end_z;        /* 末端点z坐标(底盘坐标系),即升降高度height */
-   float rod_rotation; /* 杆绕自身轴线的自转角度,与rotate_motor转角直接相等 */
+   float rod_rotation; /* 杆绕自身轴线的自转角度,与自转电机(go_motors[ROBOTICARM_GO_ROTATE])转角直接相等 */
 } RoboticArm_TypeDef;
 
 /* 初始化机械臂:依次初始化升降(J60/FDCAN)、前后(GO/RS485)、自转(GO/RS485)三个电机驱动,并按
@@ -75,7 +81,7 @@ void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float
 void RoboticArmSetRodRotation(RoboticArm_TypeDef *arm, float rotation_target);
 
 /* 周期调用:推进三个电机的规划并发送控制帧,同时按最新反馈更新arm->end_x/end_y/end_z/rod_rotation;
-   调用前需已通过J60MotorParseFeedback/GOM8010MotorParseFeedback更新对应电机反馈 */
+   调用前需已通过J60MotorParseFeedback/GOM8010GroupRxEvent更新对应电机反馈 */
 void RoboticArmUpdate(RoboticArm_TypeDef *arm);
 
 /* 使能/失能升降机构(J60);前后、自转机构(GO电机)无需单独使能 */

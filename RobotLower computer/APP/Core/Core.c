@@ -89,19 +89,8 @@ void RobotInit(void)
                           M3508_FEEDBACK_ID_BASE + M3508_ID_MAX);
     }
 
-    if (Robot.roboticarm.forward_motor.huart != NULL)
-    {
-        HAL_UARTEx_ReceiveToIdle_IT(Robot.roboticarm.forward_motor.huart,
-                                    Robot.roboticarm.forward_motor.feedback.packet.bytes,
-                                    GO_M8010_FEEDBACK_FRAME_SIZE);
-    }
-
-    if (Robot.roboticarm.rotate_motor.huart != NULL)
-    {
-        HAL_UARTEx_ReceiveToIdle_IT(Robot.roboticarm.rotate_motor.huart,
-                                    Robot.roboticarm.rotate_motor.feedback.packet.bytes,
-                                    GO_M8010_FEEDBACK_FRAME_SIZE);
-    }
+    /* forward/rotate两个GO电机的接收挂起改由GOM8010GroupUpdate在每次真正发起请求时按需完成
+       (RS485总线仲裁,避免同一huart被同时挂起两次接收),此处不再手动挂起 */
 
     RoboticArmEnable(&Robot.roboticarm);
 }

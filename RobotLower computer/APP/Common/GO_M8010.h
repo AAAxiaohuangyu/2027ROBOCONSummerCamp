@@ -20,6 +20,13 @@
 #define GO_M8010_CONTROL_FRAME_SIZE  17U
 #define GO_M8010_FEEDBACK_FRAME_SIZE 16U
 
+/* RS485总线共享时,一笔请求-应答事务的应答超时门限:超过此时长未收到应答,视为本电机这一笔
+   丢失,总线让给下一个电机,避免某个电机断线/不应答拖死总线上的其他电机;数值按实测调整 */
+#define GO_M8010_BUS_TIMEOUT_MS 20U
+
+/* 一个GOM8010Group_TypeDef最多容纳的电机数,按需调整 */
+#define GOM8010_GROUP_MAX_MOTORS 4U
+
 typedef struct
 {
     uint8_t bytes[GO_M8010_CONTROL_FRAME_SIZE];
@@ -31,7 +38,7 @@ typedef struct
 } GOM8010FeedbackPacket_TypeDef;
 
 /* 力位速混合控制的控制侧:内置速度规划(SpeedPlan),把"目标位置"闭环为torque前馈+kp/kd跟踪的position/speed指令,
-   最终打包为待发送的控制帧 */
+   最终打包为待发送的控制帧。驱动内部使用,外部通过GOM8010Group*接口访问,不要直接操作 */
 typedef struct
 {
     uint8_t mode;    /* 0=锁定,1=FOC闭环(力位速混合控制,常用模式),2=编码器校准 */
@@ -47,6 +54,7 @@ typedef struct
     GOM8010ControlPacket_TypeDef packet;
 } GOM8010Control_TypeDef;
 
+/* 反馈数据,可通过GOM8010Group_TypeDef::motors[index].feedback只读访问,不要写 */
 typedef struct
 {
     uint8_t mode;
@@ -63,28 +71,57 @@ typedef struct
     GOM8010FeedbackPacket_TypeDef packet;
 } GOM8010Feedback_TypeDef;
 
+/* 单个电机:仅保存协议地址、挂载的串口与控制/反馈数据,不含总线仲裁状态(仲裁状态集中存在
+   GOM8010Group_TypeDef::arbiter里)。control须通过GOM8010Group*接口修改,不要直接操作;
+   feedback只读访问,不要写 */
 typedef struct
 {
-    uint8_t id;                 /* 电机RS485地址 */
-    UART_HandleTypeDef *huart;  /* 该电机挂载的RS485串口实例,支持同一份驱动挂多路总线 */
+    uint8_t id;                /* 电机RS485地址 */
+    UART_HandleTypeDef *huart; /* 该电机挂载的RS485串口实例,组内所有电机须为同一实例(半双工共享总线) */
     GOM8010Control_TypeDef control;
     GOM8010Feedback_TypeDef feedback;
 } GOM8010Motor_TypeDef;
 
-/* 初始化电机:control(含plan、按GO_M8010_POS_CTRL_*默认参数)、feedback均在此一并初始化 */
-void GOM8010MotorInit(GOM8010Motor_TypeDef *motor, uint8_t id, UART_HandleTypeDef *huart);
+/* 半双工RS485总线上组内电机共享同一huart,同一时刻只允许一笔请求-应答事务在途:
+   本结构体就是这条总线的仲裁表,组内所有电机共用同一份 */
+typedef struct
+{
+    GOM8010Motor_TypeDef *pending_motor; /* 总线上当前等待应答的电机,NULL表示总线空闲 */
+    GOM8010Motor_TypeDef *last_motor;    /* 上一次成功发起请求的电机,用于多电机轮转 */
+    uint32_t request_tick;               /* 发起请求时的HAL_GetTick(),用于应答超时判定 */
+    uint8_t motor_count;                 /* 共享这条总线的电机数,>1时才需要轮转避让 */
+} GOM8010BusArbiter_TypeDef;
+
+/* GO电机组:电机数组 + 这条总线的仲裁表,是本驱动对外暴露的唯一顶层类型。组内所有电机共享
+   同一路RS485总线(半双工,同一huart) */
+typedef struct
+{
+    GOM8010Motor_TypeDef motors[GOM8010_GROUP_MAX_MOTORS];
+    GOM8010BusArbiter_TypeDef arbiter;
+    uint8_t motor_count;
+} GOM8010Group_TypeDef;
+
+/* 初始化一个空电机组,需在GOM8010GroupAddMotor之前调用 */
+void GOM8010GroupInit(GOM8010Group_TypeDef *group);
+
+/* 向电机组添加一个电机(control含plan、按GO_M8010_POS_CTRL_*默认参数,feedback均在此一并初始化),
+   返回其在组内的下标(后续GOM8010GroupSetTarget等接口按此下标操作),组已满返回0xFF。
+   组内所有电机须挂在同一路RS485总线(同一huart实例)上,共享同一份仲裁表 */
+uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_HandleTypeDef *huart);
 
 /* 下发新的目标位置,(重新)触发规划;运动中调用即为打断 */
-void GOM8010MotorSetTarget(GOM8010Motor_TypeDef *motor, float position_target);
+void GOM8010GroupSetTarget(GOM8010Group_TypeDef *group, uint8_t index, float position_target);
 
 /* 下发前馈扭矩(输出端),叠加到kp/kd跟踪规划轨迹的输出上;默认0 */
-void GOM8010MotorSetTorqueFeedforward(GOM8010Motor_TypeDef *motor, float torque_feedforward);
+void GOM8010GroupSetTorqueFeedforward(GOM8010Group_TypeDef *group, uint8_t index, float torque_feedforward);
 
-/* 解析反馈帧:接收由上层空闲线中断驱动(HAL_UARTEx_ReceiveToIdle_IT接收至motor->feedback.packet.bytes,
-   在HAL_UARTEx_RxEventCallback中取得Size后调用本函数),本驱动不包含中断回调 */
-void GOM8010MotorParseFeedback(GOM8010Motor_TypeDef *motor, uint16_t size);
+/* 周期调用:推进组内每个电机的规划并尝试发送一次控制帧(受各自所属总线仲裁,总线忙时本周期不
+   实际发送);调用前需已通过GOM8010GroupRxEvent更新过反馈 */
+void GOM8010GroupUpdate(GOM8010Group_TypeDef *group);
 
-/* 周期调用:推进规划并发送一次控制帧;调用前需已通过GOM8010MotorParseFeedback更新motor->feedback */
-void GOM8010MotorUpdate(GOM8010Motor_TypeDef *motor);
+/* 供上层在HAL_UARTEx_RxEventCallback中调用:按huart实例匹配组内总线上当前等待应答的电机并解析,
+   然后释放总线供下一个电机的请求使用。若huart不是本组的总线,或总线上并没有电机在等待应答
+   (意外/迟到的事件),直接忽略 */
+void GOM8010GroupRxEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart, uint16_t size);
 
 #endif /* __GO_M8010_H__ */

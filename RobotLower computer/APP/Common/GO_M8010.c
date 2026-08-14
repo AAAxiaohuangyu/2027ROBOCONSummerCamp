@@ -216,9 +216,7 @@ static void GOM8010MotorSendControl(GOM8010Motor_TypeDef *motor)
     HAL_UART_Transmit_DMA(motor->huart, motor->control.packet.bytes, GO_M8010_CONTROL_FRAME_SIZE);
 }
 
-/* 供上层在空闲线中断(HAL_UARTEx_RxEventCallback)中调用:size为该次事件收到的字节数,
-   上层应将数据直接接收到motor->feedback.packet.bytes中(缓冲区大小GO_M8010_FEEDBACK_FRAME_SIZE) */
-void GOM8010MotorParseFeedback(GOM8010Motor_TypeDef *motor, uint16_t size)
+static void GOM8010MotorParseFeedback(GOM8010Motor_TypeDef *motor, uint16_t size)
 {
     if (size != GO_M8010_FEEDBACK_FRAME_SIZE)
     {
@@ -230,11 +228,61 @@ void GOM8010MotorParseFeedback(GOM8010Motor_TypeDef *motor, uint16_t size)
     GOM8010ParseFeedbackFrame(&motor->feedback);
 }
 
-void GOM8010MotorInit(GOM8010Motor_TypeDef *motor, uint8_t id, UART_HandleTypeDef *huart)
+/* 尝试为group内index号电机发起一次请求(打包控制帧+发送+挂起本电机的接收缓冲区)。同一总线
+   上还有其他电机的应答未到/未超时,或刚轮到过本电机、总线上还有别的电机没轮到时,本次跳过不
+   发送,返回0;发送成功返回1 */
+static uint8_t GOM8010GroupRequest(GOM8010Group_TypeDef *group, uint8_t index)
 {
-    memset(&motor->control, 0, sizeof(motor->control));
-    memset(&motor->feedback, 0, sizeof(motor->feedback));
+    GOM8010Motor_TypeDef *motor = &group->motors[index];
+    GOM8010BusArbiter_TypeDef *bus = &group->arbiter;
+    uint32_t now;
 
+    if (motor->huart == NULL)
+        return 0U;
+
+    now = HAL_GetTick();
+
+    if (bus->pending_motor != NULL)
+    {
+        if ((now - bus->request_tick) < GO_M8010_BUS_TIMEOUT_MS)
+            return 0U; /* 总线忙,别的电机应答还没到/没超时 */
+
+        /* 上一笔请求应答超时,视为丢失,释放总线让给下一个电机 */
+        bus->pending_motor->feedback.valid = 0U;
+        bus->pending_motor->feedback.bad_msg++;
+        bus->pending_motor = NULL;
+    }
+
+    if (bus->motor_count > 1U && bus->last_motor == motor)
+        return 0U; /* 总线上还有别的电机没轮到,先让给它,避免本电机连续独占总线 */
+
+    GOM8010MotorSendControl(motor);
+    if (HAL_UARTEx_ReceiveToIdle_IT(motor->huart, motor->feedback.packet.bytes, GO_M8010_FEEDBACK_FRAME_SIZE) != HAL_OK)
+        return 0U;
+
+    bus->pending_motor = motor;
+    bus->last_motor = motor;
+    bus->request_tick = now;
+    return 1U;
+}
+
+void GOM8010GroupInit(GOM8010Group_TypeDef *group)
+{
+    memset(group, 0, sizeof(*group));
+}
+
+uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_HandleTypeDef *huart)
+{
+    uint8_t index;
+    GOM8010Motor_TypeDef *motor;
+
+    if (group->motor_count >= GOM8010_GROUP_MAX_MOTORS)
+        return 0xFFU;
+
+    index = group->motor_count;
+    motor = &group->motors[index];
+
+    memset(motor, 0, sizeof(*motor));
     motor->id = id;
     motor->huart = huart;
     motor->control.mode = 1U; /* 默认FOC闭环(力位速混合控制),GO电机通常无需切换其他模式 */
@@ -243,32 +291,57 @@ void GOM8010MotorInit(GOM8010Motor_TypeDef *motor, uint8_t id, UART_HandleTypeDe
     motor->control.kp = GO_M8010_POS_CTRL_KP;
     motor->control.kd = GO_M8010_POS_CTRL_KD;
     motor->control.position_target = 0.0f;
+
+    group->arbiter.motor_count++;
+    group->motor_count++;
+    return index;
 }
 
-void GOM8010MotorSetTarget(GOM8010Motor_TypeDef *motor, float position_target)
+void GOM8010GroupSetTarget(GOM8010Group_TypeDef *group, uint8_t index, float position_target)
 {
-    motor->control.position_target = position_target;
-    motor->control.plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
+    GOM8010Control_TypeDef *control = &group->motors[index].control;
+
+    control->position_target = position_target;
+    control->plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
 }
 
-void GOM8010MotorSetTorqueFeedforward(GOM8010Motor_TypeDef *motor, float torque_feedforward)
+void GOM8010GroupSetTorqueFeedforward(GOM8010Group_TypeDef *group, uint8_t index, float torque_feedforward)
 {
-    motor->control.torque_feedforward = torque_feedforward;
+    group->motors[index].control.torque_feedforward = torque_feedforward;
 }
 
-void GOM8010MotorUpdate(GOM8010Motor_TypeDef *motor)
+void GOM8010GroupUpdate(GOM8010Group_TypeDef *group)
 {
-    GOM8010Control_TypeDef *control = &motor->control;
-    float position_actual = motor->feedback.position; /* 电机RS485反馈的真实位置 */
+    uint8_t i;
 
-    SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
+    for (i = 0U; i < group->motor_count; i++)
+    {
+        GOM8010Motor_TypeDef *motor = &group->motors[i];
+        GOM8010Control_TypeDef *control = &motor->control;
+        float position_actual = motor->feedback.position; /* 电机RS485反馈的真实位置 */
 
-    /* 力位速混合控制:torque前馈由上层指定,叠加到kp/kd跟踪规划轨迹给出的position/speed上 */
-    control->mode = 1u; /* FOC闭环,力位速混合控制 */
-    control->timeout = 0u;
-    control->torque = control->torque_feedforward;
-    control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
-    control->speed = control->plan.v * control->plan.direction_flag;
+        SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
 
-    GOM8010MotorSendControl(motor);
+        /* 力位速混合控制:torque前馈由上层指定,叠加到kp/kd跟踪规划轨迹给出的position/speed上 */
+        control->mode = 1u; /* FOC闭环,力位速混合控制 */
+        control->timeout = 0u;
+        control->torque = control->torque_feedforward;
+        control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
+        control->speed = control->plan.v * control->plan.direction_flag;
+
+        /* 半双工RS485总线上可能与其他电机共享huart,总线忙时本周期不发送,下一次空闲即发最新目标 */
+        GOM8010GroupRequest(group, i);
+    }
+}
+
+void GOM8010GroupRxEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart, uint16_t size)
+{
+    GOM8010BusArbiter_TypeDef *bus = &group->arbiter;
+
+    if (huart == NULL || bus->pending_motor == NULL || bus->pending_motor->huart == NULL ||
+        bus->pending_motor->huart->Instance != huart->Instance)
+        return; /* 不是本组总线的事件,或总线上没有电机在等应答(意外/迟到事件),丢弃 */
+
+    GOM8010MotorParseFeedback(bus->pending_motor, size);
+    bus->pending_motor = NULL; /* 释放总线,供下一个电机的请求使用 */
 }
