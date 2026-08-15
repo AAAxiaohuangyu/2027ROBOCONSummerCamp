@@ -12,9 +12,9 @@
 #define GO_M8010_REDUCTION_RATIO 6.33f /* 转子到输出端减速比,协议帧内部仍按转子侧数据收发,由驱动负责与本结构体的输出端数据互相换算 */
 
 /* 位置控制内置速度规划(七段S曲线)默认参数,调参从这里改 */
-#define GO_M8010_POS_CTRL_A_MAX 6.0f  /* 加速度上限 */
-#define GO_M8010_POS_CTRL_V_MAX 3.0f  /* 速度上限 */
-#define GO_M8010_POS_CTRL_J     24.0f /* 加加速度(jerk)上限 */
+#define GO_M8010_POS_CTRL_A_MAX 8.5f  /* 加速度上限 */
+#define GO_M8010_POS_CTRL_V_MAX 3.5f  /* 速度上限 */
+#define GO_M8010_POS_CTRL_J     32.0f /* 加加速度(jerk)上限 */
 #define GO_M8010_POS_CTRL_KP    0.55f /* 位置环增益kp */
 #define GO_M8010_POS_CTRL_KD    0.2f  /* 速度环增益kd */
 

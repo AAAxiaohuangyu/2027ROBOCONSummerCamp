@@ -76,9 +76,9 @@ J60关节电机CAN通信协议(标准帧,DLC 8):
 #define J60_TEMPERATURE_OFFSET (-20.0f)
 
 /* 位置控制内置速度规划(七段S曲线)默认参数,调参从这里改 */
-#define J60_POS_CTRL_A_MAX 6.0f /* 加速度上限 */
-#define J60_POS_CTRL_V_MAX 3.0f /* 速度上限 */
-#define J60_POS_CTRL_J 24.0f    /* 加加速度(jerk)上限 */
+#define J60_POS_CTRL_A_MAX 8.5f /* 加速度上限 */
+#define J60_POS_CTRL_V_MAX 3.5f /* 速度上限 */
+#define J60_POS_CTRL_J 32.0f    /* 加加速度(jerk)上限 */
 #define J60_POS_CTRL_KP 12.0f   /* 位置环增益kp */
 #define J60_POS_CTRL_KD 2.5f    /* 速度环增益kd */
 
