@@ -1,6 +1,8 @@
 #ifndef CHASSIS_CONFIG_H
 #define CHASSIS_CONFIG_H
 
+#include "bsp_config.h"
+
 /*
  * 底盘标定/物理参数集中入口,风格对齐 APP/Roboticarm/RoboticArm.h 中的
  * ROBOTICARM_* 宏:只保留待标定的机械量和运动规划参数,不含 RTOS、
@@ -29,9 +31,10 @@
 
 /*
  * 车轮角速度 rad/s 与电机转速 rpm 之间的单位换算系数,配合 CHASSIS_GEAR_RATIO
- * 用于 chassis_mecanum 的逆解/正解,数学关系固定,无需标定。
+ * 用于 chassis_mecanum 的逆解/正解,数学关系固定,无需标定。圆周率统一取自
+ * bsp_config.h 的 BSP_PI。
  */
-#define CHASSIS_MECANUM_PI                       (3.14159265358979323846f)
+#define CHASSIS_MECANUM_PI                       BSP_PI
 #define CHASSIS_MECANUM_RADPS_TO_RPM             (60.0f / (2.0f * CHASSIS_MECANUM_PI))
 #define CHASSIS_MECANUM_RPM_TO_RADPS             ((2.0f * CHASSIS_MECANUM_PI) / 60.0f)
 

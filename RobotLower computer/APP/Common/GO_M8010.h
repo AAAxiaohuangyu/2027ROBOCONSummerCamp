@@ -4,9 +4,10 @@
 #include "main.h"
 #include "usart.h"
 #include "StrategyAlogrithm.h"
+#include "bsp_config.h"
 #include <stdint.h>
 
-#define PI2 6.28318f /* 2*PI,用于rad与rev(转)之间的单位换算 */
+#define PI2 (2.0f * BSP_PI) /* 2*PI,用于rad与rev(转)之间的单位换算,PI统一取自bsp_config.h的BSP_PI */
 
 #define GO_M8010_REDUCTION_RATIO 6.33f /* 转子到输出端减速比,协议帧内部仍按转子侧数据收发,由驱动负责与本结构体的输出端数据互相换算 */
 

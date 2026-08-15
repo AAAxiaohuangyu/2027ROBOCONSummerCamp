@@ -30,26 +30,26 @@ DJI C620电调CAN通信协议(适用于C610/C620 + M2006/M3508系列电机)
 #define M3508_CURRENT_RAW_MAX 16384 /* 电流给定值幅值上限,对应20A */
 
 /* 双环(速度环+电流环)速度控制默认参数,调参从这里改 */
-#define M3508_SPEED_KP         9.0f    /* 速度环kp,误差单位rpm,输出为电流环的目标电流(raw) */
-#define M3508_SPEED_KI         0.02f
-#define M3508_SPEED_KD         9.0f
-#define M3508_SPEED_MAX_OUT    16384.0f /* 速度环输出限幅 */
-#define M3508_SPEED_MAX_IOUT   650.0f   /* 速度环积分限幅,抗积分饱和 */
+#define M3508_SPEED_KP 11.0f /* 速度环kp,误差单位rpm,输出为电流环的目标电流(raw) */
+#define M3508_SPEED_KI 0.2f
+#define M3508_SPEED_KD 1.2f
+#define M3508_SPEED_MAX_OUT 16384.0f /* 速度环输出限幅 */
+#define M3508_SPEED_MAX_IOUT 700.0f  /* 速度环积分限幅,抗积分饱和 */
 
-#define M3508_CURRENT_KP       0.9f    /* 电流环kp,误差为raw电流,输出为最终电流给定(raw) */
-#define M3508_CURRENT_KI       0.0002f
-#define M3508_CURRENT_KD       0.1f
-#define M3508_CURRENT_MAX_OUT  16384.0f /* 电流环输出限幅,协议满量程16384 */
-#define M3508_CURRENT_MAX_IOUT 1500.0f  /* 电流环积分限幅 */
+#define M3508_CURRENT_KP 0.43f /* 电流环kp,误差为raw电流,输出为最终电流给定(raw) */
+#define M3508_CURRENT_KI 0.001f
+#define M3508_CURRENT_KD 0.5f
+#define M3508_CURRENT_MAX_OUT 16384.0f /* 电流环输出限幅,协议满量程16384 */
+#define M3508_CURRENT_MAX_IOUT 1500.0f /* 电流环积分限幅 */
 
 #define M3508_GROUP_SIZE 4u /* DJI协议下1~4号、5~8号电调各共享一帧控制帧,每帧最多4台 */
 
 typedef struct
 {
-    uint16_t angle;       // 转子机械角度,0~8191对应0~360°
-    int16_t speed_rpm;    // 转速,单位rpm
-    int16_t current;      // 实际转矩电流(原始值)
-    uint8_t temperature;  // 电机温度,单位摄氏度
+    uint16_t angle;      // 转子机械角度,0~8191对应0~360°
+    int16_t speed_rpm;   // 转速,单位rpm
+    int16_t current;     // 实际转矩电流(原始值)
+    uint8_t temperature; // 电机温度,单位摄氏度
 
     uint32_t update_cnt; // 累计收到反馈帧的次数,可用于判断电调是否离线
 } M3508Feedback_TypeDef;
@@ -71,8 +71,8 @@ typedef struct
 
 typedef struct
 {
-    uint16_t ctrl_id;                          /* 组的控制id: M3508_CTRL_ID_1TO4 或 M3508_CTRL_ID_5TO8 */
-    FDCAN_HandleTypeDef *FDCAN_Handle;          /* 该组挂载的FDCAN总线实例 */
+    uint16_t ctrl_id;                      /* 组的控制id: M3508_CTRL_ID_1TO4 或 M3508_CTRL_ID_5TO8 */
+    FDCAN_HandleTypeDef *FDCAN_Handle;     /* 该组挂载的FDCAN总线实例 */
     M3508_TypeDef motor[M3508_GROUP_SIZE]; /* 组内4台电调,按ctrl_id自动分配id(1~4或5~8) */
 } M3508Group_TypeDef;
 

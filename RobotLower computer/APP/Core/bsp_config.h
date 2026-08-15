@@ -1,7 +1,8 @@
 /**
  * Core/bsp_config.h
- * 全局共享外设的语义化宏定义。各模块自己私有的引脚/外设宏放在各自模块文件夹下，
- * 这里只放跨模块共用的资源（通信总线、调试口），避免多人同时改动同一文件。
+ * 各模块挂载的外设句柄（FDCAN/UART等）与节点地址统一集中在此处定义，模块自身
+ * 头文件只保留标定参数、状态机等非外设配置，避免多人同时改动各自模块文件夹下
+ * 的外设宏而互相冲突。硬件分配变化时只改这里的宏值，不用改各模块的解析代码。
  */
 #ifndef __BSP_CONFIG_H__
 #define __BSP_CONFIG_H__
@@ -9,8 +10,19 @@
 #include "fdcan.h"
 #include "usart.h"
 
+/* 数学常量：float精度的圆周率，统一来源，避免各模块各自重复定义、精度不一致 */
+#define BSP_PI (3.14159265358979323846f)
+
 /* FDCAN 总线 1：通信总线，四个模块共用 */
 #define CANBUS1_HANDLE &hfdcan2
+
+/* 编码器(Encoder)双万向轮挂载外设句柄与节点ID，供EncoderInit()调用者传入。
+   x_axis(ID1)、y_axis(ID2)目前共用同一路FDCAN，靠节点id区分；更换CAN接口或
+   编码器ID时只改这里的宏值 */
+#define ENCODER_X_FDCAN_HANDLE (&hfdcan1)
+#define ENCODER_X_NODE_ID      1u
+#define ENCODER_Y_FDCAN_HANDLE (&hfdcan1)
+#define ENCODER_Y_NODE_ID      2u
 
 /* USART 1：调试打印口 */
 #define DEBUG_UART_HANDLE &huart1
