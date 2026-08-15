@@ -18,6 +18,10 @@
 #define GO_M8010_POS_CTRL_KP    0.55f /* 位置环增益kp */
 #define GO_M8010_POS_CTRL_KD    0.2f  /* 速度环增益kd */
 
+/* 定速模式默认参数:不做位置跟踪(kp=0),速度环增益沿用位置模式的kd */
+#define GO_M8010_VEL_CTRL_KP 0.0f
+#define GO_M8010_VEL_CTRL_KD GO_M8010_POS_CTRL_KD
+
 #define GO_M8010_CONTROL_FRAME_SIZE  17U
 #define GO_M8010_FEEDBACK_FRAME_SIZE 16U
 
@@ -38,11 +42,32 @@ typedef struct
     uint8_t bytes[GO_M8010_FEEDBACK_FRAME_SIZE];
 } GOM8010FeedbackPacket_TypeDef;
 
+typedef enum
+{
+    GOM8010_CTRL_MODE_POSITION = 0, /* 原控制模式:S速度规划闭环目标位置 */
+    GOM8010_CTRL_MODE_VELOCITY = 1, /* 定速模式:直接跟踪目标速度,kp=0 */
+} GOM8010CtrlMode_TypeDef;
+
+typedef struct
+{
+    float a_max;
+    float v_max;
+    float j;
+    float kp;
+    float kd;
+} GOM8010PositionCtrlParam_TypeDef;
+
+typedef struct
+{
+    float kp;
+    float kd;
+} GOM8010VelocityCtrlParam_TypeDef;
+
 /* 力位速混合控制的控制侧:内置速度规划(SpeedPlan),把"目标位置"闭环为torque前馈+kp/kd跟踪的position/speed指令,
    最终打包为待发送的控制帧。驱动内部使用,外部通过GOM8010Group*接口访问,不要直接操作 */
 typedef struct
 {
-    uint8_t mode;    /* 0=锁定,1=FOC闭环(力位速混合控制,常用模式),2=编码器校准 */
+    uint8_t mode;    /* 0=锁定,1=FOC闭环(力位速混合控制,常用模式),2=编码器校准;硬件模式,由驱动固定为1,与ctrl_mode无关 */
     uint8_t timeout;
     float torque;   /* 输出端扭矩,驱动内部换算为转子侧后再打包 */
     float speed;    /* 输出端转速,驱动内部换算为转子侧后再打包 */
@@ -50,8 +75,12 @@ typedef struct
     float kp;
     float kd;
     SpeedPlan_TypeDef plan;
-    float position_target;     /* 输出端目标位置 */
+    float position_target;     /* 输出端目标位置,模式0使用 */
+    float velocity_target;     /* 输出端目标转速,模式1使用 */
     float torque_feedforward;  /* 输出端前馈扭矩,由上层指定,叠加到kp/kd跟踪输出上 */
+    GOM8010CtrlMode_TypeDef ctrl_mode; /* 控制算法模式:0=位置(S规划) 1=定速,与硬件mode字段区分 */
+    GOM8010PositionCtrlParam_TypeDef position_param;
+    GOM8010VelocityCtrlParam_TypeDef velocity_param;
     GOM8010ControlPacket_TypeDef packet;
 } GOM8010Control_TypeDef;
 
@@ -110,8 +139,11 @@ void GOM8010GroupInit(GOM8010Group_TypeDef *group);
    组内所有电机须挂在同一路RS485总线(同一huart实例)上,共享同一份仲裁表 */
 uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_HandleTypeDef *huart);
 
-/* 下发新的目标位置,(重新)触发规划;运动中调用即为打断 */
+/* 下发新的目标位置,切换为模式0(位置模式)并(重新)触发规划;运动中调用即为打断 */
 void GOM8010GroupSetTarget(GOM8010Group_TypeDef *group, uint8_t index, float position_target);
+
+/* 下发新的目标速度,切换为模式1(定速模式):不做位置规划,kp=0,仅由kd跟踪目标速度 */
+void GOM8010GroupSetVelocityTarget(GOM8010Group_TypeDef *group, uint8_t index, float velocity_target);
 
 /* 下发前馈扭矩(输出端),叠加到kp/kd跟踪规划轨迹的输出上;默认0 */
 void GOM8010GroupSetTorqueFeedforward(GOM8010Group_TypeDef *group, uint8_t index, float torque_feedforward);

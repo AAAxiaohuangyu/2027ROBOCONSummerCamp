@@ -74,16 +74,32 @@ void J60MotorInit(J60Motor_TypeDef *motor, FDCAN_HandleTypeDef *FDCAN_Handle, ui
     motor->id = id & 0x0FU;
     motor->FDCAN_Handle = FDCAN_Handle;
 
-    SpeedPlanInit(&motor->control.plan, J60_POS_CTRL_A_MAX, J60_POS_CTRL_V_MAX, J60_POS_CTRL_J);
-    motor->control.kp = J60_POS_CTRL_KP;
-    motor->control.kd = J60_POS_CTRL_KD;
+    motor->control.position_param.a_max = J60_POS_CTRL_A_MAX;
+    motor->control.position_param.v_max = J60_POS_CTRL_V_MAX;
+    motor->control.position_param.j = J60_POS_CTRL_J;
+    motor->control.position_param.kp = J60_POS_CTRL_KP;
+    motor->control.position_param.kd = J60_POS_CTRL_KD;
+    motor->control.velocity_param.kp = J60_VEL_CTRL_KP;
+    motor->control.velocity_param.kd = J60_VEL_CTRL_KD;
+
+    SpeedPlanInit(&motor->control.plan, motor->control.position_param.a_max, motor->control.position_param.v_max, motor->control.position_param.j);
+    motor->control.mode = J60_CTRL_MODE_POSITION;
+    motor->control.kp = motor->control.position_param.kp;
+    motor->control.kd = motor->control.position_param.kd;
     motor->control.position_target = 0.0f;
 }
 
 void J60MotorSetTarget(J60Motor_TypeDef *motor, float position_target)
 {
+    motor->control.mode = J60_CTRL_MODE_POSITION;
     motor->control.position_target = position_target;
     motor->control.plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
+}
+
+void J60MotorSetVelocityTarget(J60Motor_TypeDef *motor, float velocity_target)
+{
+    motor->control.mode = J60_CTRL_MODE_VELOCITY;
+    motor->control.velocity_target = velocity_target;
 }
 
 void J60MotorSetTorqueFeedforward(J60Motor_TypeDef *motor, float torque_feedforward)
@@ -119,12 +135,26 @@ void J60MotorUpdate(J60Motor_TypeDef *motor)
     J60Control_TypeDef *control = &motor->control;
     float position_actual = motor->feedback.position; /* 电机CAN反馈的真实位置 */
 
-    SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
-
-    /* 力位速混合控制:torque前馈由上层指定,叠加到kp/kd跟踪规划轨迹给出的position/speed上 */
+    /* 力位速混合控制:torque前馈由上层指定,叠加到kp/kd跟踪输出上 */
     control->torque = control->torque_feedforward;
-    control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
-    control->velocity = control->plan.v * control->plan.direction_flag;
+
+    if (control->mode == J60_CTRL_MODE_VELOCITY)
+    {
+        /* 定速模式:不做位置规划,kp=0仅由kd跟踪目标速度;position取反馈实际位置,kp=0时不影响输出扭矩 */
+        control->kp = control->velocity_param.kp;
+        control->kd = control->velocity_param.kd;
+        control->position = position_actual;
+        control->velocity = control->velocity_target;
+    }
+    else
+    {
+        SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
+
+        control->kp = control->position_param.kp;
+        control->kd = control->position_param.kd;
+        control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
+        control->velocity = control->plan.v * control->plan.direction_flag;
+    }
 
     J60MotorSendControl(motor);
 }

@@ -38,7 +38,7 @@ DJI C620电调CAN通信协议(适用于C610/C620 + M2006/M3508系列电机)
 
 #define M3508_CURRENT_KP 0.43f /* 电流环kp,误差为raw电流,输出为最终电流给定(raw) */
 #define M3508_CURRENT_KI 0.001f
-#define M3508_CURRENT_KD 0.5f
+#define M3508_CURRENT_KD 0.45f
 #define M3508_CURRENT_MAX_OUT 16384.0f /* 电流环输出限幅,协议满量程16384 */
 #define M3508_CURRENT_MAX_IOUT 1500.0f /* 电流环积分限幅 */
 

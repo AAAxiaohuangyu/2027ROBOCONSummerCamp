@@ -82,6 +82,31 @@ J60关节电机CAN通信协议(标准帧,DLC 8):
 #define J60_POS_CTRL_KP 12.0f   /* 位置环增益kp */
 #define J60_POS_CTRL_KD 2.5f    /* 速度环增益kd */
 
+/* 定速模式默认参数:不做位置跟踪(kp=0),速度环增益沿用位置模式的kd */
+#define J60_VEL_CTRL_KP 0.0f
+#define J60_VEL_CTRL_KD J60_POS_CTRL_KD
+
+typedef enum
+{
+    J60_CTRL_MODE_POSITION = 0, /* 原控制模式:S速度规划闭环目标位置 */
+    J60_CTRL_MODE_VELOCITY = 1, /* 定速模式:直接跟踪目标速度,kp=0 */
+} J60CtrlMode_TypeDef;
+
+typedef struct
+{
+    float a_max;
+    float v_max;
+    float j;
+    float kp;
+    float kd;
+} J60PositionCtrlParam_TypeDef;
+
+typedef struct
+{
+    float kp;
+    float kd;
+} J60VelocityCtrlParam_TypeDef;
+
 /* 力位速混合控制的控制侧:内置速度规划(SpeedPlan),把"目标位置"闭环为torque前馈为0、kp/kd跟踪的
    position/speed指令,周期打包为控制帧发送 */
 typedef struct
@@ -92,8 +117,12 @@ typedef struct
     float kp;
     float kd;
     SpeedPlan_TypeDef plan;
-    float position_target;    /* 目标位置 */
+    float position_target;    /* 目标位置,模式0使用 */
+    float velocity_target;    /* 目标速度,模式1使用 */
     float torque_feedforward; /* 前馈扭矩,由上层指定,叠加到kp/kd跟踪输出上 */
+    J60CtrlMode_TypeDef mode;
+    J60PositionCtrlParam_TypeDef position_param;
+    J60VelocityCtrlParam_TypeDef velocity_param;
 } J60Control_TypeDef;
 
 typedef struct
@@ -119,8 +148,11 @@ typedef struct
    本函数不配置FDCAN过滤器,总线过滤器范围需由调用者通过FDCANStandardInit统一配置以覆盖所有J60反馈id */
 void J60MotorInit(J60Motor_TypeDef *motor, FDCAN_HandleTypeDef *FDCAN_Handle, uint8_t id);
 
-/* 下发新的目标位置,(重新)触发规划;运动中调用即为打断 */
+/* 下发新的目标位置,切换为模式0(位置模式)并(重新)触发规划;运动中调用即为打断 */
 void J60MotorSetTarget(J60Motor_TypeDef *motor, float position_target);
+
+/* 下发新的目标速度,切换为模式1(定速模式):不做位置规划,kp=0,仅由kd跟踪目标速度 */
+void J60MotorSetVelocityTarget(J60Motor_TypeDef *motor, float velocity_target);
 
 /* 下发前馈扭矩,叠加到kp/kd跟踪规划轨迹的输出上;默认0 */
 void J60MotorSetTorqueFeedforward(J60Motor_TypeDef *motor, float torque_feedforward);

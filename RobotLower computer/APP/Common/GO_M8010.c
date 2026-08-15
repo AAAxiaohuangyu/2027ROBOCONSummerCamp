@@ -287,9 +287,18 @@ uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_Handl
     motor->huart = huart;
     motor->control.mode = 1U; /* 默认FOC闭环(力位速混合控制),GO电机通常无需切换其他模式 */
 
-    SpeedPlanInit(&motor->control.plan, GO_M8010_POS_CTRL_A_MAX, GO_M8010_POS_CTRL_V_MAX, GO_M8010_POS_CTRL_J);
-    motor->control.kp = GO_M8010_POS_CTRL_KP;
-    motor->control.kd = GO_M8010_POS_CTRL_KD;
+    motor->control.position_param.a_max = GO_M8010_POS_CTRL_A_MAX;
+    motor->control.position_param.v_max = GO_M8010_POS_CTRL_V_MAX;
+    motor->control.position_param.j = GO_M8010_POS_CTRL_J;
+    motor->control.position_param.kp = GO_M8010_POS_CTRL_KP;
+    motor->control.position_param.kd = GO_M8010_POS_CTRL_KD;
+    motor->control.velocity_param.kp = GO_M8010_VEL_CTRL_KP;
+    motor->control.velocity_param.kd = GO_M8010_VEL_CTRL_KD;
+
+    SpeedPlanInit(&motor->control.plan, motor->control.position_param.a_max, motor->control.position_param.v_max, motor->control.position_param.j);
+    motor->control.ctrl_mode = GOM8010_CTRL_MODE_POSITION;
+    motor->control.kp = motor->control.position_param.kp;
+    motor->control.kd = motor->control.position_param.kd;
     motor->control.position_target = 0.0f;
 
     group->arbiter.motor_count++;
@@ -301,8 +310,17 @@ void GOM8010GroupSetTarget(GOM8010Group_TypeDef *group, uint8_t index, float pos
 {
     GOM8010Control_TypeDef *control = &group->motors[index].control;
 
+    control->ctrl_mode = GOM8010_CTRL_MODE_POSITION;
     control->position_target = position_target;
     control->plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
+}
+
+void GOM8010GroupSetVelocityTarget(GOM8010Group_TypeDef *group, uint8_t index, float velocity_target)
+{
+    GOM8010Control_TypeDef *control = &group->motors[index].control;
+
+    control->ctrl_mode = GOM8010_CTRL_MODE_VELOCITY;
+    control->velocity_target = velocity_target;
 }
 
 void GOM8010GroupSetTorqueFeedforward(GOM8010Group_TypeDef *group, uint8_t index, float torque_feedforward)
@@ -320,14 +338,28 @@ void GOM8010GroupUpdate(GOM8010Group_TypeDef *group)
         GOM8010Control_TypeDef *control = &motor->control;
         float position_actual = motor->feedback.position; /* 电机RS485反馈的真实位置 */
 
-        SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
-
-        /* 力位速混合控制:torque前馈由上层指定,叠加到kp/kd跟踪规划轨迹给出的position/speed上 */
-        control->mode = 1u; /* FOC闭环,力位速混合控制 */
+        /* 力位速混合控制:torque前馈由上层指定,叠加到kp/kd跟踪输出上 */
+        control->mode = 1u; /* FOC闭环,力位速混合控制(硬件模式,与ctrl_mode无关) */
         control->timeout = 0u;
         control->torque = control->torque_feedforward;
-        control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
-        control->speed = control->plan.v * control->plan.direction_flag;
+
+        if (control->ctrl_mode == GOM8010_CTRL_MODE_VELOCITY)
+        {
+            /* 定速模式:不做位置规划,kp=0仅由kd跟踪目标速度;position取反馈实际位置,kp=0时不影响输出扭矩 */
+            control->kp = control->velocity_param.kp;
+            control->kd = control->velocity_param.kd;
+            control->position = position_actual;
+            control->speed = control->velocity_target;
+        }
+        else
+        {
+            SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
+
+            control->kp = control->position_param.kp;
+            control->kd = control->position_param.kd;
+            control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
+            control->speed = control->plan.v * control->plan.direction_flag;
+        }
 
         /* 半双工RS485总线上可能与其他电机共享huart,总线忙时本周期不发送,下一次空闲即发最新目标 */
         GOM8010GroupRequest(group, i);
