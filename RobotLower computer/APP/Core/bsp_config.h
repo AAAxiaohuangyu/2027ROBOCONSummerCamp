@@ -13,9 +13,6 @@
 /* 数学常量：float精度的圆周率，统一来源，避免各模块各自重复定义、精度不一致 */
 #define BSP_PI (3.14159265358979323846f)
 
-/* FDCAN 总线 1：通信总线，四个模块共用 */
-#define CANBUS1_HANDLE &hfdcan2
-
 /* 编码器(Encoder)双万向轮挂载外设句柄与节点ID，供EncoderInit()调用者传入。
    x_axis(ID1)、y_axis(ID2)目前共用同一路FDCAN，靠节点id区分；更换CAN接口或
    编码器ID时只改这里的宏值 */
@@ -23,10 +20,6 @@
 #define ENCODER_X_NODE_ID      1u
 #define ENCODER_Y_FDCAN_HANDLE (&hfdcan1)
 #define ENCODER_Y_NODE_ID      2u
-
-/* USART 1：调试打印口 */
-#define DEBUG_UART_HANDLE &huart1
-#define DEBUG_UART_INSTANCE USART1
 
 /* 机械臂(RoboticArm)三电机挂载外设句柄与地址,占位:CubeMX尚未分配对应FDCAN/RS485外设、
    地址也未实测确定,暂不接实际句柄,待确定后直接改这里的宏值即可 */
@@ -42,7 +35,7 @@
 /* 底盘(Chassis)四台M3508电调组挂载外设句柄与控制帧ID,占位:CubeMX尚未分配对应FDCAN外设、
    控制帧ID(M3508_CTRL_ID_1TO4/M3508_CTRL_ID_5TO8)也未确定,暂不接实际句柄,待确定后直接
    改这里的宏值即可 */
-#define CHASSIS_FDCAN_HANDLE NULL /* 底盘四台M3508电调组FDCAN句柄,占位待定 */
+#define CHASSIS_FDCAN_HANDLE &hfdcan1 /* 底盘四台M3508电调组FDCAN句柄,占位待定 */
 #define CHASSIS_CTRL_ID 0x200u    /* 底盘电调组控制帧ID,占位待定 */
 
 /* 视觉(Vision)模块挂载串口句柄,占位:CubeMX尚未分配对应UART外设,暂不接实际句柄,

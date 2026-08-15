@@ -24,10 +24,10 @@
  * CHASSIS_HALF_WHEELBASE_M/HALF_TRACK_M:车体中心到前后/左右轮的距离,单位 m。
  * CHASSIS_GEAR_RATIO:电机轴转数/车轮转数,直驱填 1.0f。
  */
-#define CHASSIS_WHEEL_RADIUS_M                   (0.0f)
-#define CHASSIS_HALF_WHEELBASE_M                 (0.0f)
-#define CHASSIS_HALF_TRACK_M                     (0.0f)
-#define CHASSIS_GEAR_RATIO                       (0.0f)
+#define CHASSIS_WHEEL_RADIUS_M (0.079f)
+#define CHASSIS_HALF_WHEELBASE_M (0.246f)
+#define CHASSIS_HALF_TRACK_M (0.3144f)
+#define CHASSIS_GEAR_RATIO (3591.0f / 187.0f)
 
 /*
  * 车轮角速度 rad/s 与电机转速 rpm 之间的单位换算系数,配合 CHASSIS_GEAR_RATIO
