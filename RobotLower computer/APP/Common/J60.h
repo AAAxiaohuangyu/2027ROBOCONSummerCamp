@@ -84,7 +84,7 @@ J60关节电机CAN通信协议(标准帧,DLC 8):
 
 /* 定速模式默认参数:不做位置跟踪(kp=0),速度环增益沿用位置模式的kd */
 #define J60_VEL_CTRL_KP 0.0f
-#define J60_VEL_CTRL_KD J60_POS_CTRL_KD
+#define J60_VEL_CTRL_KD 3.5f
 
 typedef enum
 {

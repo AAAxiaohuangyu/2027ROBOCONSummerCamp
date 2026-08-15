@@ -20,7 +20,7 @@
 
 /* 定速模式默认参数:不做位置跟踪(kp=0),速度环增益沿用位置模式的kd */
 #define GO_M8010_VEL_CTRL_KP 0.0f
-#define GO_M8010_VEL_CTRL_KD GO_M8010_POS_CTRL_KD
+#define GO_M8010_VEL_CTRL_KD 0.3f
 
 #define GO_M8010_CONTROL_FRAME_SIZE  17U
 #define GO_M8010_FEEDBACK_FRAME_SIZE 16U
