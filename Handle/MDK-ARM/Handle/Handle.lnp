@@ -26,6 +26,7 @@
 "handle\stm32f1xx_hal_uart.o"
 "handle\system_stm32f1xx.o"
 "handle\process.o"
+"handle\zigbee.o"
 --strict --scatter "Handle\Handle.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

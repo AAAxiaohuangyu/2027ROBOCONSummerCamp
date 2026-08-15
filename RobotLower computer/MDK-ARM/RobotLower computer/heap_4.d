@@ -1,0 +1,13 @@
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
+robotlower computer\heap_4.o: D:\AppDowmload\KEIL\ARM\ARMCC\Bin\..\include\stdlib.h
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+robotlower computer\heap_4.o: D:\AppDowmload\KEIL\ARM\ARMCC\Bin\..\include\stddef.h
+robotlower computer\heap_4.o: D:\AppDowmload\KEIL\ARM\ARMCC\Bin\..\include\stdint.h
+robotlower computer\heap_4.o: ../Core/Inc/FreeRTOSConfig.h
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/portmacro.h
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
+robotlower computer\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h

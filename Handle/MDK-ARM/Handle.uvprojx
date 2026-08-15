@@ -535,6 +535,11 @@
               <FileType>1</FileType>
               <FilePath>..\User\process.c</FilePath>
             </File>
+            <File>
+              <FileName>zigbee.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\zigbee.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
