@@ -47,6 +47,10 @@ ROBOTICARM_FORWARD_K、ROBOTICARM_FORWARD_THRESHOLD、ROBOTICARM_ROD_LENGTH、RO
 
 #define ROBOTICARM_CONTROL_PERIOD_MS (3U)
 
+#define LOAD_MASS (2.267) /*负载质量,kg*/
+#define STRATEGYALGORITHM_GRAVITY_ACCEL (9.8f) /* 重力加速度,m/s^2 */
+#define GravityCompensationLift (LOAD_MASS * STRATEGYALGORITHM_GRAVITY_ACCEL * ROBOTICARM_LIFT_K)
+
 /* go_motors组内电机下标:0=前后平移机构(控制end_x),1=杆自转机构(控制rod_rotation) */
 enum
 {

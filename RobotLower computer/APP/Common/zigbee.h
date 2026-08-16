@@ -41,6 +41,9 @@ typedef struct
     int16_t omega;             /**< 旋转速度 */
 } ZigbeeChassisCmd_TypeDef;
 
+/*
+0:停止,1:正方向运动,2负方向运动
+*/
 typedef struct
 {
     int16_t front_back;        /**< 前后关节指令 */
@@ -48,6 +51,9 @@ typedef struct
     int16_t flip;              /**< 翻转关节指令 */
 } Joint_TypeDef;
 
+/*
+0:释放,1:抓取
+*/
 typedef struct
 {
     uint8_t grab;              /**< 抓取指令 */
