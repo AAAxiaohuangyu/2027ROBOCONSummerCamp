@@ -18,6 +18,7 @@
 #include "zigbee.h"
 #include "usart.h"
 #include <string.h>
+#include "bsp_config.h"
 
 /* CRC8，多项式 0x07，初值 0x00 */
 static uint8_t crc8_calc(const uint8_t *buf, uint16_t len)
@@ -66,14 +67,10 @@ static void data_pack(uint8_t *buf, const ZigbeeData_TypeDef *data)
     /*
      * 四个0/1指令合并到一个字节：
      * bit0：抓取
-     * bit1：释放
-     * bit2：急停
-     * bit3：模式切换
+     * bit1：急停
      */
     command_byte |= (uint8_t)((data->command.grab & 0x01U) << 0U);
-    command_byte |= (uint8_t)((data->command.release & 0x01U) << 1U);
-    command_byte |= (uint8_t)((data->command.emergency_stop & 0x01U) << 2U);
-    command_byte |= (uint8_t)((data->command.mode_switch & 0x01U) << 3U);
+    command_byte |= (uint8_t)((data->command.emergency_stop & 0x01U) << 1U);
 
     buf[12] = command_byte;
 }
@@ -106,9 +103,7 @@ static void data_unpack(ZigbeeData_TypeDef *data, const uint8_t *buf)
         (int16_t)(((uint16_t)buf[10] << 8U) | buf[11]);
     /* 解析四个0/1指令 */
     data->command.grab = (buf[12] >> 0U) & 0x01U;
-    data->command.release = (buf[12] >> 1U) & 0x01U;
-    data->command.emergency_stop = (buf[12] >> 2U) & 0x01U;
-    data->command.mode_switch = (buf[12] >> 3U) & 0x01U;
+    data->command.emergency_stop = (buf[12] >> 1U) & 0x01U;
 }
 
 /* 从 DMA 缓冲中搜索并解析一帧 */
@@ -142,6 +137,7 @@ static void frame_parse(ZigbeeHandle_TypeDef *zigbee, const uint8_t *buf, uint16
         }
 
         data_unpack(&zigbee->rx_data, &buf[i + 3U]);
+        zigbee->explained_data = zigbee->rx_data;
         zigbee->rx_valid = 1U;
         zigbee->status.rx_count++;
         zigbee->status.last_rx_tick = HAL_GetTick();
@@ -164,6 +160,8 @@ const uint8_t *Zigbee_GetATResponse(const ZigbeeHandle_TypeDef *zigbee)
 HAL_StatusTypeDef Zigbee_Init(ZigbeeHandle_TypeDef *zigbee)
 {
     memset(&zigbee->status, 0, sizeof(zigbee->status));
+    memset(&zigbee->rx_data, 0, sizeof(zigbee->rx_data));
+    memset(&zigbee->explained_data, 0, sizeof(zigbee->explained_data));
     zigbee->rx_valid = 0U;
     zigbee->status.state = ZIGBEE_STATE_DISCONNECTED;
     zigbee->status.last_rx_tick = HAL_GetTick(); /* 防止上电立即误判超时 */

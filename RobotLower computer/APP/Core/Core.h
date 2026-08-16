@@ -45,6 +45,11 @@ typedef enum
 /* 顶层状态机周期,单位ms */
 #define ROBOT_STATE_UPDATE_PERIOD_MS (5U)
 
+/* 手动模式下机械臂三电机(升降lift_motor、前后go_motors[ROBOTICARM_GO_FORWARD]、
+   自转go_motors[ROBOTICARM_GO_ROTATE])定速模式下的速度大小,三者共用同一数值,
+   方向由zigbee对应关节指令(0:停止,1:正方向,2:负方向)决定,占位,待标定 */
+#define ROBOT_MANUAL_ARM_VELOCITY (0.0f)
+
 /* KFS拾取流程相关状态,集中存放拾取动作、KFS序号及视觉判断请求的进度 */
 typedef struct
 {

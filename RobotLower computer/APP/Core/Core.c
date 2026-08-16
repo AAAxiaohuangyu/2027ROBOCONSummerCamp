@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "bsp_config.h"
 #include "cmsis_os2.h"
+#include "GasPump.h"
 
 Robot_TypeDef Robot;
 
@@ -191,9 +192,50 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             break;
 
         case ROBOT_STATE_MANUAL:
-            /* 手动操作模式,控制逻辑由其他模块负责,此处不作处理 */
-            break;
+        {
+            /* 手动操作模式,持续按zigbee最新解析出的数据(explained_data)下发,不消费
+               rx_valid;某个周期没有收到新帧时explained_data保持上一帧内容,目标继续按
+               原样下发,不会"冻结"或回零 */
+            float lift_velocity = 0.0f;
+            float forward_velocity = 0.0f;
+            float rotate_velocity = 0.0f;
 
+            /* 底盘直接下发原始速度,不经过位移S曲线规划 */
+            ChassisSetVelocity(&Robot->chassis, (float)Robot->zigbee.explained_data.chassis.speed_vx,
+                               (float)Robot->zigbee.explained_data.chassis.speed_vy,
+                               (float)Robot->zigbee.explained_data.chassis.omega);
+
+            /* 机械臂三电机均采用定速模式,速度大小固定为ROBOT_MANUAL_ARM_VELOCITY,
+               方向由对应关节指令决定(0:停止,1:正方向,2:负方向) */
+            if (Robot->zigbee.explained_data.joint.up_down == 1)
+                lift_velocity = ROBOT_MANUAL_ARM_VELOCITY;
+            else if (Robot->zigbee.explained_data.joint.up_down == 2)
+                lift_velocity = -ROBOT_MANUAL_ARM_VELOCITY;
+
+            if (Robot->zigbee.explained_data.joint.front_back == 1)
+                forward_velocity = ROBOT_MANUAL_ARM_VELOCITY;
+            else if (Robot->zigbee.explained_data.joint.front_back == 2)
+                forward_velocity = -ROBOT_MANUAL_ARM_VELOCITY;
+
+            if (Robot->zigbee.explained_data.joint.flip == 1)
+                rotate_velocity = ROBOT_MANUAL_ARM_VELOCITY;
+            else if (Robot->zigbee.explained_data.joint.flip == 2)
+                rotate_velocity = -ROBOT_MANUAL_ARM_VELOCITY;
+
+            J60MotorSetVelocityTarget(&Robot->roboticarm.lift_motor, lift_velocity);
+            GOM8010GroupSetVelocityTarget(&Robot->roboticarm.go_motors, ROBOTICARM_GO_FORWARD, forward_velocity);
+            GOM8010GroupSetVelocityTarget(&Robot->roboticarm.go_motors, ROBOTICARM_GO_ROTATE, rotate_velocity);
+
+            /* 抓取、急停均通过gaspump接口控制气泵开关;急停优先于抓取指令,强制关闭气泵 */
+            if (Robot->zigbee.explained_data.command.emergency_stop != 0U)
+                RoboticArmReleaseMotion();
+            else if (Robot->zigbee.explained_data.command.grab != 0U)
+                RoboticArmGripMotion();
+            else
+                RoboticArmReleaseMotion();
+
+            break;
+        }
         default:
             Robot->state = ROBOT_STATE_IDLE;
             break;
