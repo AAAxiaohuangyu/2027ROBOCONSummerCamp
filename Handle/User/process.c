@@ -1,12 +1,12 @@
 #include "process.h"
 
-static uint32_t adc_dma_buffer[ADC_CHANNELS];
+static uint16_t adc_dma_buffer[ADC_CHANNELS];
 
 static KeyStatus key_status[10];
 static uint32_t key_press_tick[10];
 
 //将0-4095adc值映射到正负最大平动速度间
-static int32_t ADC_MapSpeed(uint32_t adc_value, float max_speed)
+static float ADC_MapSpeed(uint16_t adc_value, float max_speed)
 {
     int32_t offset;
     float result;
@@ -17,7 +17,7 @@ static int32_t ADC_MapSpeed(uint32_t adc_value, float max_speed)
     /* 摇杆中心死区 */
     if ((offset >= -(int32_t)ADC_DEAD_ZONE) &&
         (offset <= (int32_t)ADC_DEAD_ZONE))
-        return 0;
+        result = 0.0f;
 
     if (offset > 0)
         result = ((float)offset / 2047.0f) *
@@ -26,27 +26,27 @@ static int32_t ADC_MapSpeed(uint32_t adc_value, float max_speed)
         result = ((float)offset / 2048.0f) *
                  max_speed;
 
-    return (int32_t)result;
+    return result;
 }
 
-//底盘定速旋转
-static int32_t ADC_MapOmega(uint32_t adc_value)
+//底盘定速旋转  0:不旋转,1:逆时针,2:顺时针
+static int32_t ADC_MapOmega(uint16_t adc_value)
 {
     int32_t offset;
-    float result;
+    int32_t result;
 
     offset = (int32_t)adc_value -
              (int32_t)ADC_CENTER_VALUE;
 
     if ((offset >= -(int32_t)ADC_DEAD_ZONE) &&
         (offset <= (int32_t)ADC_DEAD_ZONE))
-        return 0;
+        result = 0;
 
     if (offset < 0)
-        result = -(int32_t)ADC_OMEGA;
+        result = 1;
 
     else if (offset > 0)
-        result = (int32_t)ADC_OMEGA;
+        result = 2;
 
     return (int32_t)result;
 }
@@ -56,7 +56,6 @@ static uint8_t key_scan(HandleKey_t key, GPIO_TypeDef *key_port, uint16_t key_pi
     uint8_t index;
     uint8_t pressed;
     uint32_t now;
-    uint32_t confirm_time_ms;
 
     index = (uint8_t)key;
 
@@ -64,9 +63,6 @@ static uint8_t key_scan(HandleKey_t key, GPIO_TypeDef *key_port, uint16_t key_pi
     pressed = (HAL_GPIO_ReadPin(key_port, key_pin) == GPIO_PIN_RESET) ? 1U : 0U;
 
     now = HAL_GetTick();
-
-    /* 头文件中的单位为秒，转换成毫秒 */
-    confirm_time_ms = (uint32_t)(KEY_PRESS_THRESHOLD * 1000.0f);
 
     switch (key_status[index])
     {
@@ -88,7 +84,7 @@ static uint8_t key_scan(HandleKey_t key, GPIO_TypeDef *key_port, uint16_t key_pi
                 break;
             }
 
-            if ((now - key_press_tick[index]) >= confirm_time_ms)
+            if ((now - key_press_tick[index]) >= KEY_PRESS_THRESHOLD)
                 key_status[index] = KEY_PRESSED;
             
             break;
@@ -119,7 +115,7 @@ void Handle_Init(void)
     memset(key_press_tick, 0, sizeof(key_press_tick));
 
     HAL_ADCEx_Calibration_Start(ADC_ADDRESS);
-    HAL_ADC_Start_DMA(ADC_ADDRESS, adc_dma_buffer, ADC_CHANNELS);
+    HAL_ADC_Start_DMA(ADC_ADDRESS, (uint32_t*)adc_dma_buffer, ADC_CHANNELS);
 
     //串口收发相关均在zigbee文件中
 }
@@ -131,14 +127,27 @@ void HandleOrderProcess(SendData_t *sdata)
     sdata->ChassisData.chassis_vy = ADC_MapSpeed(adc_dma_buffer[ADC_SPEED_VY_INDEX], ADC_MAX_SPEED_VY);
     sdata->ChassisData.chassis_omega = ADC_MapOmega(adc_dma_buffer[ADC_OMEGA_INDEX]);
 
-    sdata->ArmData.mode_switch = key_scan(KEY_MODE, KEY_MODE_PORT, KEY_MODE_PIN);
     sdata->ArmData.emergency_stop = key_scan(KEY_STOP, KEY_STOP_PORT, KEY_STOP_PIN);
     sdata->ArmData.arm_grip = key_scan(KEY_GRIP, KEY_GRIP_PORT, KEY_GRIP_PIN);
-    //sdata->ArmData.arm_release = key_scan(KEY_RELEASE, KEY_RELEASE_PORT, KEY_RELEASE_PIN);
     sdata->ArmData.joint_forward = key_scan(KEY_FORWARD, KEY_FORWARD_PORT, KEY_FORWARD_PIN);
     sdata->ArmData.joint_backward = key_scan(KEY_BACKWARD, KEY_BACKWARD_PORT, KEY_BACKWARD_PIN);
     sdata->ArmData.joint_lift = key_scan(KEY_LIFT, KEY_LIFT_PORT, KEY_LIFT_PIN);
     sdata->ArmData.joint_down = key_scan(KEY_DOWN, KEY_DOWN_PORT, KEY_DOWN_PIN);
     sdata->ArmData.joint_positive_flip = key_scan(KEY_POSITIVE_FLIP, KEY_POS_FLIP_PORT, KEY_POS_FLIP_PIN);
     sdata->ArmData.joint_negative_flip = key_scan(KEY_NEGATIVE_FLIP, KEY_NEG_FLIP_PORT, KEY_NEG_FLIP_PIN);
+
+    if (sdata->ArmData.emergency_stop != 0U)
+    {
+        sdata->ChassisData.chassis_vx = 0.0f;
+        sdata->ChassisData.chassis_vy = 0.0f;
+        sdata->ChassisData.chassis_omega = 0U;
+
+        sdata->ArmData.arm_grip = 0U;
+        sdata->ArmData.joint_forward = 0U;
+        sdata->ArmData.joint_backward = 0U;
+        sdata->ArmData.joint_lift = 0U;
+        sdata->ArmData.joint_down = 0U;
+        sdata->ArmData.joint_positive_flip = 0U;
+        sdata->ArmData.joint_negative_flip = 0U;
+    }
 }

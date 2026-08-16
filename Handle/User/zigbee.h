@@ -52,9 +52,7 @@ typedef struct
 typedef struct
 {
     uint8_t grab;              /**< 抓取指令 */
-    uint8_t release;           /**< 释放指令 */
     uint8_t emergency_stop;    /**< 急停指令 */
-    uint8_t mode_switch;       /**< 模式切换指令 */
 } Command_TypeDef;
 
 typedef struct
@@ -85,6 +83,7 @@ typedef struct
     uint8_t       tx_buf[ZIGBEE_PAYLOAD_LEN + ZIGBEE_FRAME_OVERHEAD]; /**< 发送缓冲 */
     uint8_t       at_response[ZIGBEE_AT_RX_SIZE];                  /**< AT指令返回缓冲 */
     ZigbeeData_TypeDef rx_data;      /**< 最新解析完成的控制帧 */
+    ZigbeeData_TypeDef tx_data;       //发送数据
     uint8_t       rx_valid;          /**< 新帧就绪标志 */
     ZigbeeStatus_TypeDef status;     /**< 连接状态与统计信息 */
 } ZigbeeHandle_TypeDef;

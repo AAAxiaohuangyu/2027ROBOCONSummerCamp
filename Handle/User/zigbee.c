@@ -66,14 +66,10 @@ static void data_pack(uint8_t *buf, const ZigbeeData_TypeDef *data)
     /*
      * 四个0/1指令合并到一个字节：
      * bit0：抓取
-     * bit1：释放
-     * bit2：急停
-     * bit3：模式切换
+     * bit1：急停
      */
     command_byte |= (uint8_t)((data->command.grab & 0x01U) << 0U);
-    command_byte |= (uint8_t)((data->command.release & 0x01U) << 1U);
-    command_byte |= (uint8_t)((data->command.emergency_stop & 0x01U) << 2U);
-    command_byte |= (uint8_t)((data->command.mode_switch & 0x01U) << 3U);
+    command_byte |= (uint8_t)((data->command.emergency_stop & 0x01U) << 1U);
 
     buf[12] = command_byte;
 }
@@ -106,9 +102,7 @@ static void data_unpack(ZigbeeData_TypeDef *data, const uint8_t *buf)
         (int16_t)(((uint16_t)buf[10] << 8U) | buf[11]);
     /* 解析四个0/1指令 */
     data->command.grab = (buf[12] >> 0U) & 0x01U;
-    data->command.release = (buf[12] >> 1U) & 0x01U;
-    data->command.emergency_stop = (buf[12] >> 2U) & 0x01U;
-    data->command.mode_switch = (buf[12] >> 3U) & 0x01U;
+    data->command.emergency_stop = (buf[12] >> 1U) & 0x01U;
 }
 
 /* 从 DMA 缓冲中搜索并解析一帧 */

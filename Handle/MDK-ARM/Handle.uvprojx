@@ -311,7 +311,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>0</Optim>
+            <Optim>4</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -336,7 +336,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../User</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;..\User</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -409,6 +409,11 @@
               <FileName>dma.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/dma.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/i2c.c</FilePath>
             </File>
             <File>
               <FileName>tim.c</FileName>
@@ -501,6 +506,11 @@
               <FilePath>../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_exti.c</FilePath>
             </File>
             <File>
+              <FileName>stm32f1xx_hal_i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_i2c.c</FilePath>
+            </File>
+            <File>
               <FileName>stm32f1xx_hal_tim.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c</FilePath>
@@ -539,6 +549,16 @@
               <FileName>zigbee.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\zigbee.c</FilePath>
+            </File>
+            <File>
+              <FileName>oled.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\oled.c</FilePath>
+            </File>
+            <File>
+              <FileName>font.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\font.c</FilePath>
             </File>
           </Files>
         </Group>
