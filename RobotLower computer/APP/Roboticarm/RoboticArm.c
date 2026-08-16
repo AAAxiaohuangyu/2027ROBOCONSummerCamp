@@ -31,7 +31,8 @@ void RoboticArmInit(RoboticArm_TypeDef *arm,
     RoboticArmUpdateStateFromFeedback(arm);
 }
 
-void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float end_z_target)
+void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float end_z_target,
+                              float lift_torque_feedforward)
 {
     float distance_target = end_x_target - ROBOTICARM_BASE_X;
     float height_target = end_z_target - ROBOTICARM_END_Z_OFFSET;
@@ -40,6 +41,7 @@ void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float
     float theta_lift_target = (height_target - ROBOTICARM_LIFT_THRESHOLD) / ROBOTICARM_LIFT_K;
 
     J60MotorSetTarget(&arm->lift_motor, theta_lift_target);
+    J60MotorSetTorqueFeedforward(&arm->lift_motor, lift_torque_feedforward);
     GOM8010GroupSetTarget(&arm->go_motors, ROBOTICARM_GO_FORWARD, theta_forward_target);
 }
 

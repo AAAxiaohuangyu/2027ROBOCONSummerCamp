@@ -78,8 +78,10 @@ void RoboticArmInit(RoboticArm_TypeDef *arm,
                     UART_HandleTypeDef *rotate_huart, uint8_t rotate_id);
 
 /* 下发末端目标坐标(end_x, end_z),内部按几何关系反解为两个电机的目标转角并下发;
-   end_y由安装位置与杆长固定,不可控,故不作为参数 */
-void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float end_z_target);
+   end_y由安装位置与杆长固定,不可控,故不作为参数;lift_torque_feedforward为升降机构(J60)
+   电机的前馈力矩,叠加到其kp/kd跟踪输出上,用于重力补偿等场景 */
+void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float end_z_target,
+                              float lift_torque_feedforward);
 
 /* 下发杆自转目标角度,直接作为自转电机的目标转角下发(两者相等,无需换算) */
 void RoboticArmSetRodRotation(RoboticArm_TypeDef *arm, float rotation_target);

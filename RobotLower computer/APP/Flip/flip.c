@@ -13,7 +13,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, FlipState_TypeDef *flip_state
         target_z = flip_start_z +
                    FLIP_UP_DISTANCE_1;
 
-        RoboticArmSetEndPosition(arm, target_x, target_z);
+        RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
 
         if (PositionReached(arm, target_x, target_z, FLIP_POSITION_TOLERANCE_X, FLIP_POSITION_TOLERANCE_Z))
             *flip_state = FLIP_STATE_FORWARD;
@@ -26,7 +26,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, FlipState_TypeDef *flip_state
         target_z = flip_start_z +
                    FLIP_UP_DISTANCE_1;
 
-        RoboticArmSetEndPosition(arm, target_x, target_z);
+        RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
 
         if (PositionReached(arm, target_x, target_z, FLIP_POSITION_TOLERANCE_X, FLIP_POSITION_TOLERANCE_Z))
             *flip_state = FLIP_STATE_GRIP;
@@ -57,7 +57,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, FlipState_TypeDef *flip_state
         target_z = flip_start_z +
                    FLIP_UP_DISTANCE_1;
 
-        RoboticArmSetEndPosition(arm, target_x, target_z);
+        RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
 
         if (PositionReached(arm, target_x, target_z, FLIP_POSITION_TOLERANCE_X, FLIP_POSITION_TOLERANCE_Z))
             *flip_state = FLIP_STATE_RELEASE;
@@ -78,7 +78,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, FlipState_TypeDef *flip_state
         target_z = flip_start_z +
                    FLIP_UP_DISTANCE_1;
 
-        RoboticArmSetEndPosition(arm, target_x, target_z);
+        RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
 
         if (PositionReached(arm, target_x, target_z, FLIP_POSITION_TOLERANCE_X, FLIP_POSITION_TOLERANCE_Z))
             *flip_state = FLIP_STATE_UP_AFTER_RELEASE;
@@ -94,7 +94,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, FlipState_TypeDef *flip_state
                    FLIP_UP_DISTANCE_1 +
                    FLIP_UP_DISTANCE_2;
 
-        RoboticArmSetEndPosition(arm, target_x, target_z);
+        RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
 
         if (PositionReached(arm, target_x, target_z, FLIP_POSITION_TOLERANCE_X, FLIP_POSITION_TOLERANCE_Z))
             *flip_state = FLIP_STATE_BACK;
@@ -110,7 +110,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, FlipState_TypeDef *flip_state
         target_z = flip_start_z +
                    FLIP_UP_DISTANCE_1 + FLIP_UP_DISTANCE_2;
 
-        RoboticArmSetEndPosition(arm, target_x, target_z);
+        RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
 
         if (PositionReached(arm, target_x, target_z, FLIP_POSITION_TOLERANCE_X, FLIP_POSITION_TOLERANCE_Z))
             *flip_state = FLIP_STATE_DOWN;
@@ -128,7 +128,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, FlipState_TypeDef *flip_state
                    FLIP_UP_DISTANCE_2 -
                    FLIP_DOWN_DISTANCE;
 
-        RoboticArmSetEndPosition(arm, target_x, target_z);
+        RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
 
         if (PositionReached(arm, target_x, target_z, FLIP_POSITION_TOLERANCE_X, FLIP_POSITION_TOLERANCE_Z))
             *flip_state = FLIP_STATE_ROTATE_BACK;

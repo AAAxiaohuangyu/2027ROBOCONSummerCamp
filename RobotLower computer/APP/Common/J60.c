@@ -28,7 +28,7 @@ static uint16_t J60CommandId(uint8_t id, uint8_t command, uint8_t response)
            ((uint16_t)command << J60_CAN_ID_COMMAND_SHIFT);
 }
 
-/* 按协议打包8字节控制帧:位置/速度取自规划结果,kp/kd取自控制参数,torque前馈恒为0 */
+/* 按协议打包8字节控制帧:位置/速度取自规划结果,kp/kd取自控制参数*/
 static void J60PackControlFrame(J60Control_TypeDef *control, uint8_t *data)
 {
     uint64_t frame = 0;
