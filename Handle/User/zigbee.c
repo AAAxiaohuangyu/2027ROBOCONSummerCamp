@@ -230,6 +230,9 @@ void Zigbee_RxEventHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *hua
 {
     frame_parse(zigbee, zigbee->rx_dma_buf, Size);
 
-    HAL_UARTEx_ReceiveToIdle_DMA(huart, zigbee->rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
+     HAL_StatusTypeDef ret = HAL_UARTEx_ReceiveToIdle_DMA(huart, zigbee->rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
     __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
+
+    if (ret != HAL_OK)
+        zigbee->status.state = ZIGBEE_STATE_ERROR;
 }
