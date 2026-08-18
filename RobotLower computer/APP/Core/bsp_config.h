@@ -23,13 +23,13 @@
 
 /* 机械臂(RoboticArm)三电机挂载外设句柄与地址,占位:CubeMX尚未分配对应FDCAN/RS485外设、
    地址也未实测确定,暂不接实际句柄,待确定后直接改这里的宏值即可 */
-#define ROBOTICARM_LIFT_FDCAN_HANDLE &hfdcan2 /* 升降电机(J60)FDCAN句柄,占位待定 */
+#define ROBOTICARM_LIFT_FDCAN_HANDLE &hfdcan3 /* 升降电机(J60)FDCAN句柄,占位待定 */
 #define ROBOTICARM_LIFT_ID 1u                /* 升降电机(J60)CAN地址,占位待定 */
 
-#define ROBOTICARM_FORWARD_UART_HANDLE &huart5 /* 前后平移电机(GO)RS485串口句柄,占位待定 */
+#define ROBOTICARM_FORWARD_UART_HANDLE &huart3 /* 前后平移电机(GO)RS485串口句柄,占位待定 */
 #define ROBOTICARM_FORWARD_ID 3u            /* 前后平移电机(GO)RS485地址,占位待定 */
 
-#define ROBOTICARM_ROTATE_UART_HANDLE &huart5 /* 自转电机(GO)RS485串口句柄,占位待定 */
+#define ROBOTICARM_ROTATE_UART_HANDLE &huart3 /* 自转电机(GO)RS485串口句柄,占位待定 */
 #define ROBOTICARM_ROTATE_ID 7u            /* 自转电机(GO)RS485地址,占位待定 */
 
 /* 底盘(Chassis)四台M3508电调组挂载外设句柄与控制帧ID,占位:CubeMX尚未分配对应FDCAN外设、
@@ -40,8 +40,8 @@
 
 /* 视觉(Vision)模块挂载串口句柄,占位:CubeMX尚未分配对应UART外设,暂不接实际句柄,
    待确定后直接改这里的宏值即可 */
-#define VISION_UART_HANDLE ((UART_HandleTypeDef *)NULL)
+#define VISION_UART_HANDLE (&huart1)
 
-#define ZIGBEE_UART_HANDLE (huart1)
+#define ZIGBEE_UART_HANDLE (huart9)
 
 #endif /* __BSP_CONFIG_H__ */
