@@ -116,17 +116,17 @@ void EncoderInit(Encoder_TypeDef *encoder, EncoderTask_TypeDef *task,
 
     if (x_fdcan_handle == y_fdcan_handle)
     {
-        /* FilterIndex固定为1,目标RXFIFO0;同一条总线上两只编码器共用这一个过滤器，
+        /* FilterIndex固定为0,目标RXFIFO0;同一条总线上两只编码器共用这一个过滤器，
            必须合并成一次调用覆盖两只编码器的节点id，否则后一次调用会覆盖前一次的过滤器。 */
         uint8_t range_min = (x_node_id < y_node_id) ? x_node_id : y_node_id;
         uint8_t range_max = (x_node_id > y_node_id) ? x_node_id : y_node_id;
 
-        FDCANFilterInit(x_fdcan_handle, 1, range_min, range_max, FDCAN_FILTER_TO_RXFIFO0);
+        FDCANFilterInit(x_fdcan_handle, 0, range_min, range_max, FDCAN_FILTER_TO_RXFIFO0);
     }
     else
     {
-        FDCANFilterInit(x_fdcan_handle, 1, x_node_id, x_node_id, FDCAN_FILTER_TO_RXFIFO0);
-        FDCANFilterInit(y_fdcan_handle, 1, y_node_id, y_node_id, FDCAN_FILTER_TO_RXFIFO0);
+        FDCANFilterInit(x_fdcan_handle, 0, x_node_id, x_node_id, FDCAN_FILTER_TO_RXFIFO0);
+        FDCANFilterInit(y_fdcan_handle, 0, y_node_id, y_node_id, FDCAN_FILTER_TO_RXFIFO0);
     }
 }
 

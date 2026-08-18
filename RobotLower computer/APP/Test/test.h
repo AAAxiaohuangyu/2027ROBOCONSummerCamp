@@ -19,4 +19,8 @@ void TestChassisUpdateTask(void *argument);
 /* RTOS任务入口:周期发送编码器位置请求,触发编码器应答 */
 void TestEncoderUpdateTask(void *argument);
 
+/* RTOS任务入口:下发一次固定测试速度(ChassisSetVelocity),之后空转;
+   由TestChassisUpdateTask持续下发对应控制帧,用于验证电机能否按目标转动 */
+void TestChassisSetVelocityTask(void *argument);
+
 #endif

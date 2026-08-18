@@ -3,8 +3,8 @@
 #include "bsp_config.h"
 
 /* FDCAN FIFO0收到新报文:按hfdcan实例匹配到挂载在该总线上的电机/电调组/编码器,解析反馈;
-   命中J60(升降)后即返回,否则再尝试M3508电调组(底盘),最后尝试编码器(过滤器1),
-   避免不同子系统误解析对方的帧 */
+   命中J60(升降)后即返回,否则再尝试M3508电调组(底盘),最后尝试编码器(过滤器0),
+   均先判断句柄非空且实例匹配再进入对应解析,避免不同子系统误解析对方的帧 */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
     FDCAN_RxHeaderTypeDef rx_header;
@@ -30,7 +30,13 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         return;
     }
 
-    EncoderParseFeedback(&Robot.encoder, hfdcan, rx_header.Identifier, rx_data);
+    if ((Robot.encoder.x_axis.FDCAN_Handle != NULL &&
+         hfdcan->Instance == Robot.encoder.x_axis.FDCAN_Handle->Instance) ||
+        (Robot.encoder.y_axis.FDCAN_Handle != NULL &&
+         hfdcan->Instance == Robot.encoder.y_axis.FDCAN_Handle->Instance))
+    {
+        EncoderParseFeedback(&Robot.encoder, hfdcan, rx_header.Identifier, rx_data);
+    }
 }
 
 /* FDCAN FIFO1收到新报文:目前没有模块使用过滤器映射到RXFIFO1,保留空实现供后续扩展 */
