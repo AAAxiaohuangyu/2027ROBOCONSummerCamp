@@ -22,6 +22,11 @@ extern "C" {
 
 /* 车轮角速度 rad/s 与电机转速 rpm 之间的单位换算系数,定义见 chassis_config.h。 */
 
+#define CHASSIS_MECANUM_WHEEL_FRONT_LEFT_DIRECTION 1
+#define CHASSIS_MECANUM_WHEEL_FRONT_RIGHT_DIRECTION -1
+#define CHASSIS_MECANUM_WHEEL_REAR_LEFT_DIRECTION 1
+#define CHASSIS_MECANUM_WHEEL_REAR_RIGHT_DIRECION -1
+
 /* 数组下标固定为 FL、FR、RL、RR。 */
 typedef enum
 {

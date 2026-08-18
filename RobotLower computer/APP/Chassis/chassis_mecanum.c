@@ -28,21 +28,25 @@ void ChassisMecanum_Inverse(
      *   RL = (Vx + Vy - L*Wz) / r      RR = (Vx - Vy + L*Wz) / r
      */
     wheel_radps[CHASSIS_MECANUM_WHEEL_FRONT_LEFT] =
-        (body_velocity->vx_mps - body_velocity->vy_mps -
-         rotation_arm_m * body_velocity->wz_radps) /
-        mecanum->config.wheel_radius_m;
+        ((body_velocity->vx_mps - body_velocity->vy_mps -
+          rotation_arm_m * body_velocity->wz_radps) /
+         mecanum->config.wheel_radius_m) *
+        CHASSIS_MECANUM_WHEEL_FRONT_LEFT_DIRECTION;
     wheel_radps[CHASSIS_MECANUM_WHEEL_FRONT_RIGHT] =
-        (body_velocity->vx_mps + body_velocity->vy_mps +
-         rotation_arm_m * body_velocity->wz_radps) /
-        mecanum->config.wheel_radius_m;
+        ((body_velocity->vx_mps + body_velocity->vy_mps +
+          rotation_arm_m * body_velocity->wz_radps) /
+         mecanum->config.wheel_radius_m) *
+        CHASSIS_MECANUM_WHEEL_FRONT_RIGHT_DIRECTION;
     wheel_radps[CHASSIS_MECANUM_WHEEL_REAR_LEFT] =
-        (body_velocity->vx_mps + body_velocity->vy_mps -
-         rotation_arm_m * body_velocity->wz_radps) /
-        mecanum->config.wheel_radius_m;
+        ((body_velocity->vx_mps + body_velocity->vy_mps -
+          rotation_arm_m * body_velocity->wz_radps) /
+         mecanum->config.wheel_radius_m) *
+        CHASSIS_MECANUM_WHEEL_REAR_LEFT_DIRECTION;
     wheel_radps[CHASSIS_MECANUM_WHEEL_REAR_RIGHT] =
-        (body_velocity->vx_mps - body_velocity->vy_mps +
-         rotation_arm_m * body_velocity->wz_radps) /
-        mecanum->config.wheel_radius_m;
+        ((body_velocity->vx_mps - body_velocity->vy_mps +
+          rotation_arm_m * body_velocity->wz_radps) /
+         mecanum->config.wheel_radius_m) *
+        CHASSIS_MECANUM_WHEEL_REAR_RIGHT_DIRECION;
 
     /* 车轮 rad/s -> 电机轴 rpm：乘减速比、单位换算、安装方向修正。 */
     for (index = 0U; index < CHASSIS_MECANUM_WHEEL_COUNT; ++index)
