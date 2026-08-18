@@ -13,8 +13,8 @@
 /* 数据帧格式 */
 #define ZIGBEE_FRAME_SOF0 0xAAU /* 帧头第一字节 */
 #define ZIGBEE_FRAME_SOF1 0x55U /* 帧头第二字节 */
-/** 帧固定：SOF×2 + LEN(1B) + CRC8(1B) = 4 字节 */
-#define ZIGBEE_FRAME_OVERHEAD 4U
+/** 帧固定：SOF×2 + LEN(1B) = 3 字节 */
+#define ZIGBEE_FRAME_OVERHEAD 3U
 
 /*
  * 有效载荷：
@@ -77,7 +77,7 @@ typedef struct
 {
     ZigbeeState_e state;   /**< 当前连接状态 */
     uint32_t rx_count;     /**< 累计有效帧数 */
-    uint32_t error_count;  /**< 累计错误次数（CRC失败+重连） */
+    uint32_t error_count;  /**< 累计错误次数 */
     uint32_t last_rx_tick; /**< 最后收到有效帧时的 HAL tick */
 } ZigbeeStatus_TypeDef;
 
