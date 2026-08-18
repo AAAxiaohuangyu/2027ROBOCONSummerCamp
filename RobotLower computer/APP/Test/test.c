@@ -1,0 +1,30 @@
+#include "test.h"
+#include "Core.h"
+#include "bsp_config.h"
+
+static EncoderTask_TypeDef TestEncoderTask;
+
+void TestChassisEncoderRxInit(void)
+{
+    ChassisInit(&Robot.chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
+    FDCANStandardInit(Robot.chassis.drive.motor_group.FDCAN_Handle,
+                       M3508_FEEDBACK_ID_BASE + M3508_ID_MIN,
+                       M3508_FEEDBACK_ID_BASE + M3508_ID_MAX); /* 过滤器0 -> RXFIFO0 */
+
+    EncoderInit(&Robot.encoder, &TestEncoderTask,
+                ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID, ENCODER_X_DIRECTION_SIGN,
+                ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID, ENCODER_Y_DIRECTION_SIGN,
+                NULL, NULL); /* 过滤器1 -> RXFIFO1 */
+}
+
+void TestChassisUpdateTask(void *argument)
+{
+    (void)argument;
+    ChassisUpdate(&Robot.chassis); /* ChassisInit后velocity=0/mode=1,持续下发0电流控制帧触发电调反馈 */
+}
+
+void TestEncoderUpdateTask(void *argument)
+{
+    (void)argument;
+    EncoderUpdate(&TestEncoderTask); /* 周期发位置请求触发encoder应答 */
+}

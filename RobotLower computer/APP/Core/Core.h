@@ -3,6 +3,7 @@
 
 #include "RoboticArm.h"
 #include "chassis.h"
+#include "encoder.h"
 #include "zigbee.h"
 #include "flip.h"
 #include "Pickup.h"
@@ -68,6 +69,7 @@ typedef struct
     RobotState_TypeDef state;
     RoboticArm_TypeDef roboticarm;
     Chassis_TypeDef chassis;
+    Encoder_TypeDef encoder;
     ZigbeeHandle_TypeDef zigbee;
     FlipState_TypeDef flip_state;
     RobotPickup_TypeDef pickup;

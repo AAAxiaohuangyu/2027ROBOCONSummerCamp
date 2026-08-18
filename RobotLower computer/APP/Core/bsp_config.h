@@ -16,14 +16,14 @@
 /* 编码器(Encoder)双万向轮挂载外设句柄与节点ID，供EncoderInit()调用者传入。
    x_axis(ID1)、y_axis(ID2)目前共用同一路FDCAN，靠节点id区分；更换CAN接口或
    编码器ID时只改这里的宏值 */
-#define ENCODER_X_FDCAN_HANDLE (&hfdcan1)
+#define ENCODER_X_FDCAN_HANDLE (&hfdcan3)
 #define ENCODER_X_NODE_ID      1u
-#define ENCODER_Y_FDCAN_HANDLE (&hfdcan1)
+#define ENCODER_Y_FDCAN_HANDLE (&hfdcan3)
 #define ENCODER_Y_NODE_ID      2u
 
 /* 机械臂(RoboticArm)三电机挂载外设句柄与地址,占位:CubeMX尚未分配对应FDCAN/RS485外设、
    地址也未实测确定,暂不接实际句柄,待确定后直接改这里的宏值即可 */
-#define ROBOTICARM_LIFT_FDCAN_HANDLE &hfdcan3 /* 升降电机(J60)FDCAN句柄,占位待定 */
+#define ROBOTICARM_LIFT_FDCAN_HANDLE &hfdcan1 /* 升降电机(J60)FDCAN句柄,占位待定 */
 #define ROBOTICARM_LIFT_ID 1u                /* 升降电机(J60)CAN地址,占位待定 */
 
 #define ROBOTICARM_FORWARD_UART_HANDLE &huart3 /* 前后平移电机(GO)RS485串口句柄,占位待定 */
