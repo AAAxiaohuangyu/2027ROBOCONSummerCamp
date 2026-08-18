@@ -28,6 +28,7 @@ void TestEncoderUpdateTask(void *argument)
 {
     (void)argument;
     EncoderUpdate(&TestEncoderTask); /* 周期发位置请求触发encoder应答 */
+    ChassisSetPosition(&Robot.chassis, Robot.encoder.x_m, Robot.encoder.y_m);
 }
 
 void TestChassisSetVelocityTask(void *argument)
@@ -36,5 +37,15 @@ void TestChassisSetVelocityTask(void *argument)
     {
         ChassisSetVelocity(&Robot.chassis, 0.1f, 0.0f, 0.0f); /* 固定测试速度,验证电机能否按目标转动;TestChassisUpdateTask持续下发该速度对应的控制帧 */
         osDelay(100);
+    }
+}
+
+void TestChassisSetPositionTask(void *argument)
+{
+    ChassisSetTranslation(&Robot.chassis,2.5f,0.0f);
+    (void)argument;
+    for (;;)
+    {
+        osDelay(1000);
     }
 }

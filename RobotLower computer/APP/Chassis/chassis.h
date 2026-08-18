@@ -87,6 +87,10 @@ void ChassisSetTranslation(Chassis_TypeDef *chassis, float dx_m, float dy_m);
    不影响平移目标;运动过程速度由 ChassisUpdate 中的规划器给出 */
 void ChassisSetYaw(Chassis_TypeDef *chassis, float dyaw_rad);
 
+/* 位姿写入接口:直接覆盖 pose.x_m/y_m(不改 yaw_rad),供外部里程计/位姿融合
+   模块(如编码器积分)按周期写入当前位置,本文件不做任何计算或校验 */
+void ChassisSetPosition(Chassis_TypeDef *chassis, float x_m, float y_m);
+
 /* 停止接口:切回原始速度模式并强制车体速度三分量清零,立即生效,
    不经过 S 曲线减速 */
 void ChassisStop(Chassis_TypeDef *chassis);

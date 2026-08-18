@@ -96,6 +96,12 @@ void ChassisSetYaw(Chassis_TypeDef *chassis, float dyaw_rad)
     chassis->displacement_plan.yaw.state = init;
 }
 
+void ChassisSetPosition(Chassis_TypeDef *chassis, float x_m, float y_m)
+{
+    chassis->pose.x_m = x_m;
+    chassis->pose.y_m = y_m;
+}
+
 void ChassisUpdate(Chassis_TypeDef *chassis)
 {
     while (1)

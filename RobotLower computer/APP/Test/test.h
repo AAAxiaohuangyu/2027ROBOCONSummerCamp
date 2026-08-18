@@ -23,4 +23,9 @@ void TestEncoderUpdateTask(void *argument);
    由TestChassisUpdateTask持续下发对应控制帧,用于验证电机能否按目标转动 */
 void TestChassisSetVelocityTask(void *argument);
 
+/* RTOS任务入口:只把编码器坐标(Robot.encoder.x_m/y_m)赋值一次给底盘坐标
+   (ChassisSetPosition),之后空转;避免循环重复调用打断规划,用于验证
+   SetPosition接口;需TestEncoderUpdateTask同时运行且编码器坐标已更新 */
+void TestChassisSetPositionTask(void *argument);
+
 #endif

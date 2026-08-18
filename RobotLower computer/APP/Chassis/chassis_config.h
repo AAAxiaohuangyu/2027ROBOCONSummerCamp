@@ -48,9 +48,9 @@
  * 位移接口使用的七段 S 曲线参数,平移和偏航各用一条独立规划器。
  * 平移单位为 m/s^2、m/s、m/s^3,偏航单位为 rad/s^2、rad/s、rad/s^3。
  */
-#define CHASSIS_PLAN_TRANSLATION_MAX_ACCEL_MPS2  (0.0f)
-#define CHASSIS_PLAN_TRANSLATION_MAX_SPEED_MPS   (0.0f)
-#define CHASSIS_PLAN_TRANSLATION_MAX_JERK_MPS3   (0.0f)
+#define CHASSIS_PLAN_TRANSLATION_MAX_ACCEL_MPS2  (0.4f)
+#define CHASSIS_PLAN_TRANSLATION_MAX_SPEED_MPS   (0.2f)
+#define CHASSIS_PLAN_TRANSLATION_MAX_JERK_MPS3   (1.6f)
 
 #define CHASSIS_PLAN_YAW_MAX_ACCEL_RADPS2        (0.0f)
 #define CHASSIS_PLAN_YAW_MAX_SPEED_RADPS         (0.0f)
