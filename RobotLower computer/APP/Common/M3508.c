@@ -1,5 +1,48 @@
 #include "M3508.h"
 
+static void M3508FrictionParams(uint8_t id, float *ff, float *deadzone)
+{
+    switch (id)
+    {
+    case 1:
+        *ff = M3508_FRICTION_FF_1;
+        *deadzone = M3508_FRICTION_DEADZONE_1;
+        break;
+    case 2:
+        *ff = M3508_FRICTION_FF_2;
+        *deadzone = M3508_FRICTION_DEADZONE_2;
+        break;
+    case 3:
+        *ff = M3508_FRICTION_FF_3;
+        *deadzone = M3508_FRICTION_DEADZONE_3;
+        break;
+    case 4:
+        *ff = M3508_FRICTION_FF_4;
+        *deadzone = M3508_FRICTION_DEADZONE_4;
+        break;
+    case 5:
+        *ff = M3508_FRICTION_FF_5;
+        *deadzone = M3508_FRICTION_DEADZONE_5;
+        break;
+    case 6:
+        *ff = M3508_FRICTION_FF_6;
+        *deadzone = M3508_FRICTION_DEADZONE_6;
+        break;
+    case 7:
+        *ff = M3508_FRICTION_FF_7;
+        *deadzone = M3508_FRICTION_DEADZONE_7;
+        break;
+    case 8:
+        *ff = M3508_FRICTION_FF_8;
+        *deadzone = M3508_FRICTION_DEADZONE_8;
+        break;
+    default:
+        *ff = 0.0f;
+        *deadzone = 0.0f;
+        break;
+    }
+}
+
 static void M3508Init(M3508_TypeDef *motor, uint8_t id)
 {
     if (id < M3508_ID_MIN || id > M3508_ID_MAX)
@@ -19,6 +62,7 @@ static void M3508Init(M3508_TypeDef *motor, uint8_t id)
                    M3508_CURRENT_MAX_OUT, M3508_CURRENT_MAX_IOUT);
     motor->control.speed_target = 0.0f;
     motor->control.current_output = 0;
+    M3508FrictionParams(id, &motor->control.friction_ff, &motor->control.friction_deadzone);
 }
 
 static uint8_t M3508FeedbackId(uint32_t std_id)
@@ -54,8 +98,20 @@ static int16_t M3508SpeedControlCalc(M3508_TypeDef *motor)
 {
     float speed_actual = (float)motor->feedback.speed_rpm;
     float current_actual = (float)motor->feedback.current;
+    float speed_target = motor->control.speed_target;
 
-    float current_out = CascadePIDCalc(&motor->control.pid, speed_actual, motor->control.speed_target, current_actual);
+    float current_out = CascadePIDCalc(&motor->control.pid, speed_actual, speed_target, current_actual);
+
+    if (speed_target > motor->control.friction_deadzone)
+        current_out += motor->control.friction_ff;
+    else if (speed_target < -motor->control.friction_deadzone)
+        current_out -= motor->control.friction_ff;
+
+    if (current_out > M3508_CURRENT_RAW_MAX)
+        current_out = M3508_CURRENT_RAW_MAX;
+    else if (current_out < -M3508_CURRENT_RAW_MAX)
+        current_out = -M3508_CURRENT_RAW_MAX;
+
     motor->control.current_output = (int16_t)current_out;
 
     return motor->control.current_output;

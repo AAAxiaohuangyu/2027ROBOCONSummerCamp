@@ -42,6 +42,27 @@ DJI C620电调CAN通信协议(适用于C610/C620 + M2006/M3508系列电机)
 #define M3508_CURRENT_MAX_OUT 16384.0f /* 电流环输出限幅,协议满量程16384 */
 #define M3508_CURRENT_MAX_IOUT 1500.0f /* 电流环积分限幅 */
 
+/* 摩擦力矩前馈补偿:按目标转速方向叠加一个固定电流(raw),用于抵消电机静摩擦/库仑摩擦;
+   每台电调(按id 1~8)单独标定,数值需实测调整。前馈电流(raw),死区单位rpm(|speed_target|小于
+   死区时不加前馈,避免零速蠕动/抖动) */
+#define M3508_FRICTION_FF_1 400.0f
+#define M3508_FRICTION_FF_2 400.0f
+#define M3508_FRICTION_FF_3 400.0f
+#define M3508_FRICTION_FF_4 400.0f
+#define M3508_FRICTION_FF_5 0.0f
+#define M3508_FRICTION_FF_6 0.0f
+#define M3508_FRICTION_FF_7 0.0f
+#define M3508_FRICTION_FF_8 0.0f
+
+#define M3508_FRICTION_DEADZONE_1 0.02f
+#define M3508_FRICTION_DEADZONE_2 0.02f
+#define M3508_FRICTION_DEADZONE_3 0.02f
+#define M3508_FRICTION_DEADZONE_4 0.02f
+#define M3508_FRICTION_DEADZONE_5 0.0f
+#define M3508_FRICTION_DEADZONE_6 0.0f
+#define M3508_FRICTION_DEADZONE_7 0.0f
+#define M3508_FRICTION_DEADZONE_8 0.0f
+
 #define M3508_GROUP_SIZE 4u /* DJI协议下1~4号、5~8号电调各共享一帧控制帧,每帧最多4台 */
 
 typedef struct
@@ -57,9 +78,11 @@ typedef struct
 /* 双环(速度环+电流环)速度控制:目标转速直接闭环,不做速度规划;PID通用算法见Common/ControlAlgorithm */
 typedef struct
 {
-    CascadePID_TypeDef pid; /* outer=速度环(误差=目标转速-反馈转速rpm),inner=电流环(误差=电流环目标-反馈电流raw) */
-    float speed_target;     /* 目标转速,单位rpm */
-    int16_t current_output; /* 本次计算得到的电流给定值 */
+    CascadePID_TypeDef pid;  /* outer=速度环(误差=目标转速-反馈转速rpm),inner=电流环(误差=电流环目标-反馈电流raw) */
+    float speed_target;      /* 目标转速,单位rpm */
+    int16_t current_output;  /* 本次计算得到的电流给定值 */
+    float friction_ff;       /* 摩擦力矩前馈电流(raw),按id标定,见M3508_FRICTION_FF_x */
+    float friction_deadzone; /* 前馈死区,单位rpm,按id标定,见M3508_FRICTION_DEADZONE_x */
 } M3508Control_TypeDef;
 
 typedef struct
