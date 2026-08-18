@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "test.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +45,19 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+osThreadId_t TestChassisUpdateTaskHandle;
+const osThreadAttr_t TestChassisUpdateTask_attributes = {
+  .name = "TestChassisUpdateTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
 
+osThreadId_t TestChassisSetVelocityTaskHandle;
+const osThreadAttr_t TestChassisSetVelocityTask_attributes = {
+  .name = "TestChassisSetVelocityTask",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -71,7 +83,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-
+  TestChassisSetVelocityInit();
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -96,6 +108,8 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  TestChassisUpdateTaskHandle = osThreadNew(TestChassisUpdateTask, NULL, &TestChassisUpdateTask_attributes);
+  TestChassisSetVelocityTaskHandle = osThreadNew(TestChassisSetVelocityTask, NULL, &TestChassisSetVelocityTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 
