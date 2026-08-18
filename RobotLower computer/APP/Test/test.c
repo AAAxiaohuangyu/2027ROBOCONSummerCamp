@@ -13,9 +13,9 @@ void TestChassisEncoderRxInit(void)
                        M3508_FEEDBACK_ID_BASE + M3508_ID_MAX); /* 过滤器0 -> RXFIFO0 */
 
     EncoderInit(&Robot.encoder, &TestEncoderTask,
-                ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID, ENCODER_X_DIRECTION_SIGN,
-                ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID, ENCODER_Y_DIRECTION_SIGN,
-                NULL, NULL); /* 过滤器0 -> RXFIFO0 */
+                ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID,
+                ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID,
+                NULL, NULL); /* 过滤器0 -> RXFIFO1 */
 }
 
 void TestChassisUpdateTask(void *argument)

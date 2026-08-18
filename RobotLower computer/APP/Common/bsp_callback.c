@@ -2,9 +2,9 @@
 #include "Core.h"
 #include "bsp_config.h"
 
-/* FDCAN FIFO0收到新报文:按hfdcan实例匹配到挂载在该总线上的电机/电调组/编码器,解析反馈;
-   命中J60(升降)后即返回,否则再尝试M3508电调组(底盘),最后尝试编码器(过滤器0),
-   均先判断句柄非空且实例匹配再进入对应解析,避免不同子系统误解析对方的帧 */
+/* FDCAN FIFO0收到新报文:按hfdcan实例匹配到挂载在该总线上的电机/电调组,解析反馈;
+   命中J60(升降)后即返回,否则再尝试M3508电调组(底盘),均先判断句柄非空且实例匹配
+   再进入对应解析,避免不同子系统误解析对方的帧 */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
     FDCAN_RxHeaderTypeDef rx_header;
@@ -29,6 +29,19 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         M3508GroupParseFeedback(&Robot.chassis.drive.motor_group, rx_header.Identifier, rx_data);
         return;
     }
+}
+
+/* FDCAN FIFO1收到新报文:目前仅编码器(过滤器0)映射到RXFIFO1 */
+void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
+{
+    FDCAN_RxHeaderTypeDef rx_header;
+    uint8_t rx_data[8];
+
+    if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) == 0U)
+        return;
+
+    if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK)
+        return;
 
     if ((Robot.encoder.x_axis.FDCAN_Handle != NULL &&
          hfdcan->Instance == Robot.encoder.x_axis.FDCAN_Handle->Instance) ||
@@ -37,13 +50,6 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     {
         EncoderParseFeedback(&Robot.encoder, hfdcan, rx_header.Identifier, rx_data);
     }
-}
-
-/* FDCAN FIFO1收到新报文:目前没有模块使用过滤器映射到RXFIFO1,保留空实现供后续扩展 */
-void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
-{
-    (void)hfdcan;
-    (void)RxFifo1ITs;
 }
 
 /* UART空闲线收到一帧:按huart实例分发。ZigBee走独立处理;forward/rotate两个GO电机可能共享

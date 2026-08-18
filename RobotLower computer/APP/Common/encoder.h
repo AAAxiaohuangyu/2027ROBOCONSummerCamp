@@ -35,25 +35,18 @@
  */
 
 /* 两只万向轮当前均按直径 10 cm 计算；距离单位统一为 m。 */
-#define ENCODER_WHEEL_DIAMETER_M          (0.10f)
+#define ENCODER_WHEEL_DIAMETER_M          (0.05f)
 #define ENCODER_WHEEL_RADIUS_M            (ENCODER_WHEEL_DIAMETER_M * 0.5f)
 
 /*
- * 当实际滚动的正方向与编码器位置计数增加方向一致时设为 +1；相反时设为 -1。
- * 这只影响最终 x/y 的正负号，不修改编码器本身的方向配置。
+ * 两只编码器滚动方向与底盘坐标系 x 轴的夹角，角度制，逆时针为正，取值范围不限于
+ * 0~90 度。若编码器计数增加方向与实际滚动正方向相反，直接把该轴角度加/减 180 度
+ * 即可翻转，无需额外的方向符号参数（cos(θ+180°)=-cosθ，sin(θ+180°)=-sinθ，与单独
+ * 乘 -1 等价）。若实际安装角度存在偏差，只需修改这里的角度值，EncoderUpdate() 会
+ * 按新角度重新把两轴滚动距离分解、叠加到底盘 x、y，无需改动换算代码。
  */
-#define ENCODER_X_DIRECTION_SIGN          (1)
-#define ENCODER_Y_DIRECTION_SIGN          (1)
-
-/*
- * 两只编码器滚动方向与底盘坐标系 x 轴的夹角，角度制，逆时针为正。
- * 理想安装下 x_axis（ID1）滚动方向与底盘 x 轴重合，取 0 度；y_axis（ID2）
- * 滚动方向与底盘 x 轴垂直，取 90 度。若实际安装存在偏差，只需修改这里的
- * 角度值，EncoderUpdate() 会按新角度重新把两轴滚动距离分解、叠加到底盘
- * x、y，无需改动换算代码。
- */
-#define ENCODER_X_INSTALL_ANGLE_DEG       (0.0f)
-#define ENCODER_Y_INSTALL_ANGLE_DEG       (90.0f)
+#define ENCODER_X_INSTALL_ANGLE_DEG       (225.0f)
+#define ENCODER_Y_INSTALL_ANGLE_DEG       (-225.0f)
 
 /* BRT38M 固定协议与型号参数，不应作为现场调参项。 */
 #define ENCODER_COUNTS_PER_REVOLUTION     (4096U)
@@ -62,7 +55,7 @@
 #define ENCODER_POSITION_REPLY_LENGTH     (7U)
 
 /*
- * 单只编码器的运行状态。FDCAN_Handle/node_id/direction_sign 由 EncoderInit() 赋值；
+ * 单只编码器的运行状态。FDCAN_Handle/node_id 由 EncoderInit() 赋值；
  * raw_position_count、feedback_ready 由 EncoderParseFeedback() 在 FDCAN 接收回调中更新；
  * origin_position_count、distance_m 由 EncoderUpdate() 任务循环更新。
  */
@@ -70,7 +63,6 @@ typedef struct
 {
     FDCAN_HandleTypeDef *FDCAN_Handle; /* 该编码器挂载的 FDCAN 总线实例 */
     uint8_t node_id;                   /* 编码器 CAN 节点 id */
-    int8_t direction_sign;             /* 计数方向与实际滚动正方向的符号关系，+1/-1 */
 
     volatile uint32_t raw_position_count;
     volatile uint8_t feedback_ready;
@@ -105,7 +97,7 @@ typedef struct
 } EncoderTask_TypeDef;
 
 /*
- * 初始化双编码器模块：x_axis/y_axis 各自的 FDCAN 句柄、节点 id、方向符号均由调用者传入，
+ * 初始化双编码器模块：x_axis/y_axis 各自的 FDCAN 句柄、节点 id 均由调用者传入，
  * 在此一并赋值到结构体，同时为各自挂载的总线配置对应节点 id 的接收过滤器并启动 FDCAN
  * （两轴若共用同一条总线，会对该总线重复调用一次，不影响正确性）。
  * 同时初始化 EncoderUpdate 任务参数 task：把 encoder 本身与底盘当前位置的写入地址
@@ -115,14 +107,14 @@ typedef struct
  * 本函数不发送位置查询，首次有效反馈到来前两轴 distance_m 均为 0。
  */
 void EncoderInit(Encoder_TypeDef *encoder, EncoderTask_TypeDef *task,
-                  FDCAN_HandleTypeDef *x_fdcan_handle, uint8_t x_node_id, int8_t x_direction_sign,
-                  FDCAN_HandleTypeDef *y_fdcan_handle, uint8_t y_node_id, int8_t y_direction_sign,
+                  FDCAN_HandleTypeDef *x_fdcan_handle, uint8_t x_node_id,
+                  FDCAN_HandleTypeDef *y_fdcan_handle, uint8_t y_node_id,
                   float *chassis_x_m, float *chassis_y_m);
 
 /*
  * 解析一帧 FDCAN 反馈数据：先由 fdcan_handle+std_id 判断该帧属于 x 轴还是 y 轴，命中则
  * 更新对应轴的原始计数并返回 1，不命中则不作任何处理并返回 0；调用者在
- * HAL_FDCAN_RxFifo0Callback 中取得 std_id 和数据后调用。函数内部只保存整数计数，不做
+ * HAL_FDCAN_RxFifo1Callback 中取得 std_id 和数据后调用。函数内部只保存整数计数，不做
  * 浮点换算、串口输出或阻塞操作。
  */
 uint8_t EncoderParseFeedback(Encoder_TypeDef *encoder, FDCAN_HandleTypeDef *fdcan_handle,
