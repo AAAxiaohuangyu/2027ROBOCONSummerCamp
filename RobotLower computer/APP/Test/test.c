@@ -3,8 +3,6 @@
 #include "bsp_config.h"
 #include "cmsis_os.h"
 
-static EncoderTask_TypeDef TestEncoderTask;
-
 void TestChassisEncoderRxInit(void)
 {
     ChassisInit(&Robot.chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
@@ -12,10 +10,9 @@ void TestChassisEncoderRxInit(void)
                        M3508_FEEDBACK_ID_BASE + M3508_ID_MIN,
                        M3508_FEEDBACK_ID_BASE + M3508_ID_MAX); /* 过滤器0 -> RXFIFO0 */
 
-    EncoderInit(&Robot.encoder, &TestEncoderTask,
+    EncoderInit(&Robot.encoder,
                 ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID,
-                ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID,
-                NULL, NULL); /* 过滤器0 -> RXFIFO1 */
+                ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID); /* 过滤器0 -> RXFIFO1 */
 }
 
 void TestChassisUpdateTask(void *argument)
@@ -27,22 +24,21 @@ void TestChassisUpdateTask(void *argument)
 void TestEncoderUpdateTask(void *argument)
 {
     (void)argument;
-    EncoderUpdate(&TestEncoderTask); /* 周期发位置请求触发encoder应答 */
-    ChassisSetPosition(&Robot.chassis, Robot.encoder.x_m, Robot.encoder.y_m);
+    EncoderUpdate(&Robot.encoder); /* 周期发位置请求触发encoder应答 */
 }
 
 void TestChassisSetVelocityTask(void *argument)
 {
     for (;;)
     {
-        ChassisSetVelocity(&Robot.chassis, 0.0f, 0.0f, 0.5f); /* 固定测试速度,验证电机能否按目标转动;TestChassisUpdateTask持续下发该速度对应的控制帧 */
+        ChassisSetVelocity(&Robot.chassis, 0.0f, 0.0f, 0.0f); /* 固定测试速度,验证电机能否按目标转动;TestChassisUpdateTask持续下发该速度对应的控制帧 */
         osDelay(100);
     }
 }
 
 void TestChassisSetPositionTask(void *argument)
 {
-    ChassisSetTranslation(&Robot.chassis,2.5f,0.0f);
+    ChassisSetTranslation(&Robot.chassis,-2.0f,0.0f);
     (void)argument;
     for (;;)
     {

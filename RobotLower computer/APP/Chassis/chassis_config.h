@@ -50,7 +50,7 @@
  */
 #define CHASSIS_PLAN_TRANSLATION_MAX_ACCEL_MPS2  (0.4f)
 #define CHASSIS_PLAN_TRANSLATION_MAX_SPEED_MPS   (0.2f)
-#define CHASSIS_PLAN_TRANSLATION_MAX_JERK_MPS3   (1.6f)
+#define CHASSIS_PLAN_TRANSLATION_MAX_JERK_MPS3   (1.0f)
 
 #define CHASSIS_PLAN_YAW_MAX_ACCEL_RADPS2        (0.0f)
 #define CHASSIS_PLAN_YAW_MAX_SPEED_RADPS         (0.0f)
@@ -60,10 +60,10 @@
  * 位移接口跟踪器(SpeedPlanTrack)使用的位置跟踪PID参数,平移和偏航各用一套,
  * 目标为规划位置、输出叠加到规划速度前馈上,待整定。
  */
-#define CHASSIS_TRACK_TRANSLATION_KP             (0.0f)
-#define CHASSIS_TRACK_TRANSLATION_KI             (0.0f)
+#define CHASSIS_TRACK_TRANSLATION_KP             (0.8f)
+#define CHASSIS_TRACK_TRANSLATION_KI             (0.008f)
 #define CHASSIS_TRACK_TRANSLATION_KD             (0.0f)
-#define CHASSIS_TRACK_TRANSLATION_MAX_OUT        (0.0f)
+#define CHASSIS_TRACK_TRANSLATION_MAX_OUT        (0.3f)
 #define CHASSIS_TRACK_TRANSLATION_MAX_IOUT       (0.0f)
 
 #define CHASSIS_TRACK_YAW_KP                     (0.0f)

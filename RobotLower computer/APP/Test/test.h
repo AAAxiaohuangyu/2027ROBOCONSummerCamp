@@ -6,7 +6,7 @@
  * 验收不看本模块的代码,直接在调试器Watch窗口看:
  *   Robot.chassis.drive.motor_group.motor[0..3].feedback.update_cnt 持续增长
  *     -> 过滤器0/RXFIFO0 收到了3508反馈帧;
- *   Robot.encoder.x_axis/y_axis.feedback_ready 变1且raw_position_count随实际转动变化
+ *   Robot.encoder.x_axis/y_axis.midpoint_ack 变1且raw_position_count随实际转动变化
  *     -> 过滤器1/RXFIFO1 收到了encoder应答帧。
  */
 
