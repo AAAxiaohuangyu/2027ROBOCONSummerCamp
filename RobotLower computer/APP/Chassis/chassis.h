@@ -72,6 +72,8 @@ typedef struct
     ChassisMecanum_BodyVelocity_t velocity; /* 当前下发的车体速度 Vx/Vy/Wz。 */
     uint8_t velocity_mode; /* 1:ChassisSetVelocity 原始速度生效;0:位移 S 曲线生效。 */
 
+    ChassisMecanum_BodyVelocity_t actual_velocity; /* 麦轮正解算得到的当前实际车体速度 Vx/Vy/Wz。 */
+
     Chassis_Pose_t pose; /* 底盘当前位姿,预留字段,说明见上。 */
 } Chassis_TypeDef;
 
@@ -101,9 +103,10 @@ void ChassisSetPosition(Chassis_TypeDef *chassis, float x_m, float y_m);
    不经过 S 曲线减速 */
 void ChassisStop(Chassis_TypeDef *chassis);
 
-/* 周期调用:位移模式下推进两条 S 曲线得到车体速度,随后统一做麦轮逆解并
-   刷新四台电机目标、发送控制帧;调用前需已通过 M3508GroupParseFeedback
-   更新反馈 */
+/* 周期调用:先由四台电机反馈转速做麦轮正解算,得到实际车体速度写入
+   actual_velocity;位移模式下再推进两条 S 曲线得到车体速度,随后统一做
+   麦轮逆解并刷新四台电机目标、发送控制帧;调用前需已通过
+   M3508GroupParseFeedback 更新反馈 */
 void ChassisUpdate(Chassis_TypeDef *chassis);
 
 uint8_t ChassisTranslationReached(Chassis_TypeDef *chassis, float tolerance_m);

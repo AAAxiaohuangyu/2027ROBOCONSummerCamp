@@ -110,6 +110,10 @@ void M3508GroupInit(M3508Group_TypeDef *group, FDCAN_HandleTypeDef *FDCAN_Handle
    不触发规划,PID直接跟踪新目标 */
 void M3508GroupSetTarget(M3508Group_TypeDef *group, uint8_t id, float speed_target);
 
+/* 读取组内某台电调最近一次反馈转速,单位rpm;id需落在group->ctrl_id对应的1~4或5~8范围内,
+   否则返回0.0f */
+float M3508GroupGetSpeed(const M3508Group_TypeDef *group, uint8_t id);
+
 /* 解析一帧反馈数据到组内对应电调:先由std_id判断该帧是否属于本组(id落在1~4或5~8范围内),
    命中则解析反馈并返回1,不命中则不作任何处理并返回0;调用者在HAL_FDCAN_RxFifo0Callback中
    取得std_id和数据后调用,可依次对多个组尝试直至命中 */

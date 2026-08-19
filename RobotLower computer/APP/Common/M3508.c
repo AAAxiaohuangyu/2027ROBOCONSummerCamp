@@ -138,6 +138,16 @@ void M3508GroupSetTarget(M3508Group_TypeDef *group, uint8_t id, float speed_targ
     group->motor[id - base].control.speed_target = speed_target;
 }
 
+float M3508GroupGetSpeed(const M3508Group_TypeDef *group, uint8_t id)
+{
+    uint8_t base = (group->ctrl_id == M3508_CTRL_ID_1TO4) ? 1u : 5u;
+
+    if (id < base || id >= (uint8_t)(base + M3508_GROUP_SIZE))
+        return 0.0f;
+
+    return (float)group->motor[id - base].feedback.speed_rpm;
+}
+
 uint8_t M3508GroupParseFeedback(M3508Group_TypeDef *group, uint32_t std_id, const uint8_t *rx_data)
 {
     uint8_t base = (group->ctrl_id == M3508_CTRL_ID_1TO4) ? 1u : 5u;

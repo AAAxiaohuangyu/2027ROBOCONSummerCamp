@@ -61,6 +61,10 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
     chassis->velocity.wz_radps = 0.0f;
     chassis->velocity_mode = 1U;
 
+    chassis->actual_velocity.vx_mps = 0.0f;
+    chassis->actual_velocity.vy_mps = 0.0f;
+    chassis->actual_velocity.wz_radps = 0.0f;
+
     chassis->pose.x_m = 0.0f;
     chassis->pose.y_m = 0.0f;
     chassis->pose.yaw_rad = 0.0f;
@@ -127,7 +131,14 @@ void ChassisUpdate(Chassis_TypeDef *chassis)
     {
         ChassisMecanum_BodyVelocity_t body_velocity;
         ChassisMecanum_MotorCommand_t motor_command;
+        float motor_rpm_actual[CHASSIS_MECANUM_WHEEL_COUNT];
         uint32_t wheel;
+
+        for (wheel = 0U; wheel < CHASSIS_MECANUM_WHEEL_COUNT; ++wheel)
+        {
+            motor_rpm_actual[wheel] = M3508GroupGetSpeed(&chassis->drive.motor_group, chassis->drive.motor_id[wheel]);
+        }
+        ChassisMecanum_Forward(&chassis->drive.mecanum, motor_rpm_actual, &chassis->actual_velocity);
 
         if (chassis->velocity_mode == 0U)
         {
