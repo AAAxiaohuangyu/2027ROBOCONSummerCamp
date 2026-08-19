@@ -35,7 +35,7 @@ void TestChassisSetVelocityTask(void *argument)
 {
     for (;;)
     {
-        ChassisSetVelocity(&Robot.chassis, 0.1f, 0.0f, 0.0f); /* 固定测试速度,验证电机能否按目标转动;TestChassisUpdateTask持续下发该速度对应的控制帧 */
+        ChassisSetVelocity(&Robot.chassis, 0.0f, 0.0f, 0.5f); /* 固定测试速度,验证电机能否按目标转动;TestChassisUpdateTask持续下发该速度对应的控制帧 */
         osDelay(100);
     }
 }

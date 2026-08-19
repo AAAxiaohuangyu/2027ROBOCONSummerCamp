@@ -360,3 +360,16 @@ void SpeedPlanUpdate(SpeedPlan_TypeDef *sp, float position_actual, float positio
         }
     }
 }
+
+float SpeedPlanTrack(SpeedPlan_TypeDef *sp, float position_actual)
+{
+    float feedforward_v = sp->v * sp->direction_flag;
+
+    if (sp->state >= phase1 && sp->state <= phase7)
+    {
+        float target = sp->position_initial + sp->s * sp->direction_flag;
+        return PIDCalc(&sp->track_pid, position_actual, target) + feedforward_v;
+    }
+
+    return feedforward_v;
+}
