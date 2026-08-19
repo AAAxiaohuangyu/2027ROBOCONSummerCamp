@@ -237,6 +237,12 @@ uint8_t EncoderParseFeedback(Encoder_TypeDef *encoder, FDCAN_HandleTypeDef *fdca
     return EncoderAxisParseFeedback(&encoder->y_axis, fdcan_handle, std_id, data);
 }
 
+void EncoderRequestSetMidpoint(Encoder_TypeDef *encoder)
+{
+    EncoderAxisRequestSetMidpoint(&encoder->x_axis);
+    EncoderAxisRequestSetMidpoint(&encoder->y_axis);
+}
+
 void EncoderUpdate(Encoder_TypeDef *encoder)
 {
     while (1)

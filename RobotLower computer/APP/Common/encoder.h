@@ -164,4 +164,11 @@ uint8_t EncoderParseFeedback(Encoder_TypeDef *encoder, FDCAN_HandleTypeDef *fdca
  */
 void EncoderUpdate(Encoder_TypeDef *encoder);
 
+/*
+ * 对x_axis/y_axis各发送一次FUNC=0x0C"设置多圈中点"请求,不阻塞等待应答——是否已
+ * 完成重置以EncoderParseFeedback()异步置位的midpoint_ack/midpoint_pending为准。
+ * 供EncoderInit()之外、底盘运行中需要重新居中的场景调用。
+ */
+void EncoderRequestSetMidpoint(Encoder_TypeDef *encoder);
+
 #endif /* ENCODER_H */
