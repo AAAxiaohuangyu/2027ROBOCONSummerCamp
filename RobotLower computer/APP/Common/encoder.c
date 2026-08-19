@@ -223,6 +223,7 @@ void EncoderInit(Encoder_TypeDef *encoder,
     while (encoder->y_axis.midpoint_pending != 1)
     {
     }
+    HAL_Delay(500);
 }
 
 uint8_t EncoderParseFeedback(Encoder_TypeDef *encoder, FDCAN_HandleTypeDef *fdcan_handle,

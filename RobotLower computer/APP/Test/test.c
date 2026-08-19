@@ -5,13 +5,15 @@
 
 void TestChassisEncoderRxInit(void)
 {
-    EncoderInit(&Robot.encoder,
-                ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID,
-                ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID); /* 过滤器0 -> RXFIFO1 */
+    HAL_Delay(1000);
     ChassisInit(&Robot.chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
     FDCANStandardInit(Robot.chassis.drive.motor_group.FDCAN_Handle,
                        M3508_FEEDBACK_ID_BASE + M3508_ID_MIN,
                        M3508_FEEDBACK_ID_BASE + M3508_ID_MAX); /* 过滤器0 -> RXFIFO0 */
+
+    EncoderInit(&Robot.encoder,
+                ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID,
+                ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID); /* 过滤器0 -> RXFIFO1 */
 }
 
 void TestChassisUpdateTask(void *argument)

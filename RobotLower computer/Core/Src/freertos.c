@@ -66,12 +66,12 @@ const osThreadAttr_t TestChassisSetVelocityTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };*/
 
-/*osThreadId_t TestChassisSetPositionTaskHandle;
+osThreadId_t TestChassisSetPositionTaskHandle;
 const osThreadAttr_t TestChassisSetPositionTask_attributes = {
     .name = "TestChassisSetPositionTask",
     .stack_size = 256 * 10,
     .priority = (osPriority_t)osPriorityNormal,
-};*/
+};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -125,7 +125,7 @@ void MX_FREERTOS_Init(void) {
   TestChassisUpdateTaskHandle = osThreadNew(TestChassisUpdateTask, NULL, &TestChassisUpdateTask_attributes);
   TestEncoderUpdateTaskHandle = osThreadNew(TestEncoderUpdateTask, NULL, &TestEncoderUpdateTask_attributes);
   /*TestChassisSetVelocityTaskHandle = osThreadNew(TestChassisSetVelocityTask, NULL, &TestChassisSetVelocityTask_attributes);*/
-  /*TestChassisSetPositionTaskHandle = osThreadNew(TestChassisSetPositionTask, NULL, &TestChassisSetPositionTask_attributes);*/
+  TestChassisSetPositionTaskHandle = osThreadNew(TestChassisSetPositionTask, NULL, &TestChassisSetPositionTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 
