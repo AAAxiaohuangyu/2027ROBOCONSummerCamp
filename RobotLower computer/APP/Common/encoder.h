@@ -70,6 +70,15 @@
 #define ENCODER_MIDPOINT_REQUEST_PARAM    (0x01U)
 #define ENCODER_MIDPOINT_REPLY_LENGTH     (4U)
 #define ENCODER_MIDPOINT_REPLY_STATUS_OK  (0x00U)
+
+/* BRT FUNC=0x04：设置模式，PARAM=0x00。EncoderInit() 上电时向每只编码器发送一次并
+   阻塞等待应答；成功应答为请求帧的原样回传：04 ID 04 00，见
+   EncoderAxisRequestSetMode()/EncoderAxisParseFeedback()。 */
+#define ENCODER_CMD_SET_MODE              (0x04U)
+#define ENCODER_MODE_REQUEST_LENGTH       (4U)
+#define ENCODER_MODE_REQUEST_PARAM        (0x00U)
+#define ENCODER_MODE_REPLY_LENGTH         (4U)
+#define ENCODER_MODE_REPLY_STATUS_OK      (0x00U)
 /* EncoderInit() 等待两轴"设置中点"应答的上限，超时未收到也不阻塞后续流程。 */
 #define ENCODER_MIDPOINT_ACK_TIMEOUT_MS   (500U)
 
@@ -92,6 +101,7 @@ typedef struct
                                    回调中按相邻两帧计数差增量累加，EncoderUpdate()
                                    任务与回调分属不同上下文，故需volatile */
 
+    volatile uint8_t mode_ack; /* 收到"设置模式"成功应答后置1，供EncoderInit()阻塞等待 */
     volatile uint8_t midpoint_ack; /* 收到"设置中点"成功应答后置1，供EncoderInit()阻塞等待 */
     volatile uint8_t midpoint_pending; /* 收到"设置中点"成功应答后置1(不是请求发出时)，
                                            确保只有编码器已确认完成内部重置才让下一帧
@@ -121,7 +131,8 @@ typedef struct
  * 初始化双编码器模块：x_axis/y_axis 各自的 FDCAN 句柄、节点 id 均由调用者传入，
  * 在此一并赋值到结构体，同时为各自挂载的总线配置对应节点 id 的接收过滤器并启动 FDCAN
  * （两轴若共用同一条总线，会对该总线重复调用一次，不影响正确性）。
- * 过滤器配置完成后，会各向 x_axis/y_axis 发送一次 FUNC=0x0C“设置多圈中点”请求，
+ * 过滤器配置完成后，会各向 x_axis/y_axis 先发送一次 FUNC=0x04“设置模式”请求并阻塞
+ * 等待原样回传的成功应答（置位 mode_ack），再发送一次 FUNC=0x0C“设置多圈中点”请求，
  * 并在 ENCODER_MIDPOINT_ACK_TIMEOUT_MS 内忙等对应应答（应答经 FDCAN 接收中断异步
  * 到达，由 EncoderParseFeedback 解析并置位 midpoint_ack/midpoint_pending）。增量位移的
  * 计算基准由该应答触发的下一帧位置反馈建立，因此本函数假设应答一定会在超时前到达——

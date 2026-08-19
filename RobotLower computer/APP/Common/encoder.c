@@ -15,6 +15,7 @@ static void EncoderAxisInit(EncoderAxis_TypeDef *axis, FDCAN_HandleTypeDef *fdca
     axis->raw_position_count = 0U;
     axis->origin_position_count = 0U;
     axis->distance_m = 0.0f;
+    axis->mode_ack = 0U;
     axis->midpoint_ack = 0U;
     axis->midpoint_pending = 0U;
     axis->request_blocked = 0U;
@@ -39,6 +40,23 @@ static void EncoderAxisRequestPosition(const EncoderAxis_TypeDef *axis)
 
     /* 发送失败仅表示本帧未进入FIFO；下一周期会再次请求，不在这里做额外状态机。 */
     FDCANSendStandard(axis->FDCAN_Handle, axis->node_id, data, ENCODER_POSITION_REQUEST_LENGTH);
+}
+
+/* 向一只编码器发送 BRT 协议 FUNC=0x04 的“设置模式”请求，PARAM固定为0x00。
+   成功应答为请求帧的原样回传，故这里先清空上一次的应答标记，避免把上一次
+   遗留的旧应答误当作这次请求的确认（见EncoderAxisParseFeedback()）。 */
+static void EncoderAxisRequestSetMode(EncoderAxis_TypeDef *axis)
+{
+    uint8_t data[ENCODER_MODE_REQUEST_LENGTH];
+
+    data[0] = ENCODER_MODE_REQUEST_LENGTH;
+    data[1] = axis->node_id;
+    data[2] = ENCODER_CMD_SET_MODE;
+    data[3] = ENCODER_MODE_REQUEST_PARAM;
+
+    axis->mode_ack = 0U;
+
+    FDCANSendStandard(axis->FDCAN_Handle, axis->node_id, data, ENCODER_MODE_REQUEST_LENGTH);
 }
 
 /* 向一只编码器发送 BRT 协议 FUNC=0x0C 的“设置多圈中点”请求：EncoderInit() 上电时
@@ -74,6 +92,17 @@ static uint8_t EncoderAxisParseFeedback(EncoderAxis_TypeDef *axis, FDCAN_HandleT
     if ((fdcan_handle != axis->FDCAN_Handle) || (std_id != axis->node_id))
     {
         return 0U;
+    }
+
+    /* BRT“设置模式”回复为请求帧的原样回传：04 ID 04 00，命中则说明模式设置成功，
+       供EncoderInit()阻塞等待。 */
+    if ((data[0] == ENCODER_MODE_REPLY_LENGTH) &&
+        (data[1] == axis->node_id) &&
+        (data[2] == ENCODER_CMD_SET_MODE) &&
+        (data[3] == ENCODER_MODE_REPLY_STATUS_OK))
+    {
+        axis->mode_ack = 1U;
+        return 1U;
     }
 
     /* BRT“设置多圈中点”回复固定为：04 ID 0C 00，00表示设置成功。只有收到这个应答
@@ -168,16 +197,31 @@ void EncoderInit(Encoder_TypeDef *encoder,
         FDCANFilterInit(y_fdcan_handle, 0, y_node_id, y_node_id, FDCAN_FILTER_TO_RXFIFO1);
     }
 
-    /* 过滤器就绪后，各向两轴发送一次"设置多圈中点"请求；应答经FDCAN接收中断异步到达
+    /* 过滤器就绪后，各向两轴先发送一次"设置模式"请求并忙等其原样回传的成功应答，
+       再发送一次"设置多圈中点"请求；中点请求的应答经FDCAN接收中断异步到达
        (HAL_FDCAN_RxFifo1Callback -> EncoderParseFeedback -> EncoderAxisParseFeedback)，
        此处仅在有限时间内忙等。增量计算基准完全依赖这次应答触发（见EncoderAxisParseFeedback()
        的midpoint_pending分支）：若超时仍未收到应答，对应轴的首帧位置反馈会把中点重置
        造成的计数跳变误计入distance_m。当前假设该应答一定会在超时前到达。 */
-    {
-        uint32_t wait_start_tick = HAL_GetTick();
 
-        EncoderAxisRequestSetMidpoint(&encoder->x_axis);
-        EncoderAxisRequestSetMidpoint(&encoder->y_axis);
+    EncoderAxisRequestSetMode(&encoder->x_axis);
+    while (encoder->x_axis.mode_ack != 1)
+    {
+    }
+
+    EncoderAxisRequestSetMode(&encoder->y_axis);
+    while (encoder->y_axis.mode_ack != 1)
+    {
+    }
+
+    EncoderAxisRequestSetMidpoint(&encoder->x_axis);
+    while (encoder->x_axis.midpoint_pending != 1)
+    {
+    }
+
+    EncoderAxisRequestSetMidpoint(&encoder->y_axis);
+    while (encoder->y_axis.midpoint_pending != 1)
+    {
     }
 }
 
@@ -200,11 +244,11 @@ void EncoderUpdate(Encoder_TypeDef *encoder)
            中完成；本任务只负责周期发送位置请求帧、以及把两轴累计距离按安装角度
            分解叠加为底盘坐标。 */
         EncoderAxisRequestPosition(&encoder->x_axis);
-        osDelay(ENCODER_UPDATE_PERIOD_MS);
         EncoderAxisRequestPosition(&encoder->y_axis);
 
-        EncoderDecomposeAxes(encoder);
+        osDelay(ENCODER_UPDATE_PERIOD_MS);
 
+        EncoderDecomposeAxes(encoder);
 
         /*暂时将码盘数据直接赋值给底盘坐标*/
         ChassisSetPosition(&Robot.chassis, Robot.encoder.x_m, Robot.encoder.y_m);
