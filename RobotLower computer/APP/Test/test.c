@@ -39,13 +39,11 @@ void TestChassisSetVelocityTask(void *argument)
 
 /* TestChassisSetPositionTask状态机各状态:START_*只在进入时下发一次ChassisSetTranslation
    (该函数每次调用都会令S曲线重新规划,跑向同一目标期间不能重复调用),WAIT_*则只轮询
-   ChassisTranslationReached等待到位;到位后对两只编码器做一次setmid重置并等待10ms,
-   再沿y方向平移,到位后保持不动 */
+   ChassisTranslationReached等待到位;到位后沿y方向平移,到位后保持不动 */
 typedef enum
 {
     TEST_POSITION_STATE_START_MOVE_X,
     TEST_POSITION_STATE_WAIT_MOVE_X,
-    TEST_POSITION_STATE_RESET_MID,
     TEST_POSITION_STATE_START_MOVE_Y,
     TEST_POSITION_STATE_WAIT_MOVE_Y,
     TEST_POSITION_STATE_DONE,
@@ -62,27 +60,11 @@ void TestChassisSetPositionTask(void *argument)
         switch (state)
         {
         case TEST_POSITION_STATE_START_MOVE_X:
-            ChassisSetTranslation(&Robot.chassis, -2.0f, 0.0f); /* x方向,只在进入本状态时下发一次 */
+            ChassisSetTranslation(&Robot.chassis, -1.0f, 0.0f); /* x方向,只在进入本状态时下发一次 */
             state = TEST_POSITION_STATE_WAIT_MOVE_X;
             break;
 
         case TEST_POSITION_STATE_WAIT_MOVE_X:
-            if (ChassisTranslationReached(&Robot.chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                state = TEST_POSITION_STATE_RESET_MID;
-            break;
-
-        case TEST_POSITION_STATE_RESET_MID:
-            EncoderRequestSetMidpoint(&Robot.encoder);
-            osDelay(10);
-            state = TEST_POSITION_STATE_START_MOVE_Y;
-            break;
-
-        case TEST_POSITION_STATE_START_MOVE_Y:
-            ChassisSetTranslation(&Robot.chassis, -2.0f, 1.0f); /* y方向,只在进入本状态时下发一次 */
-            state = TEST_POSITION_STATE_WAIT_MOVE_Y;
-            break;
-
-        case TEST_POSITION_STATE_WAIT_MOVE_Y:
             if (ChassisTranslationReached(&Robot.chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
                 state = TEST_POSITION_STATE_DONE;
             break;

@@ -45,35 +45,38 @@ static void RobotMoveToKfs(Robot_TypeDef *Robot, uint8_t target_index)
 
 void RobotInit(void)
 {
-    RoboticArmInit(&Robot.roboticarm,
+    /* RobotInit在调度器启动前单线程执行,不存在并发访问,可安全去除Robot的volatile限定 */
+    Robot_TypeDef *robot = (Robot_TypeDef *)&Robot;
+
+    RoboticArmInit(&robot->roboticarm,
                    ROBOTICARM_LIFT_FDCAN_HANDLE, ROBOTICARM_LIFT_ID,
                    ROBOTICARM_FORWARD_UART_HANDLE, ROBOTICARM_FORWARD_ID,
                    ROBOTICARM_ROTATE_UART_HANDLE, ROBOTICARM_ROTATE_ID);
 
-    ChassisInit(&Robot.chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
+    ChassisInit(&robot->chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
 
     /* zigbee.c头部注释要求Zigbee_Init须在MX_USART1_UART_Init()之后调用,以开启huart1的
        DMA接收(HAL_UARTEx_ReceiveToIdle_DMA);huart1由CubeMX固定分配,非占位句柄,无需判空 */
-    Zigbee_Init(&Robot.zigbee);
+    Zigbee_Init(&robot->zigbee);
 
     /* VISION_UART_HANDLE在CubeMX完成分配前于bsp_config.h中为NULL占位,Vision_Init内部
        自行判空,无需在此额外判断 */
-    Vision_Init(&Robot.vision);
+    Vision_Init(&robot->vision);
 
     /* 各外设句柄在CubeMX完成分配前于bsp_config.h中为NULL占位,逐个判空后再启动,
        句柄补齐后无需再改这里 */
-    if (Robot.roboticarm.lift_motor.FDCAN_Handle != NULL)
+    if (robot->roboticarm.lift_motor.FDCAN_Handle != NULL)
     {
         uint16_t lift_feedback_base = (uint16_t)((J60_RESPONSE_FEEDBACK << J60_CAN_ID_RESPONSE_SHIFT) |
                                                  (J60_CMD_CONTROL << J60_CAN_ID_COMMAND_SHIFT));
-        FDCANStandardInit(Robot.roboticarm.lift_motor.FDCAN_Handle,
+        FDCANStandardInit(robot->roboticarm.lift_motor.FDCAN_Handle,
                           lift_feedback_base + J60_ID_MIN,
                           lift_feedback_base + J60_ID_MAX);
     }
 
-    if (Robot.chassis.drive.motor_group.FDCAN_Handle != NULL)
+    if (robot->chassis.drive.motor_group.FDCAN_Handle != NULL)
     {
-        FDCANStandardInit(Robot.chassis.drive.motor_group.FDCAN_Handle,
+        FDCANStandardInit(robot->chassis.drive.motor_group.FDCAN_Handle,
                           M3508_FEEDBACK_ID_BASE + M3508_ID_MIN,
                           M3508_FEEDBACK_ID_BASE + M3508_ID_MAX);
     }
@@ -81,7 +84,7 @@ void RobotInit(void)
     /* forward/rotate两个GO电机的接收挂起改由GOM8010GroupUpdate在每次真正发起请求时按需完成
        (RS485总线仲裁,避免同一huart被同时挂起两次接收),此处不再手动挂起 */
 
-    RoboticArmEnable(&Robot.roboticarm);
+    RoboticArmEnable(&robot->roboticarm);
 }
 
 void RobotStateUpdate(Robot_TypeDef *Robot)
