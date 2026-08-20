@@ -38,8 +38,9 @@ void TestChassisSetVelocityTask(void *argument)
 }
 
 /* TestChassisSetPositionTask状态机各状态:START_*只在进入时下发一次ChassisSetTranslation
-   (该函数每次调用都会令S曲线重新规划,跑向同一目标期间不能重复调用),WAIT_*则只轮询
-   ChassisTranslationReached等待到位;到位后沿y方向平移,到位后保持不动 */
+   (该函数每次调用都会令S曲线重新规划,跑向同一目标期间不能重复调用;x/y现为世界系绝对
+   目标,START_MOVE_Y必须原样带上START_MOVE_X已下发的x目标,否则x会被打断拉回0),
+   WAIT_*则只轮询ChassisTranslationReached等待到位;到位后沿y方向平移,到位后保持不动 */
 typedef enum
 {
     TEST_POSITION_STATE_START_MOVE_X,
@@ -60,7 +61,7 @@ void TestChassisSetPositionTask(void *argument)
         switch (state)
         {
         case TEST_POSITION_STATE_START_MOVE_X:
-            ChassisSetTranslation(&Robot.chassis, -2.0f, 0.0f); /* x方向,只在进入本状态时下发一次 */
+            ChassisSetTranslation(&Robot.chassis, -2.0f, 0.0f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
             state = TEST_POSITION_STATE_WAIT_MOVE_X;
             break;
 
@@ -70,7 +71,7 @@ void TestChassisSetPositionTask(void *argument)
             break;
 
         case TEST_POSITION_STATE_START_MOVE_Y:
-            ChassisSetTranslation(&Robot.chassis, 0.0f, 1.0f); 
+            ChassisSetTranslation(&Robot.chassis, -2.0f, 1.0f); /* 绝对目标(-2, 1),x原样带上避免被打断拉回0 */
             state = TEST_POSITION_STATE_WAIT_MOVE_Y;
             break;
 

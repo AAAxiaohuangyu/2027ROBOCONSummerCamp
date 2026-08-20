@@ -34,13 +34,10 @@ static float RobotKfsPositionY(uint8_t kfs_index)
     return ROBOT_MOVE_START_TO_KFS1_Y + (float)(kfs_index - 1U) * ROBOT_MOVE_KFS_STEP_Y;
 }
 
-/* 下发从kfs_last_index当前所在位置移动到target_index的相对位移 */
+/* 下发从当前位置移动到target_index对应KFS工位的绝对目标坐标 */
 static void RobotMoveToKfs(Robot_TypeDef *Robot, uint8_t target_index)
 {
-    float dx = RobotKfsPositionX(target_index) - RobotKfsPositionX(Robot->pickup.kfs_last_index);
-    float dy = RobotKfsPositionY(target_index) - RobotKfsPositionY(Robot->pickup.kfs_last_index);
-
-    ChassisSetTranslation(&Robot->chassis, dx, dy);
+    ChassisSetTranslation(&Robot->chassis, RobotKfsPositionX(target_index), RobotKfsPositionY(target_index));
 }
 
 void RobotInit(void)
