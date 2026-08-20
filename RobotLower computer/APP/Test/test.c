@@ -39,8 +39,10 @@ void TestChassisSetVelocityTask(void *argument)
 
 /* TestChassisSetPositionTask状态机各状态:START_*只在进入时下发一次ChassisSetTranslation
    (该函数每次调用都会令S曲线重新规划,跑向同一目标期间不能重复调用;x/y现为世界系绝对
-   目标,START_MOVE_Y必须原样带上START_MOVE_X已下发的x目标,否则x会被打断拉回0),
-   WAIT_*则只轮询ChassisTranslationReached等待到位;到位后沿y方向平移,到位后保持不动 */
+   目标,START_MOVE_Y必须原样带上START_MOVE_X已下发的x目标,否则x会被打断拉回0);
+   WAIT_MOVE_Y用固定容差轮询ChassisTranslationReached等待终点到位,WAIT_MOVE_X则用
+   TEST_CORNER_BLEND_K放大的动态容差提前判定"到位",在x轴尚未停稳前就切到
+   START_MOVE_Y以实现转弯圆滑过渡,而非在拐角处完全停顿 */
 typedef enum
 {
     TEST_POSITION_STATE_START_MOVE_X,
@@ -50,9 +52,16 @@ typedef enum
     TEST_POSITION_STATE_DONE,
 } TestPositionState_TypeDef;
 
+/* 转弯提前系数(无量纲):WAIT_MOVE_X用ChassisTranslationReached判断是否
+   切换到START_MOVE_Y时,传入的容差为该系数乘以x轴当前速度对应的S曲线
+   减速距离(SpeedPlanDecelDistance),而非固定的米数,因此能随速度规划
+   参数自动适配;k=1表示x刚进入减速阶段就切换,转弯越圆滑需要越大的k,
+   但也会让实际路径更早偏离(-2,0)这个中间点 */
+#define TEST_CORNER_BLEND_K (1.7f)
+
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_X;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_Y;
 
     (void)argument;
 
@@ -61,18 +70,26 @@ void TestChassisSetPositionTask(void *argument)
         switch (state)
         {
         case TEST_POSITION_STATE_START_MOVE_X:
+            osDelay(500);
             ChassisSetTranslation(&Robot.chassis, -2.0f, 0.0f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
             state = TEST_POSITION_STATE_WAIT_MOVE_X;
             break;
 
         case TEST_POSITION_STATE_WAIT_MOVE_X:
-            if (ChassisTranslationReached(&Robot.chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+        {
+            float corner_tolerance = TEST_CORNER_BLEND_K *
+                SpeedPlanDecelDistance(&Robot.chassis.displacement_plan.translation_x);
+            if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
+                corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
+
+            if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
                 state = TEST_POSITION_STATE_START_MOVE_Y;
             break;
+        }
 
         case TEST_POSITION_STATE_START_MOVE_Y:
-            ChassisSetTranslation(&Robot.chassis, -2.0f, 1.0f); /* 绝对目标(-2, 1),x原样带上避免被打断拉回0 */
-            state = TEST_POSITION_STATE_WAIT_MOVE_Y;
+            ChassisSetTranslation(&Robot.chassis, 0.0f, 1.0f); /* 绝对目标(-2, 2),x原样带上避免被打断拉回0 */
+            state = TEST_POSITION_STATE_DONE;
             break;
 
         case TEST_POSITION_STATE_WAIT_MOVE_Y:

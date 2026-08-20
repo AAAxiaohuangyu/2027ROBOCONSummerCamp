@@ -99,13 +99,14 @@ void ChassisStop(Chassis_TypeDef *chassis)
 void ChassisSetTranslation(Chassis_TypeDef *chassis, float x_target_m, float y_target_m)
 {
     chassis->velocity_mode = 0U;
+
+    if (fabsf(x_target_m - chassis->displacement_plan.translation_target_x_m) > CHASSIS_SPEEDPLAN_CONTROL_THRESHOLD)
+        chassis->displacement_plan.translation_x.state = init;
+    if (fabsf(y_target_m - chassis->displacement_plan.translation_target_y_m) > CHASSIS_SPEEDPLAN_CONTROL_THRESHOLD)
+        chassis->displacement_plan.translation_y.state = init;
+
     chassis->displacement_plan.translation_target_x_m = x_target_m;
     chassis->displacement_plan.translation_target_y_m = y_target_m;
-
-    if (fabsf(x_target_m - chassis->pose.x_m) > CHASSIS_SPEEDPLAN_CONTROL_THRESHOLD)
-        chassis->displacement_plan.translation_x.state = init;
-    if (fabsf(y_target_m - chassis->pose.y_m) > CHASSIS_SPEEDPLAN_CONTROL_THRESHOLD)
-        chassis->displacement_plan.translation_y.state = init;
 }
 
 void ChassisSetYaw(Chassis_TypeDef *chassis, float dyaw_rad)

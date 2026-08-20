@@ -369,6 +369,11 @@ void SpeedPlanUpdate(SpeedPlan_TypeDef *sp, float position_actual, float positio
     }
 }
 
+float SpeedPlanDecelDistance(const SpeedPlan_TypeDef *sp)
+{
+    return CalcDecelDist(sp->v, sp->a_limit, sp->j_limit);
+}
+
 float PositionTrack(SpeedPlan_TypeDef *sp, float position_actual)
 {
     float feedforward_v = sp->v * sp->direction_flag;

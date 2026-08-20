@@ -30,8 +30,8 @@ DJI C620电调CAN通信协议(适用于C610/C620 + M2006/M3508系列电机)
 #define M3508_CURRENT_RAW_MAX 16384 /* 电流给定值幅值上限,对应20A */
 
 /* 双环(速度环+电流环)速度控制默认参数,调参从这里改 */
-#define M3508_SPEED_KP 11.0f /* 速度环kp,误差单位rpm,输出为电流环的目标电流(raw) */
-#define M3508_SPEED_KI 0.2f
+#define M3508_SPEED_KP 13.0f /* 速度环kp,误差单位rpm,输出为电流环的目标电流(raw) */
+#define M3508_SPEED_KI 0.25f
 #define M3508_SPEED_KD 1.2f
 #define M3508_SPEED_MAX_OUT 16384.0f /* 速度环输出限幅 */
 #define M3508_SPEED_MAX_IOUT 700.0f  /* 速度环积分限幅,抗积分饱和 */
@@ -46,7 +46,7 @@ DJI C620电调CAN通信协议(适用于C610/C620 + M2006/M3508系列电机)
    每台电调(按id 1~8)单独标定,数值需实测调整。前馈电流(raw),死区单位rpm(|speed_target|小于
    死区时不加前馈,避免零速蠕动/抖动) */
 #define M3508_FRICTION_FF_1 400.0f
-#define M3508_FRICTION_FF_2 400.0f
+#define M3508_FRICTION_FF_2 0.0f
 #define M3508_FRICTION_FF_3 400.0f
 #define M3508_FRICTION_FF_4 400.0f
 #define M3508_FRICTION_FF_5 0.0f

@@ -59,4 +59,9 @@ void SpeedPlanUpdate(SpeedPlan_TypeDef *sp, float position_actual, float positio
    时跳过PID补偿,仅保留速度前馈,避免死区内噪声/量化误差引起的抖动 */
 float PositionTrack(SpeedPlan_TypeDef *sp, float position_actual);
 
+/* 按当前v/a_limit/j_limit返回七段S曲线减速到0所需的位移;可配合
+   ChassisTranslationReached实现"提前量"式转弯触发(容差=k*该距离),
+   k为无量纲提前系数,而非与具体速度/距离绑定的固定值 */
+float SpeedPlanDecelDistance(const SpeedPlan_TypeDef *sp);
+
 #endif
