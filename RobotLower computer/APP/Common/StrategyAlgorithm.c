@@ -385,6 +385,7 @@ float PositionTrack(SpeedPlan_TypeDef *sp, float position_actual)
        PID补偿,只保留速度前馈,避免死区内噪声/量化误差引起的抖动。 */
     if (fabsf(target - position_actual) < sp->track_deadband)
     {
+        sp->track_pid.error_i = 0.0f;
         return feedforward_v;
     }
 

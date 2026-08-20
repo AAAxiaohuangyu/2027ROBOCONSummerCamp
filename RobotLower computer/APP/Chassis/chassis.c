@@ -68,7 +68,7 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
     chassis->velocity.vx_mps = 0.0f;
     chassis->velocity.vy_mps = 0.0f;
     chassis->velocity.wz_radps = 0.0f;
-    chassis->velocity_mode = 1U;
+    chassis->velocity_mode = 0U;
 
     chassis->actual_velocity.vx_mps = 0.0f;
     chassis->actual_velocity.vy_mps = 0.0f;
