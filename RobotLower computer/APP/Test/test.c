@@ -21,7 +21,7 @@ void TestChassisEncoderRxInit(void)
 void TestChassisUpdateTask(void *argument)
 {
     (void)argument;
-    ChassisUpdate(&Robot.chassis); /* ChassisInit后velocity=0/mode=1,持续下发0电流控制帧触发电调反馈 */
+    ChassisUpdate(&Robot.chassis, &Robot.yis512); /* ChassisInit后velocity=0/mode=1,持续下发0电流控制帧触发电调反馈 */
 }
 
 void TestEncoderUpdateTask(void *argument)

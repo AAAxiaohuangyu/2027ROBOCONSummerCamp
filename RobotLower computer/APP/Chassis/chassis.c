@@ -64,7 +64,6 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
     chassis->displacement_plan.translation_target_x_m = 0.0f;
     chassis->displacement_plan.translation_target_y_m = 0.0f;
     chassis->displacement_plan.yaw_target_rad = 0.0f;
-    chassis->displacement_plan.yaw_start_rad = 0.0f;
 
     chassis->velocity.vx_mps = 0.0f;
     chassis->velocity.vy_mps = 0.0f;
@@ -111,11 +110,14 @@ void ChassisSetTranslation(Chassis_TypeDef *chassis, float x_target_m, float y_t
 
 void ChassisSetYaw(Chassis_TypeDef *chassis, float dyaw_rad)
 {
-    chassis->velocity_mode = 0U;
-    chassis->displacement_plan.yaw_target_rad = dyaw_rad;
-    chassis->displacement_plan.yaw_start_rad = chassis->pose.yaw_rad;
+    float yaw_target_rad = chassis->pose.yaw_rad + dyaw_rad;
 
-    chassis->displacement_plan.yaw.state = init;
+    chassis->velocity_mode = 0U;
+
+    if (fabsf(yaw_target_rad - chassis->displacement_plan.yaw_target_rad) > CHASSIS_SPEEDPLAN_CONTROL_THRESHOLD)
+        chassis->displacement_plan.yaw.state = init;
+
+    chassis->displacement_plan.yaw_target_rad = yaw_target_rad;
 }
 
 void ChassisSetPosition(Chassis_TypeDef *chassis, float x_m, float y_m)
@@ -124,7 +126,7 @@ void ChassisSetPosition(Chassis_TypeDef *chassis, float x_m, float y_m)
     chassis->pose.y_m = y_m;
 }
 
-void ChassisUpdate(Chassis_TypeDef *chassis)
+void ChassisUpdate(Chassis_TypeDef *chassis, const Yis512_TypeDef *yis512)
 {
     while (1)
     {
@@ -139,22 +141,21 @@ void ChassisUpdate(Chassis_TypeDef *chassis)
         }
         ChassisMecanum_Forward(&chassis->drive.mecanum, motor_rpm_actual, &chassis->actual_velocity);
 
+        chassis->pose.yaw_rad = yis512->yaw_deg * BSP_PI / 180.0f;
+
         if (chassis->velocity_mode == 0U)
         {
-            float yaw_actual;
-
-            yaw_actual = chassis->pose.yaw_rad - chassis->displacement_plan.yaw_start_rad;
-
             SpeedPlanUpdate(&chassis->displacement_plan.translation_x, chassis->pose.x_m,
                                  chassis->displacement_plan.translation_target_x_m);
             SpeedPlanUpdate(&chassis->displacement_plan.translation_y, chassis->pose.y_m,
                                  chassis->displacement_plan.translation_target_y_m);
-            SpeedPlanUpdate(&chassis->displacement_plan.yaw, yaw_actual, chassis->displacement_plan.yaw_target_rad);
+            SpeedPlanUpdate(&chassis->displacement_plan.yaw, chassis->pose.yaw_rad,
+                                 chassis->displacement_plan.yaw_target_rad);
 
             /* 全局跟踪 */
             chassis->velocity.vx_mps = PositionTrack(&chassis->displacement_plan.translation_x, chassis->pose.x_m);
             chassis->velocity.vy_mps = PositionTrack(&chassis->displacement_plan.translation_y, chassis->pose.y_m);
-            chassis->velocity.wz_radps = PositionTrack(&chassis->displacement_plan.yaw, yaw_actual);
+            chassis->velocity.wz_radps = PositionTrack(&chassis->displacement_plan.yaw, chassis->pose.yaw_rad);
         }
 
         body_velocity.vx_mps = chassis->velocity.vx_mps;
@@ -182,11 +183,7 @@ uint8_t ChassisTranslationReached(Chassis_TypeDef *chassis, float tolerance_m)
 
 uint8_t ChassisYawReached(Chassis_TypeDef *chassis, float tolerance_rad)
 {
-    float error = fabsf(chassis->displacement_plan.yaw_target_rad) - chassis->displacement_plan.yaw.s;
+    float error = chassis->displacement_plan.yaw_target_rad - chassis->pose.yaw_rad;
 
-    if (error < 0.0f)
-    {
-        error = -error;
-    }
-    return (error <= tolerance_rad);
+    return (fabsf(error) <= tolerance_rad);
 }
