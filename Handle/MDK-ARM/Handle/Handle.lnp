@@ -30,6 +30,7 @@
 "handle\font.o"
 "handle\oled.o"
 "handle\process.o"
+"handle\test_zigbee.o"
 "handle\zigbee.o"
 --strict --scatter "Handle\Handle.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols

@@ -3,36 +3,17 @@
  * @brief   ZigBee 透传模块驱动实现
  *
  * 帧格式：
- * | SOF0 | SOF1 | LEN | PAYLOAD | CRC8 |
+ * | SOF0 | SOF1 | LEN | PAYLOAD |
  *
  * 调用说明：
  *   1. 在 MX_USART1_UART_Init() 之后调用 Zigbee_Init(&Robot.zigbee)
  *   2. 在周期任务（≤100ms）中调用 Zigbee_ErrorHandler(&Robot.zigbee)
  *   3. Zigbee_Send(&Robot.zigbee, &control_data)的调用大约在100-200Hz，确保数据完整性和实时性
  *   4. 接收时采用中断接收，定时解析
- *
- * AT指令使用：
- *   1. Zigbee_SendAT(&Robot.zigbee, "AT\r\n");
- *   2. printf("Zigbee response: %s\r\n", (const char *)Zigbee_GetATResponse(&Robot.zigbee));
  */
 #include "zigbee.h"
 #include "usart.h"
 #include <string.h>
-
-/* CRC8，多项式 0x07，初值 0x00 */
-static uint8_t crc8_calc(const uint8_t *buf, uint16_t len)
-{
-    uint8_t crc = 0x00U;
-    while (len--)
-    {
-        crc ^= *buf++;
-        for (uint8_t i = 0U; i < 8U; i++)
-        {
-            crc = (crc & 0x80U) ? (uint8_t)((crc << 1U) ^ 0x07U) : (uint8_t)(crc << 1U);
-        }
-    }
-    return crc;
-}
 
 /* 将 ZigbeeData_TypeDef 按大端字节序拼入 buf */
 static void data_pack(uint8_t *buf, const ZigbeeData_TypeDef *data)
@@ -127,19 +108,13 @@ static void frame_parse(ZigbeeHandle_TypeDef *zigbee, const uint8_t *buf, uint16
             continue;
         }
 
-        uint8_t crc_recv = buf[i + 3U + payload_len];
-        uint8_t crc_calc = crc8_calc(&buf[i + 2U], (uint16_t)payload_len + 1U);
-        if (crc_recv != crc_calc)
-        {
-            zigbee->status.error_count++;
-            continue;
-        }
-
         data_unpack(&zigbee->rx_data, &buf[i + 3U]);
+        zigbee->explained_data = zigbee->rx_data;
         zigbee->rx_valid = 1U;
         zigbee->status.rx_count++;
         zigbee->status.last_rx_tick = HAL_GetTick();
         zigbee->status.state = ZIGBEE_STATE_CONNECTED;
+        
         return;
     }
 }
@@ -158,6 +133,8 @@ const uint8_t *Zigbee_GetATResponse(const ZigbeeHandle_TypeDef *zigbee)
 HAL_StatusTypeDef Zigbee_Init(ZigbeeHandle_TypeDef *zigbee)
 {
     memset(&zigbee->status, 0, sizeof(zigbee->status));
+    memset(&zigbee->rx_data, 0, sizeof(zigbee->rx_data));
+    memset(&zigbee->explained_data, 0, sizeof(zigbee->explained_data));
     zigbee->rx_valid = 0U;
     zigbee->status.state = ZIGBEE_STATE_DISCONNECTED;
     zigbee->status.last_rx_tick = HAL_GetTick(); /* 防止上电立即误判超时 */
@@ -181,7 +158,6 @@ HAL_StatusTypeDef Zigbee_Send(ZigbeeHandle_TypeDef *zigbee, const ZigbeeData_Typ
     zigbee->tx_buf[1] = ZIGBEE_FRAME_SOF1;
     zigbee->tx_buf[2] = ZIGBEE_PAYLOAD_LEN;
     data_pack(&zigbee->tx_buf[3], data);
-    zigbee->tx_buf[3U + ZIGBEE_PAYLOAD_LEN] = crc8_calc(&zigbee->tx_buf[2], ZIGBEE_PAYLOAD_LEN + 1U);
 
     return HAL_UART_Transmit_DMA(&ZIGBEE_UART_HANDLE, zigbee->tx_buf, ZIGBEE_PAYLOAD_LEN + ZIGBEE_FRAME_OVERHEAD);
 }
@@ -230,9 +206,6 @@ void Zigbee_RxEventHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *hua
 {
     frame_parse(zigbee, zigbee->rx_dma_buf, Size);
 
-     HAL_StatusTypeDef ret = HAL_UARTEx_ReceiveToIdle_DMA(huart, zigbee->rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
+    HAL_UARTEx_ReceiveToIdle_DMA(huart, zigbee->rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
     __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
-
-    if (ret != HAL_OK)
-        zigbee->status.state = ZIGBEE_STATE_ERROR;
 }
