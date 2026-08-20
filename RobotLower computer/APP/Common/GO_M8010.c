@@ -295,7 +295,7 @@ uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_Handl
     motor->control.velocity_param.kp = GO_M8010_VEL_CTRL_KP;
     motor->control.velocity_param.kd = GO_M8010_VEL_CTRL_KD;
 
-    SpeedPlanInit(&motor->control.plan, motor->control.position_param.a_max, motor->control.position_param.v_max, motor->control.position_param.j);
+    SpeedPlanInit(&motor->control.plan, motor->control.position_param.a_max, motor->control.position_param.v_max, motor->control.position_param.j, 0.0f);
     motor->control.ctrl_mode = GOM8010_CTRL_MODE_POSITION;
     motor->control.kp = motor->control.position_param.kp;
     motor->control.kd = motor->control.position_param.kd;

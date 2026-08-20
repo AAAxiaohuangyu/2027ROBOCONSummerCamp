@@ -82,7 +82,7 @@ void J60MotorInit(J60Motor_TypeDef *motor, FDCAN_HandleTypeDef *FDCAN_Handle, ui
     motor->control.velocity_param.kp = J60_VEL_CTRL_KP;
     motor->control.velocity_param.kd = J60_VEL_CTRL_KD;
 
-    SpeedPlanInit(&motor->control.plan, motor->control.position_param.a_max, motor->control.position_param.v_max, motor->control.position_param.j);
+    SpeedPlanInit(&motor->control.plan, motor->control.position_param.a_max, motor->control.position_param.v_max, motor->control.position_param.j, 0.0f);
     motor->control.mode = J60_CTRL_MODE_POSITION;
     motor->control.kp = motor->control.position_param.kp;
     motor->control.kd = motor->control.position_param.kd;

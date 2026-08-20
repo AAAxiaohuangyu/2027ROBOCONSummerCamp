@@ -26,16 +26,29 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
     mecanum_config.motor_direction[CHASSIS_MECANUM_WHEEL_REAR_RIGHT] = CHASSIS_MOTOR_DIRECTION_RR;
     ChassisMecanum_Init(&chassis->drive.mecanum, &mecanum_config);
 
-    SpeedPlanInit(&chassis->displacement_plan.translation,
+    SpeedPlanInit(&chassis->displacement_plan.translation_x,
                   CHASSIS_PLAN_TRANSLATION_MAX_ACCEL_MPS2,
                   CHASSIS_PLAN_TRANSLATION_MAX_SPEED_MPS,
-                  CHASSIS_PLAN_TRANSLATION_MAX_JERK_MPS3);
+                  CHASSIS_PLAN_TRANSLATION_MAX_JERK_MPS3,
+                  CHASSIS_TRACK_TRANSLATION_DEADBAND_M);
+    SpeedPlanInit(&chassis->displacement_plan.translation_y,
+                  CHASSIS_PLAN_TRANSLATION_MAX_ACCEL_MPS2,
+                  CHASSIS_PLAN_TRANSLATION_MAX_SPEED_MPS,
+                  CHASSIS_PLAN_TRANSLATION_MAX_JERK_MPS3,
+                  CHASSIS_TRACK_TRANSLATION_DEADBAND_M);
     SpeedPlanInit(&chassis->displacement_plan.yaw,
                   CHASSIS_PLAN_YAW_MAX_ACCEL_RADPS2,
                   CHASSIS_PLAN_YAW_MAX_SPEED_RADPS,
-                  CHASSIS_PLAN_YAW_MAX_JERK_RADPS3);
+                  CHASSIS_PLAN_YAW_MAX_JERK_RADPS3,
+                  CHASSIS_TRACK_YAW_DEADBAND_RAD);
 
-    PIDInit(&chassis->displacement_plan.translation.track_pid,
+    PIDInit(&chassis->displacement_plan.translation_x.track_pid,
+            CHASSIS_TRACK_TRANSLATION_KP,
+            CHASSIS_TRACK_TRANSLATION_KI,
+            CHASSIS_TRACK_TRANSLATION_KD,
+            CHASSIS_TRACK_TRANSLATION_MAX_OUT,
+            CHASSIS_TRACK_TRANSLATION_MAX_IOUT);
+    PIDInit(&chassis->displacement_plan.translation_y.track_pid,
             CHASSIS_TRACK_TRANSLATION_KP,
             CHASSIS_TRACK_TRANSLATION_KI,
             CHASSIS_TRACK_TRANSLATION_KD,
@@ -48,11 +61,8 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
             CHASSIS_TRACK_YAW_MAX_OUT,
             CHASSIS_TRACK_YAW_MAX_IOUT);
 
-    chassis->displacement_plan.translation_target_m = 0.0f;
-    chassis->displacement_plan.translation_direction_x = 0.0f;
-    chassis->displacement_plan.translation_direction_y = 0.0f;
-    chassis->displacement_plan.translation_start_x = 0.0f;
-    chassis->displacement_plan.translation_start_y = 0.0f;
+    chassis->displacement_plan.translation_target_x_m = 0.0f;
+    chassis->displacement_plan.translation_target_y_m = 0.0f;
     chassis->displacement_plan.yaw_target_rad = 0.0f;
     chassis->displacement_plan.yaw_start_rad = 0.0f;
 
@@ -88,26 +98,12 @@ void ChassisStop(Chassis_TypeDef *chassis)
 
 void ChassisSetTranslation(Chassis_TypeDef *chassis, float dx_m, float dy_m)
 {
-    float distance_m = sqrtf(dx_m * dx_m + dy_m * dy_m);
-
     chassis->velocity_mode = 0U;
-    chassis->displacement_plan.translation_target_m = distance_m;
-    chassis->displacement_plan.translation_start_x = chassis->pose.x_m;
-    chassis->displacement_plan.translation_start_y = chassis->pose.y_m;
+    chassis->displacement_plan.translation_target_x_m = chassis->pose.x_m + dx_m;
+    chassis->displacement_plan.translation_target_y_m = chassis->pose.y_m + dy_m;
 
-    if (distance_m > 0.0f)
-    {
-        chassis->displacement_plan.translation_direction_x = dx_m / distance_m;
-        chassis->displacement_plan.translation_direction_y = dy_m / distance_m;
-    }
-    else
-    {
-        /* dx_m、dy_m同时为0:目标位移为0,不存在方向,避免0/0产生NaN */
-        chassis->displacement_plan.translation_direction_x = 0.0f;
-        chassis->displacement_plan.translation_direction_y = 0.0f;
-    }
-
-    chassis->displacement_plan.translation.state = init;
+    chassis->displacement_plan.translation_x.state = init;
+    chassis->displacement_plan.translation_y.state = init;
 }
 
 void ChassisSetYaw(Chassis_TypeDef *chassis, float dyaw_rad)
@@ -142,21 +138,20 @@ void ChassisUpdate(Chassis_TypeDef *chassis)
 
         if (chassis->velocity_mode == 0U)
         {
-            float translation_actual;
-            float translation_speed;
             float yaw_actual;
 
-            translation_actual = (chassis->pose.x_m - chassis->displacement_plan.translation_start_x) * chassis->displacement_plan.translation_direction_x +
-                                  (chassis->pose.y_m - chassis->displacement_plan.translation_start_y) * chassis->displacement_plan.translation_direction_y;
             yaw_actual = chassis->pose.yaw_rad - chassis->displacement_plan.yaw_start_rad;
 
-            SpeedPlanUpdate(&chassis->displacement_plan.translation, translation_actual, chassis->displacement_plan.translation_target_m);
+            SpeedPlanUpdate(&chassis->displacement_plan.translation_x, chassis->pose.x_m,
+                                 chassis->displacement_plan.translation_target_x_m);
+            SpeedPlanUpdate(&chassis->displacement_plan.translation_y, chassis->pose.y_m,
+                                 chassis->displacement_plan.translation_target_y_m);
             SpeedPlanUpdate(&chassis->displacement_plan.yaw, yaw_actual, chassis->displacement_plan.yaw_target_rad);
 
-            translation_speed = SpeedPlanTrack(&chassis->displacement_plan.translation, translation_actual);
-            chassis->velocity.vx_mps = chassis->displacement_plan.translation_direction_x * translation_speed;
-            chassis->velocity.vy_mps = chassis->displacement_plan.translation_direction_y * translation_speed;
-            chassis->velocity.wz_radps = SpeedPlanTrack(&chassis->displacement_plan.yaw, yaw_actual);
+            /* 全局跟踪 */
+            chassis->velocity.vx_mps = PositionTrack(&chassis->displacement_plan.translation_x, chassis->pose.x_m);
+            chassis->velocity.vy_mps = PositionTrack(&chassis->displacement_plan.translation_y, chassis->pose.y_m);
+            chassis->velocity.wz_radps = PositionTrack(&chassis->displacement_plan.yaw, yaw_actual);
         }
 
         body_velocity.vx_mps = chassis->velocity.vx_mps;
@@ -176,13 +171,10 @@ void ChassisUpdate(Chassis_TypeDef *chassis)
 
 uint8_t ChassisTranslationReached(Chassis_TypeDef *chassis, float tolerance_m)
 {
-    float error = chassis->displacement_plan.translation_target_m - chassis->displacement_plan.translation.s;
+    float error_x = chassis->displacement_plan.translation_target_x_m - chassis->pose.x_m;
+    float error_y = chassis->displacement_plan.translation_target_y_m - chassis->pose.y_m;
 
-    if (error < 0.0f)
-    {
-        error = -error;
-    }
-    return (error <= tolerance_m);
+    return (sqrtf(error_x * error_x + error_y * error_y) <= tolerance_m);
 }
 
 uint8_t ChassisYawReached(Chassis_TypeDef *chassis, float tolerance_rad)

@@ -144,7 +144,7 @@ static void SpeedPlanOneStep(SpeedPlan_TypeDef *sp, float dt)
     }
 }
 
-void SpeedPlanInit(SpeedPlan_TypeDef *sp, float a_max, float v_max, float j)
+void SpeedPlanInit(SpeedPlan_TypeDef *sp, float a_max, float v_max, float j, float track_deadband)
 {
     sp->state = init;
 
@@ -165,6 +165,8 @@ void SpeedPlanInit(SpeedPlan_TypeDef *sp, float a_max, float v_max, float j)
     sp->position_initial = 0.0f;
 
     sp->time_stamp = HAL_GetTick();
+
+    sp->track_deadband = track_deadband;
 }
 
 void SpeedPlanUpdate(SpeedPlan_TypeDef *sp, float position_actual, float position_target)
@@ -192,8 +194,14 @@ void SpeedPlanUpdate(SpeedPlan_TypeDef *sp, float position_actual, float positio
     if (sp->state == init)
     {
         float err = position_target - position_actual;
-        if (fabsf(err) <= 0.03f)
+        if (fabsf(err) <= 0.01f)
         {
+            sp->error_s = err;
+            sp->direction_flag = (err >= 0.0f) ? 1.0f : -1.0f;
+            sp->position_initial = position_actual;
+            sp->s = fabsf(err);
+            sp->a = 0.0f;
+            sp->v = 0.0f;
             sp->state = idle;
             return;
         }
@@ -361,15 +369,19 @@ void SpeedPlanUpdate(SpeedPlan_TypeDef *sp, float position_actual, float positio
     }
 }
 
-float SpeedPlanTrack(SpeedPlan_TypeDef *sp, float position_actual)
+float PositionTrack(SpeedPlan_TypeDef *sp, float position_actual)
 {
     float feedforward_v = sp->v * sp->direction_flag;
+    float target = sp->position_initial + sp->s * sp->direction_flag;
 
-    if (sp->state >= phase1 && sp->state <= phase7)
+    /* 全局跟踪:不论处于init/idle/phaseN哪个状态都持续做位置PID闭环。
+       idle时s已钳位为fabsf(error_s),target即为最终目标位置,PID自然
+       退化为位置保持闭环,可抵抗到位后的外部扰动。误差落入死区时跳过
+       PID补偿,只保留速度前馈,避免死区内噪声/量化误差引起的抖动。 */
+    if (fabsf(target - position_actual) < sp->track_deadband)
     {
-        float target = sp->position_initial + sp->s * sp->direction_flag;
-        return PIDCalc(&sp->track_pid, position_actual, target) + feedforward_v;
+        return feedforward_v;
     }
 
-    return feedforward_v;
+    return PIDCalc(&sp->track_pid, position_actual, target) + feedforward_v;
 }

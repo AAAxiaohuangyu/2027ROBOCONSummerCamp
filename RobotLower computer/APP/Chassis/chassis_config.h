@@ -45,7 +45,8 @@
 #define CHASSIS_MOTOR_DIRECTION_RR               (1)
 
 /*
- * 位移接口使用的七段 S 曲线参数,平移和偏航各用一条独立规划器。
+ * 位移接口使用的七段 S 曲线参数。平移拆分为 x、y 两条完全独立的规划器,
+ * 参数(下同一组宏)保持一致;偏航单独用一条规划器。
  * 平移单位为 m/s^2、m/s、m/s^3,偏航单位为 rad/s^2、rad/s、rad/s^3。
  */
 #define CHASSIS_PLAN_TRANSLATION_MAX_ACCEL_MPS2  (0.4f)
@@ -57,19 +58,25 @@
 #define CHASSIS_PLAN_YAW_MAX_JERK_RADPS3         (0.0f)
 
 /*
- * 位移接口跟踪器(SpeedPlanTrack)使用的位置跟踪PID参数,平移和偏航各用一套,
- * 目标为规划位置、输出叠加到规划速度前馈上,待整定。
+ * 位移接口跟踪器(PositionTrack)使用的位置跟踪PID参数。平移 x、y 两轴共用
+ * 这一组参数(各自独立的PID实例),偏航单独用一套,目标为规划位置、输出
+ * 叠加到规划速度前馈上,待整定。
  */
 #define CHASSIS_TRACK_TRANSLATION_KP             (0.8f)
-#define CHASSIS_TRACK_TRANSLATION_KI             (0.008f)
+#define CHASSIS_TRACK_TRANSLATION_KI             (0.0005f)
 #define CHASSIS_TRACK_TRANSLATION_KD             (0.0f)
 #define CHASSIS_TRACK_TRANSLATION_MAX_OUT        (0.3f)
-#define CHASSIS_TRACK_TRANSLATION_MAX_IOUT       (0.0f)
+#define CHASSIS_TRACK_TRANSLATION_MAX_IOUT       (0.025f)
+/* PositionTrack死区,|实际位置-规划目标位置|小于该值(单位m)时不做PID补偿,
+   只保留速度前馈,避免死区内里程计噪声/量化误差引起的抖动。 */
+#define CHASSIS_TRACK_TRANSLATION_DEADBAND_M     (0.0025f)
 
 #define CHASSIS_TRACK_YAW_KP                     (0.0f)
 #define CHASSIS_TRACK_YAW_KI                     (0.0f)
 #define CHASSIS_TRACK_YAW_KD                     (0.0f)
 #define CHASSIS_TRACK_YAW_MAX_OUT                (0.0f)
 #define CHASSIS_TRACK_YAW_MAX_IOUT               (0.0f)
+/* 同上,单位rad */
+#define CHASSIS_TRACK_YAW_DEADBAND_RAD           (0.0025f)
 
 #endif

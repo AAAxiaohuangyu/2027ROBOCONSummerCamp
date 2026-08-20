@@ -41,17 +41,22 @@ typedef struct
 
     uint32_t time_stamp; /* 上一次SpeedPlanUpdate的HAL_GetTick() */
 
-    PID_TypeDef track_pid; /* 位置跟踪PID,目标为规划位置,输出叠加到规划速度前馈上 */
+    PID_TypeDef track_pid;    /* 位置跟踪PID,目标为规划位置,输出叠加到规划速度前馈上 */
+    float track_deadband;     /* PositionTrack死区,|实际-规划目标|小于该值时不做PID补偿,避免小误差抖动 */
 } SpeedPlan_TypeDef;
 
-/* 初始化速度规划句柄,a_max/v_max/j为该规划实例允许的最大加速度/速度/加加速度 */
-void SpeedPlanInit(SpeedPlan_TypeDef *sp, float a_max, float v_max, float j);
+/* 初始化速度规划句柄,a_max/v_max/j为该规划实例允许的最大加速度/速度/加加速度,
+   track_deadband为PositionTrack的位置跟踪死区 */
+void SpeedPlanInit(SpeedPlan_TypeDef *sp, float a_max, float v_max, float j, float track_deadband);
 
 /* 按position_target重新/继续规划,周期调用,内部按1ms子步长积分,建议调用周期不超过数十ms */
 void SpeedPlanUpdate(SpeedPlan_TypeDef *sp, float position_actual, float position_target);
 
-/* 位置跟踪:phase1~phase7区间内以规划位置(position_initial + s*direction_flag)为目标做PID闭环,
-   输出叠加规划速度前馈(v*direction_flag);init/idle状态下直接返回速度前馈 */
-float SpeedPlanTrack(SpeedPlan_TypeDef *sp, float position_actual);
+/* 全局位置跟踪:不论init/idle/phaseN哪个状态,均以规划位置
+   (position_initial + s*direction_flag)为目标做PID闭环,输出叠加规划速度
+   前馈(v*direction_flag);idle时该目标即为最终目标位置,PID退化为位置
+   保持闭环,可持续抵抗到位后的外部扰动。|实际-规划目标|小于track_deadband
+   时跳过PID补偿,仅保留速度前馈,避免死区内噪声/量化误差引起的抖动 */
+float PositionTrack(SpeedPlan_TypeDef *sp, float position_actual);
 
 #endif

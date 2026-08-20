@@ -22,15 +22,20 @@ extern "C" {
 
 3. 位移接口拆分为平移、偏航两个独立入口:ChassisSetTranslation 下发相对
    当前点的目标位移 dx/dy,ChassisSetYaw 下发相对当前朝向的目标偏航
-   dyaw;两者分别触发各自的七段 S 曲线重新规划,互不影响。平移沿 dx/dy
-   合成的直线方向前进,偏航按 dyaw 的符号原地转动。
+   dyaw;两者分别触发各自的重新规划,互不影响。平移进一步拆分为 x、y
+   两条完全独立的七段 S 曲线规划器,直接以世界系绝对坐标为目标(不再
+   合成方向),二者参数一致、互不耦合;偏航按 dyaw 的符号原地转动。
 
 4. 本模块不做里程计/位姿积分,pose 由外部里程计/位姿融合模块按周期写入
    (x_m/y_m 已接入,yaw_rad 待后续融合模块补齐,目前恒为 0)。每次
    ChassisSetTranslation/ChassisSetYaw 都是相对当前时刻重新规划一段新
-   位移,并记下触发时刻的 pose 作为起点;ChassisUpdate 中用当前 pose 相对
-   该起点的投影量作为跟踪器的实际反馈,对规划速度做闭环修正,由调用方
-   负责在合适的时机以合适的目标增量调用。
+   位移,平移 x/y 各轴以调用时刻的世界系坐标加上 dx/dy 作为绝对目标;
+   ChassisUpdate 中用当前 pose 直接作为跟踪器的实际反馈,对规划速度做
+   闭环修正,由调用方负责在合适的时机以合适的目标增量调用。跟踪器
+   (PositionTrack)不论处于 init/idle/phaseN 哪个规划阶段都持续生效,
+   到位后仍锁住目标位置、抵抗扰动;平移 x、y 使用两套完全独立的跟踪器。
+   某轴当前位置与目标位置之差小于 CHASSIS_PLAN_TRANSLATION_DEADZONE_M
+   时跳过该轴的重新规划,但跟踪器仍持续运行。
 */
 
 /* 驱动硬件与麦轮运动学:电机组、轮序到电调 ID 的映射、逆解参数。 */
@@ -44,13 +49,11 @@ typedef struct
 /* 位移接口(ChassisSetTranslation/ChassisSetYaw)下的 S 曲线规划状态。 */
 typedef struct
 {
-    SpeedPlan_TypeDef translation; /* 平移(沿 dx/dy 合成方向)S 曲线。 */
-    SpeedPlan_TypeDef yaw;         /* 偏航 S 曲线。 */
-    float translation_target_m;    /* 本次位移的距离目标,非负。 */
-    float translation_direction_x; /* 位移方向单位向量 x 分量。 */
-    float translation_direction_y; /* 位移方向单位向量 y 分量。 */
-    float translation_start_x;     /* 本次平移规划触发时刻的世界系起点 x,供跟踪器投影实际已走距离。 */
-    float translation_start_y;     /* 本次平移规划触发时刻的世界系起点 y。 */
+    SpeedPlan_TypeDef translation_x; /* 平移 x 方向独立 S 曲线,含独立跟踪器。 */
+    SpeedPlan_TypeDef translation_y; /* 平移 y 方向独立 S 曲线,含独立跟踪器。 */
+    SpeedPlan_TypeDef yaw;           /* 偏航 S 曲线。 */
+    float translation_target_x_m;    /* 本次平移的世界系绝对目标 x。 */
+    float translation_target_y_m;    /* 本次平移的世界系绝对目标 y。 */
     float yaw_target_rad;          /* 本次偏航目标,带符号。 */
     float yaw_start_rad;           /* 本次偏航规划触发时刻的起始朝向,供跟踪器计算实际已转角度。 */
 } Chassis_DisplacementPlan_t;
@@ -85,9 +88,9 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
    立即生效,不经过 S 曲线规划 */
 void ChassisSetVelocity(Chassis_TypeDef *chassis, float vx_mps, float vy_mps, float wz_radps);
 
-/* 平移接口:下发相对当前点的目标位移 dx/dy,记录当前 pose 作为跟踪起点,
-   触发平移 S 曲线重新规划,不影响偏航目标;运动过程速度由 ChassisUpdate
-   中的规划器结合跟踪器给出 */
+/* 平移接口:下发相对当前点的目标位移 dx/dy,换算为世界系绝对目标坐标,
+   触发 x、y 两条独立 S 曲线重新规划,不影响偏航目标;运动过程速度由
+   ChassisUpdate 中的规划器结合两套独立跟踪器给出 */
 void ChassisSetTranslation(Chassis_TypeDef *chassis, float dx_m, float dy_m);
 
 /* 偏航接口:下发相对当前朝向的目标偏航 dyaw,记录当前 pose.yaw_rad 作为

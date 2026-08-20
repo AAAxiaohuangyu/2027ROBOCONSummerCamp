@@ -60,11 +60,21 @@ void TestChassisSetPositionTask(void *argument)
         switch (state)
         {
         case TEST_POSITION_STATE_START_MOVE_X:
-            ChassisSetTranslation(&Robot.chassis, -1.0f, 0.0f); /* x方向,只在进入本状态时下发一次 */
+            ChassisSetTranslation(&Robot.chassis, -2.0f, 0.0f); /* x方向,只在进入本状态时下发一次 */
             state = TEST_POSITION_STATE_WAIT_MOVE_X;
             break;
 
         case TEST_POSITION_STATE_WAIT_MOVE_X:
+            if (ChassisTranslationReached(&Robot.chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+                state = TEST_POSITION_STATE_START_MOVE_Y;
+            break;
+
+        case TEST_POSITION_STATE_START_MOVE_Y:
+            ChassisSetTranslation(&Robot.chassis, 0.0f, 1.0f); 
+            state = TEST_POSITION_STATE_WAIT_MOVE_Y;
+            break;
+
+        case TEST_POSITION_STATE_WAIT_MOVE_Y:
             if (ChassisTranslationReached(&Robot.chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
                 state = TEST_POSITION_STATE_DONE;
             break;
