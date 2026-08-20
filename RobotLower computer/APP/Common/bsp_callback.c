@@ -43,7 +43,9 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
     if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK)
         return;
 
-    if ((Robot.encoder.x_axis.FDCAN_Handle != NULL &&
+    if ((Robot.encoder.baudrate_target_handle != NULL &&
+         hfdcan->Instance == Robot.encoder.baudrate_target_handle->Instance) ||
+        (Robot.encoder.x_axis.FDCAN_Handle != NULL &&
          hfdcan->Instance == Robot.encoder.x_axis.FDCAN_Handle->Instance) ||
         (Robot.encoder.y_axis.FDCAN_Handle != NULL &&
          hfdcan->Instance == Robot.encoder.y_axis.FDCAN_Handle->Instance))

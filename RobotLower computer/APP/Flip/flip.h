@@ -26,18 +26,18 @@
 
 typedef enum
 {
-    FLIP_STATE_UP = 0,
-    FLIP_STATE_FORWARD,
-    FLIP_STATE_GRIP,
-    FLIP_STATE_ROTATE,
-    FLIP_STATE_FORWARD_AFTER_ROTATE,
-    FLIP_STATE_RELEASE,
-    FLIP_STATE_FORWARD_AFTER_RELEASE,
-    FLIP_STATE_UP_AFTER_RELEASE,
-    FLIP_STATE_BACK,
-    FLIP_STATE_DOWN,
-    FLIP_STATE_ROTATE_BACK,
-    FLIP_STATE_DONE
+    FLIP_STATE_UP = 0,             /* 从初始位置抬升。 */
+    FLIP_STATE_FORWARD,            /* 移动至 KFS 上方。 */
+    FLIP_STATE_GRIP,               /* 吸附 KFS。 */
+    FLIP_STATE_ROTATE,             /* 第一次旋转，完成翻转。 */
+    FLIP_STATE_FORWARD_AFTER_ROTATE, /* 移动至释放位置。 */
+    FLIP_STATE_RELEASE,            /* 释放已翻转的 KFS。 */
+    FLIP_STATE_FORWARD_AFTER_RELEASE, /* 离开释放位置。 */
+    FLIP_STATE_UP_AFTER_RELEASE,   /* 抬升至回程安全高度。 */
+    FLIP_STATE_BACK,               /* 后退至回落位置。 */
+    FLIP_STATE_DOWN,               /* 下降至复位高度。 */
+    FLIP_STATE_ROTATE_BACK,        /* 第二次旋转，恢复初始朝向。 */
+    FLIP_STATE_DONE                /* 翻转流程结束。 */
 } FlipState_TypeDef;
 
 __weak void RoboticArmGripMotion(void);

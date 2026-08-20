@@ -13,6 +13,7 @@ static void EncoderAxisInit(EncoderAxis_TypeDef *axis, FDCAN_HandleTypeDef *fdca
     axis->FDCAN_Handle = fdcan_handle;
     axis->node_id = node_id;
     axis->raw_position_count = 0U;
+    axis->position_valid = 0U;
     axis->origin_position_count = 0U;
     axis->distance_m = 0.0f;
     axis->midpoint_ack = 0U;
@@ -104,13 +105,13 @@ static uint8_t EncoderAxisParseFeedback(EncoderAxis_TypeDef *axis, FDCAN_HandleT
                      ((uint32_t)data[5] << 16) |
                      ((uint32_t)data[6] << 24);
 
-    axis->origin_position_count = axis->raw_position_count;
-    axis->raw_position_count = position_count;
-    if (axis->midpoint_pending != 0U)
+    /* 首帧不能与初始化时的 0 比较；中点重置后的首帧也不能与重置前的
+       计数比较。两种情况都只建立基准，不产生位移。 */
+    if ((axis->position_valid == 0U) || (axis->midpoint_pending != 0U))
     {
-        /* 中点重置应答之后的首帧反馈：编码器内部计数发生了跳变，这一帧不能
-           计入位移增量，只把它作为下一帧起计算增量的新基准，避免把中点重置
-           造成的计数跳变累加进distance_m。 */
+        axis->raw_position_count = position_count;
+        axis->origin_position_count = position_count;
+        axis->position_valid = 1U;
         axis->midpoint_pending = 0U;
     }
     else
@@ -122,7 +123,11 @@ static uint8_t EncoderAxisParseFeedback(EncoderAxis_TypeDef *axis, FDCAN_HandleT
         float angle_deg;
         float wheel_circumference_m;
 
-        delta_count = (int32_t)axis->raw_position_count - (int32_t)axis->origin_position_count;
+        /* 先在 uint32_t 域做模 2^32 减法，再转换为有符号差值；这样跨越
+           0xffffffff/0 的环绕不会触发有符号整数溢出（原写法是未定义行为）。 */
+        delta_count = (int32_t)(position_count - axis->raw_position_count);
+        axis->origin_position_count = axis->raw_position_count;
+        axis->raw_position_count = position_count;
         angle_deg = ((float)delta_count * 360.0f) / (float)ENCODER_COUNTS_PER_REVOLUTION;
         wheel_circumference_m = 2.0f * BSP_PI * ENCODER_WHEEL_RADIUS_M;
 
@@ -152,6 +157,9 @@ void EncoderInit(Encoder_TypeDef *encoder,
     EncoderAxisInit(&encoder->y_axis, y_fdcan_handle, y_node_id);
     encoder->x_m = 0.0f;
     encoder->y_m = 0.0f;
+    encoder->baudrate_target_handle = NULL;
+    encoder->baudrate_target_id = 0U;
+    encoder->baudrate_ack = 0U;
 
     if (x_fdcan_handle == y_fdcan_handle)
     {
@@ -169,21 +177,72 @@ void EncoderInit(Encoder_TypeDef *encoder,
     }
 
     /* 过滤器就绪后，各向两轴发送一次"设置多圈中点"请求；应答经FDCAN接收中断异步到达
-       (HAL_FDCAN_RxFifo1Callback -> EncoderParseFeedback -> EncoderAxisParseFeedback)，
-       此处仅在有限时间内忙等。增量计算基准完全依赖这次应答触发（见EncoderAxisParseFeedback()
-       的midpoint_pending分支）：若超时仍未收到应答，对应轴的首帧位置反馈会把中点重置
-       造成的计数跳变误计入distance_m。当前假设该应答一定会在超时前到达。 */
+       (HAL_FDCAN_RxFifo1Callback -> EncoderParseFeedback -> EncoderAxisParseFeedback)。
+       等待只用于给正常应答留出时间；即使超时，position_valid仍会保护首帧，不会把
+       初始化/重置造成的计数跳变误计入 distance_m。 */
+    EncoderAxisRequestSetMidpoint(&encoder->x_axis);
+    EncoderAxisRequestSetMidpoint(&encoder->y_axis);
+
+    /* 原代码只声明 wait_start_tick 就退出，完全没有等待；于是首帧是否在
+       中点应答前后到达取决于总线时序，表现为“偶尔正常”。中断仍可运行，
+       因而这里等待应答标志即可；超时则放行查询，首帧仍会安全地只建基准。 */
     {
         uint32_t wait_start_tick = HAL_GetTick();
+        while (((encoder->x_axis.midpoint_ack == 0U) ||
+                (encoder->y_axis.midpoint_ack == 0U)) &&
+               ((HAL_GetTick() - wait_start_tick) < ENCODER_MIDPOINT_ACK_TIMEOUT_MS))
+        {
+            /* 不调用 osDelay：EncoderInit 可能在 RTOS 调度器启动前执行。 */
+        }
 
-        EncoderAxisRequestSetMidpoint(&encoder->x_axis);
-        EncoderAxisRequestSetMidpoint(&encoder->y_axis);
+        /* 超时轴不能永久阻塞位置请求；其首帧由 position_valid 逻辑建立基准。 */
+        if (encoder->x_axis.midpoint_ack == 0U)
+            encoder->x_axis.request_blocked = 0U;
+        if (encoder->y_axis.midpoint_ack == 0U)
+            encoder->y_axis.request_blocked = 0U;
     }
+}
+
+void EncoderSetCanBaudRate(Encoder_TypeDef *encoder,
+                           FDCAN_HandleTypeDef *fdcan_handle,
+                           uint8_t node_id,
+                           uint8_t baudrate_code)
+{
+    uint8_t data[4];
+
+    if ((fdcan_handle == NULL) || (node_id == 0U) || (baudrate_code > ENCODER_CAN_BAUD_100K))
+    {
+        return;
+    }
+
+    /* 使用FIFO1，复用HAL_FDCAN_RxFifo1Callback中的EncoderParseFeedback分发。 */
+    encoder->baudrate_target_handle = fdcan_handle;
+    encoder->baudrate_target_id = node_id;
+    encoder->baudrate_ack = 0U;
+    FDCANFilterInit(fdcan_handle, 0U, node_id, node_id, FDCAN_FILTER_TO_RXFIFO1);
+
+    data[0] = 0x04U;
+    data[1] = node_id;
+    data[2] = ENCODER_CMD_SET_CAN_BAUD_RATE;
+    data[3] = baudrate_code;
+    FDCANSendStandard(fdcan_handle, node_id, data, sizeof(data));
 }
 
 uint8_t EncoderParseFeedback(Encoder_TypeDef *encoder, FDCAN_HandleTypeDef *fdcan_handle,
                              uint32_t std_id, const uint8_t data[8])
 {
+    /* BRT38M FUNC=0x03设置波特率应答：04 ID 03 00。设备应答后立即切换速率。 */
+    if ((fdcan_handle == encoder->baudrate_target_handle) &&
+        (std_id == encoder->baudrate_target_id) &&
+        (data[0] == 0x04U) &&
+        (data[1] == encoder->baudrate_target_id) &&
+        (data[2] == ENCODER_CMD_SET_CAN_BAUD_RATE) &&
+        (data[3] == 0x00U))
+    {
+        encoder->baudrate_ack = 1U;
+        return 1U;
+    }
+
     if (EncoderAxisParseFeedback(&encoder->x_axis, fdcan_handle, std_id, data))
     {
         return 1U;

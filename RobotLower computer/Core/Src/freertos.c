@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "test.h"
+#include "encoder_baudrate_switch.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,33 +46,32 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-osThreadId_t TestChassisUpdateTaskHandle;
-const osThreadAttr_t TestChassisUpdateTask_attributes = {
-  .name = "TestChassisUpdateTask",
-  .stack_size = 256 * 10,
+osThreadId_t TestChassisVofaTaskHandle;
+const osThreadAttr_t TestChassisVofaTask_attributes = {
+  .name = "TestChassisVofaTask",
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-
-osThreadId_t TestEncoderUpdateTaskHandle;
-const osThreadAttr_t TestEncoderUpdateTask_attributes = {
-  .name = "TestEncoderUpdateTask",
-  .stack_size = 256 * 10,
+osThreadId_t TestArmControlTaskHandle;
+uint8_t TestArmTestEnabled;
+const osThreadAttr_t TestArmControlTask_attributes = {
+  .name = "TestArmControlTask",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
+osThreadId_t TestArmMotionTaskHandle;
+const osThreadAttr_t TestArmMotionTask_attributes = {
+  .name = "TestArmMotionTask",
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-
-/*osThreadId_t TestChassisSetVelocityTaskHandle;
-const osThreadAttr_t TestChassisSetVelocityTask_attributes = {
-  .name = "TestChassisSetVelocityTask",
-  .stack_size = 256 * 10,
+osThreadId_t EncoderBaudrateSwitchTaskHandle;
+uint8_t EncoderBaudrateSwitchEnabled;
+const osThreadAttr_t EncoderBaudrateSwitchTask_attributes = {
+  .name = "EncoderBaudrateSwitchTask",
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
-};*/
-
-/*osThreadId_t TestChassisSetPositionTaskHandle;
-const osThreadAttr_t TestChassisSetPositionTask_attributes = {
-    .name = "TestChassisSetPositionTask",
-    .stack_size = 256 * 10,
-    .priority = (osPriority_t)osPriorityNormal,
-};*/
+};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -97,7 +97,9 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-  TestChassisEncoderRxInit();
+  TestChassisSpeedPlanInit();
+  TestArmTestEnabled = TestArmMotionInit();
+  EncoderBaudrateSwitchEnabled = EncoderBaudrateSwitchInit();
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -122,10 +124,16 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  TestChassisUpdateTaskHandle = osThreadNew(TestChassisUpdateTask, NULL, &TestChassisUpdateTask_attributes);
-  TestEncoderUpdateTaskHandle = osThreadNew(TestEncoderUpdateTask, NULL, &TestEncoderUpdateTask_attributes);
-  /*TestChassisSetVelocityTaskHandle = osThreadNew(TestChassisSetVelocityTask, NULL, &TestChassisSetVelocityTask_attributes);*/
-  /*TestChassisSetPositionTaskHandle = osThreadNew(TestChassisSetPositionTask, NULL, &TestChassisSetPositionTask_attributes);*/
+  TestChassisVofaTaskHandle = osThreadNew(TestChassisVofaTask, NULL, &TestChassisVofaTask_attributes);
+  if (TestArmTestEnabled != 0U)
+  {
+    TestArmControlTaskHandle = osThreadNew(TestArmControlTask, NULL, &TestArmControlTask_attributes);
+    TestArmMotionTaskHandle = osThreadNew(TestArmMotionTask, NULL, &TestArmMotionTask_attributes);
+  }
+  if (EncoderBaudrateSwitchEnabled != 0U)
+  {
+    EncoderBaudrateSwitchTaskHandle = osThreadNew(EncoderBaudrateSwitchTask, NULL, &EncoderBaudrateSwitchTask_attributes);
+  }
 
   /* USER CODE END RTOS_THREADS */
 

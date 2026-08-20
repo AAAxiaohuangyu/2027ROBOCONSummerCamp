@@ -21,8 +21,9 @@
  * 每只编码器发送一次“设置多圈中点”请求（FUNC=0x0C，把编码器内部多圈计数器重置到
  * 量程中点、留出上下余量，不改变零点定义），并阻塞等待应答；收到应答后触发的
  * 下一帧位置反馈自动成为本次上电后的软件原点，因此两轴滚动距离均从 0 m 开始。
- * 该流程假设“设置中点”请求一定会在 EncoderInit() 的等待超时前得到应答——若某轴
- * 超时未收到应答，该轴将永远不会建立软件原点。本模块不写入编码器硬件零点，是否
+ * 若应答超时，首帧仍会单独建立软件原点，不会产生虚假位移；但应检查总线、节点 ID
+ * 和过滤器配置。当前实现只在初始化（或外部显式调用内部流程）设置一次中点，尚未
+ * 实现按累计距离自动计次并重新设置中点的运行时策略。本模块不写入编码器硬件零点，是否
  * 使用本模块由调用者是否调用 EncoderInit() 决定，不依赖额外的使能宏。
  */
 
@@ -73,6 +74,14 @@
 /* EncoderInit() 等待两轴"设置中点"应答的上限，超时未收到也不阻塞后续流程。 */
 #define ENCODER_MIDPOINT_ACK_TIMEOUT_MS   (500U)
 
+/* BRT38M CAN波特率配置值，FUNC=0x03。设备默认500 kbps。 */
+#define ENCODER_CAN_BAUD_500K             (0x00U)
+#define ENCODER_CAN_BAUD_1M               (0x01U)
+#define ENCODER_CAN_BAUD_250K             (0x02U)
+#define ENCODER_CAN_BAUD_125K             (0x03U)
+#define ENCODER_CAN_BAUD_100K             (0x04U)
+#define ENCODER_CMD_SET_CAN_BAUD_RATE     (0x03U)
+
 /*
  * 单只编码器的运行状态。FDCAN_Handle/node_id 由 EncoderInit() 赋值；
  * raw_position_count、origin_position_count、distance_m 均由 EncoderParseFeedback()
@@ -85,6 +94,7 @@ typedef struct
     uint8_t node_id;                   /* 编码器 CAN 节点 id */
 
     volatile uint32_t raw_position_count;
+    volatile uint8_t position_valid; /* 已收到至少一帧位置并建立增量基准 */
     uint32_t origin_position_count; /* 上一帧位置反馈的计数值，作为下一帧计算增量
                                         位移的基准，每帧位置反馈到达后都会刷新为
                                         该帧的计数值，见EncoderAxisParseFeedback() */
@@ -115,6 +125,11 @@ typedef struct
 
     float x_m; /* 底盘坐标系下的 x，由两轴滚动距离按安装角度分解、叠加得到 */
     float y_m; /* 底盘坐标系下的 y，由两轴滚动距离按安装角度分解、叠加得到 */
+
+    /* 单码盘波特率配置事务。配置期间应仅连接目标码盘，避免不同速率的设备共线。 */
+    FDCAN_HandleTypeDef *baudrate_target_handle;
+    uint8_t baudrate_target_id;
+    volatile uint8_t baudrate_ack;
 } Encoder_TypeDef;
 
 /*
@@ -131,6 +146,13 @@ typedef struct
 void EncoderInit(Encoder_TypeDef *encoder,
                   FDCAN_HandleTypeDef *x_fdcan_handle, uint8_t x_node_id,
                   FDCAN_HandleTypeDef *y_fdcan_handle, uint8_t y_node_id);
+
+/* 在当前CAN速率下向单只BRT38M发送FUNC=0x03配置命令。收到04 ID 03 00应答后
+   encoder->baudrate_ack置1；设备随即切换到新速率。调用前只能连接该目标码盘。 */
+void EncoderSetCanBaudRate(Encoder_TypeDef *encoder,
+                           FDCAN_HandleTypeDef *fdcan_handle,
+                           uint8_t node_id,
+                           uint8_t baudrate_code);
 
 /*
  * 解析一帧 FDCAN 反馈数据：先由 fdcan_handle+std_id 判断该帧属于 x 轴还是 y 轴。
