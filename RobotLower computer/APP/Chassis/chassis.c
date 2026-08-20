@@ -43,11 +43,11 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
                   CHASSIS_TRACK_YAW_DEADBAND_RAD);
 
     PIDInit(&chassis->displacement_plan.translation_x.track_pid,
-            CHASSIS_TRACK_TRANSLATION_KP,
-            CHASSIS_TRACK_TRANSLATION_KI,
-            CHASSIS_TRACK_TRANSLATION_KD,
-            CHASSIS_TRACK_TRANSLATION_MAX_OUT,
-            CHASSIS_TRACK_TRANSLATION_MAX_IOUT);
+            CHASSIS_TRACK_TRANSLATION_X_KP,
+            CHASSIS_TRACK_TRANSLATION_X_KI,
+            CHASSIS_TRACK_TRANSLATION_X_KD,
+            CHASSIS_TRACK_TRANSLATION_X_MAX_OUT,
+            CHASSIS_TRACK_TRANSLATION_X_MAX_IOUT);
     PIDInit(&chassis->displacement_plan.translation_y.track_pid,
             CHASSIS_TRACK_TRANSLATION_KP,
             CHASSIS_TRACK_TRANSLATION_KI,

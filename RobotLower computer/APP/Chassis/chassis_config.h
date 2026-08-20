@@ -58,10 +58,16 @@
 #define CHASSIS_PLAN_YAW_MAX_JERK_RADPS3 (0.0f)
 
 /*
- * 位移接口跟踪器(PositionTrack)使用的位置跟踪PID参数。平移 x、y 两轴共用
- * 这一组参数(各自独立的PID实例),偏航单独用一套,目标为规划位置、输出
- * 叠加到规划速度前馈上,待整定。
+ * 位移接口跟踪器(PositionTrack)使用的位置跟踪PID参数。平移 x、y 两轴各自
+ * 独立整定,偏航单独用一套,目标为规划位置、输出叠加到规划速度前馈上,
+ * 待整定。
  */
+#define CHASSIS_TRACK_TRANSLATION_X_KP (0.1f)
+#define CHASSIS_TRACK_TRANSLATION_X_KI (0.0001f)
+#define CHASSIS_TRACK_TRANSLATION_X_KD (0.01f)
+#define CHASSIS_TRACK_TRANSLATION_X_MAX_OUT (0.2f)
+#define CHASSIS_TRACK_TRANSLATION_X_MAX_IOUT (0.001f)
+
 #define CHASSIS_TRACK_TRANSLATION_KP (2.55f)
 #define CHASSIS_TRACK_TRANSLATION_KI (0.0001f)
 #define CHASSIS_TRACK_TRANSLATION_KD (0.1f)
