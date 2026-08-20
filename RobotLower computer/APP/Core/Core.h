@@ -8,6 +8,7 @@
 #include "flip.h"
 #include "Pickup.h"
 #include "vision.h"
+#include "yis512.h"
 
 /* 机器人整体状态机状态,占位,具体状态由后续任务流程补充 */
 typedef enum
@@ -75,6 +76,7 @@ typedef struct
     FlipState_TypeDef flip_state;
     RobotPickup_TypeDef pickup;
     VisionHandle_TypeDef vision;
+    Yis512_TypeDef yis512;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;

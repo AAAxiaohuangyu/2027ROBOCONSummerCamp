@@ -2,9 +2,9 @@
 #include "Core.h"
 #include "bsp_config.h"
 
-/* FDCAN FIFO0收到新报文:按hfdcan实例匹配到挂载在该总线上的电机/电调组,解析反馈;
-   命中J60(升降)后即返回,否则再尝试M3508电调组(底盘),均先判断句柄非空且实例匹配
-   再进入对应解析,避免不同子系统误解析对方的帧 */
+/* FDCAN FIFO0收到新报文:按hfdcan实例匹配到挂载在该总线上的电机/电调组/传感器,解析反馈;
+   命中J60(升降)后即返回,否则再尝试M3508电调组(底盘),最后尝试YIS512(扩展过滤器0->FIFO0),
+   均先判断句柄非空且实例匹配再进入对应解析,避免不同子系统误解析对方的帧 */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
     FDCAN_RxHeaderTypeDef rx_header;
@@ -27,6 +27,12 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         hfdcan->Instance == Robot.chassis.drive.motor_group.FDCAN_Handle->Instance)
     {
         M3508GroupParseFeedback(&Robot.chassis.drive.motor_group, rx_header.Identifier, rx_data);
+        return;
+    }
+
+    if (hfdcan->Instance == YIS512_FDCAN_HANDLE->Instance &&
+        Yis512ParseEulerFrame(&Robot.yis512, hfdcan, &rx_header, rx_data))
+    {
         return;
     }
 }

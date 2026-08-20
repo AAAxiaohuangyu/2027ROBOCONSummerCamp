@@ -27,6 +27,34 @@ void FDCANStandardInit(FDCAN_HandleTypeDef *FDCAN_Handle, int StartID, int EndID
     FDCANFilterInit(FDCAN_Handle, 0, StartID, EndID, FDCAN_FILTER_TO_RXFIFO0);
 }
 
+// 扩展(29位)ID列表模式过滤器配置,以及中断的启用和fdcan的开启,过滤器序号与目标FIFO均可指定
+// 扩展过滤器与标准过滤器分属不同的过滤器组,FilterIndex在扩展过滤器组内独立编号
+void FDCANExtendedFilterInit(FDCAN_HandleTypeDef *FDCAN_Handle, uint32_t FilterIndex,
+                              uint32_t StartID, uint32_t EndID, uint32_t FilterConfig)
+{
+    FDCAN_FilterTypeDef sfilter = {0};
+    sfilter.IdType = FDCAN_EXTENDED_ID;
+    sfilter.FilterIndex = FilterIndex;
+    sfilter.FilterType = FDCAN_FILTER_RANGE;
+    sfilter.FilterConfig = FilterConfig;
+    sfilter.FilterID1 = StartID;
+    sfilter.FilterID2 = EndID;
+    HAL_FDCAN_ConfigFilter(FDCAN_Handle, &sfilter);
+
+    HAL_FDCAN_ActivateNotification(FDCAN_Handle,
+        (FilterConfig == FDCAN_FILTER_TO_RXFIFO1) ? FDCAN_IT_RX_FIFO1_NEW_MESSAGE
+                                                    : FDCAN_IT_RX_FIFO0_NEW_MESSAGE,
+        0);
+
+    HAL_FDCAN_Start(FDCAN_Handle);
+}
+
+// 默认使用扩展过滤器0,目标fifo0,精确匹配单个扩展ID
+void FDCANExtendedInit(FDCAN_HandleTypeDef *FDCAN_Handle, uint32_t ExtID)
+{
+    FDCANExtendedFilterInit(FDCAN_Handle, 0, ExtID, ExtID, FDCAN_FILTER_TO_RXFIFO0);
+}
+
 void FDCANSendStandard(FDCAN_HandleTypeDef *FDCAN_Handle, uint16_t std_id, uint8_t *data, uint8_t length)
 {
     FDCAN_TxHeaderTypeDef TxHeader = {0};

@@ -14,6 +14,8 @@ void TestChassisEncoderRxInit(void)
     EncoderInit(&Robot.encoder,
                 ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID,
                 ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID); /* 过滤器0 -> RXFIFO1 */
+
+    Yis512Init(&Robot.yis512); /* 扩展过滤器0 -> RXFIFO0 */
 }
 
 void TestChassisUpdateTask(void *argument)
@@ -61,7 +63,7 @@ typedef enum
 
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_X;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_DONE;
 
     (void)argument;
 
