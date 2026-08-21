@@ -23,6 +23,13 @@ RobotLower computer/MDK-ARM/*.s
 RobotLower computer/MDK-ARM/.vscode/*.log
 RobotLower computer/MDK-ARM/.vscode/*.log.lock
 
+# J60 bridge Keil MDK-ARM build outputs and local IDE state
+RobotJ60Bridge/MDK-ARM/RobotJ60Bridge/
+RobotJ60Bridge/MDK-ARM/RobotLower computer/
+RobotJ60Bridge/MDK-ARM/DebugConfig/
+RobotJ60Bridge/MDK-ARM/*.lst
+RobotJ60Bridge/MDK-ARM/*.scvd
+
 # General
 *.bak
 
