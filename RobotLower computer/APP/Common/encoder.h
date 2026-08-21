@@ -13,11 +13,15 @@
  * 1. 接收上层 FDCAN 转交的编码器位置帧，在接收回调中直接把相邻两帧的计数差换算
  *    为本帧滚动距离并累加到对应轴的 distance_m；
  * 2. 在 EncoderUpdate() 这一自循环 RTOS 任务中周期发送位置查询请求帧；
- * 3. 按各自的安装角度把两轴累计滚动距离分解到底盘坐标系 x、y 方向后叠加。
+ * 3. 取两轴滚动距离相对上一次积分的增量，按各自安装偏移扣除底盘旋转在该
+ *    安装点引入的牵连线速度分量，再按安装角度投影为底盘车体系增量位移，
+ *    最后按当前 yaw 把该增量旋转到世界系后累加到 x_m、y_m——即编码器安装点
+ *    不在底盘几何中心、且底盘存在转动时的里程计融合，见 EncoderUpdate()。
  *
  * 坐标约定：ID1 编码器为 x_axis，ID2 编码器为 y_axis，理想安装下二者滚动方向
  * 分别与底盘 x 轴重合、垂直；实际安装角度由 ENCODER_X_INSTALL_ANGLE_DEG /
- * ENCODER_Y_INSTALL_ANGLE_DEG 描述，见 EncoderUpdate()。本模块不写入编码器硬件
+ * ENCODER_Y_INSTALL_ANGLE_DEG 描述，安装点相对底盘几何中心的偏移由
+ * ENCODER_X/Y_OFFSET_X/Y_M 描述，见 EncoderUpdate()。本模块不写入编码器硬件
  * 零点，是否使用本模块由调用者是否调用 EncoderInit() 决定，不依赖额外的使能宏。
  */
 
@@ -44,8 +48,20 @@
  * 乘 -1 等价）。若实际安装角度存在偏差，只需修改这里的角度值，EncoderUpdate() 会
  * 按新角度重新把两轴滚动距离分解、叠加到底盘 x、y，无需改动换算代码。
  */
-#define ENCODER_X_INSTALL_ANGLE_DEG       (225.0f)
-#define ENCODER_Y_INSTALL_ANGLE_DEG       (-225.0f)
+#define ENCODER_X_INSTALL_ANGLE_DEG       (45.0f)
+#define ENCODER_Y_INSTALL_ANGLE_DEG       (-45.0f)
+
+/*
+ * 两只编码器滚动接触点相对底盘几何中心的安装偏移，单位 m，底盘坐标系下的
+ * x/y 分量（与 ENCODER_X/Y_INSTALL_ANGLE_DEG 同一坐标系）。若码盘未装在
+ * 几何中心，底盘转动会在该安装点叠加 ω×r 的牵连线速度，编码器会把这部分
+ * 也当成滚动计入，需据此在 EncoderUpdate() 中先扣除、再换算为几何中心的
+ * 位移。恰好装在几何中心时四个偏移量保持为 0 即可。实测标定。
+ */
+#define ENCODER_X_OFFSET_X_M              (0.162f)
+#define ENCODER_X_OFFSET_Y_M              (0.185f)
+#define ENCODER_Y_OFFSET_X_M              (0.162f)
+#define ENCODER_Y_OFFSET_Y_M              (0.1115f)
 
 /* BRT38M 固定协议与型号参数，不应作为现场调参项。 */
 #define ENCODER_COUNTS_PER_REVOLUTION     (4096U)
@@ -89,14 +105,25 @@ typedef struct
                                                 EncoderAxisParseFeedback() */
 } EncoderAxis_TypeDef;
 
-/* 模块整体状态：两只编码器及按安装角度分解、叠加后的底盘坐标系位置。 */
+/* 模块整体状态：两只编码器，及扣除安装偏心、按 yaw 转换到世界系后累加得到
+   的底盘世界系位置，与 chassis->pose.x_m/y_m 同一坐标系，可直接互相赋值。 */
 typedef struct
 {
     EncoderAxis_TypeDef x_axis; /* ID1 编码器 */
     EncoderAxis_TypeDef y_axis; /* ID2 编码器 */
 
-    float x_m; /* 底盘坐标系下的 x，由两轴滚动距离按安装角度分解、叠加得到 */
-    float y_m; /* 底盘坐标系下的 y，由两轴滚动距离按安装角度分解、叠加得到 */
+    float x_m; /* 底盘世界系累计位置 x，见 EncoderUpdate() 中的积分过程 */
+    float y_m; /* 底盘世界系累计位置 y，见 EncoderUpdate() 中的积分过程 */
+
+    /* 上一次积分时的两轴累计距离快照，用于取本周期增量，见
+       EncoderIntegrateOdometry()。 */
+    float prev_x_axis_distance_m;
+    float prev_y_axis_distance_m;
+    float prev_yaw_rad; /* 上一次积分时的底盘 yaw（来自 chassis->pose.yaw_rad），
+                            用于取 yaw 增量、把车体系位移增量旋转到世界系 */
+    uint8_t pose_initialized; /* 0 表示尚未建立积分基准：上电首次调用只记录
+                                  上述三个快照、不累加位移，避免把上电瞬间的
+                                  任意状态误计入位移，见 EncoderIntegrateOdometry() */
 } Encoder_TypeDef;
 
 /*
@@ -121,11 +148,13 @@ uint8_t EncoderParseFeedback(Encoder_TypeDef *encoder, FDCAN_HandleTypeDef *fdca
 
 /*
  * RTOS 任务入口：内部为 while(1) 循环，每轮向 x/y 两只编码器各发送一次位置
- * 读取请求（浮点距离换算与累加已在 EncoderParseFeedback() 回调中完成），再按
- * ENCODER_X_INSTALL_ANGLE_DEG / ENCODER_Y_INSTALL_ANGLE_DEG 把两轴累计滚动距离
- * 分解到底盘 x、y 方向并叠加，写入 encoder->x_m / y_m。每轮结束调用
- * osDelay(ENCODER_UPDATE_PERIOD_MS) 让出 CPU，函数本身不会返回，需通过
- * osThreadNew 启动、且不能在 FDCAN 中断回调中调用。
+ * 读取请求（浮点距离换算与累加已在 EncoderParseFeedback() 回调中完成），再取
+ * 两轴累计滚动距离相对上一次积分的增量，按 ENCODER_X/Y_OFFSET_X/Y_M 扣除
+ * 底盘转动在安装点引入的牵连线速度分量，按 ENCODER_X/Y_INSTALL_ANGLE_DEG
+ * 投影为底盘车体系位移增量，再用底盘 yaw（读自 Robot.chassis.pose.yaw_rad）
+ * 旋转到世界系后累加，写入 encoder->x_m / y_m，与 chassis->pose.x_m/y_m
+ * 同一坐标系。每轮结束调用 osDelay(ENCODER_UPDATE_PERIOD_MS) 让出 CPU，
+ * 函数本身不会返回，需通过 osThreadNew 启动、且不能在 FDCAN 中断回调中调用。
  */
 void EncoderUpdate(Encoder_TypeDef *encoder);
 

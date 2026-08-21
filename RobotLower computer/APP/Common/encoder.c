@@ -102,16 +102,80 @@ static uint8_t EncoderAxisParseFeedback(EncoderAxis_TypeDef *axis, FDCAN_HandleT
     return 1U;
 }
 
-/* 把两轴各自的滚动距离，按各自安装角度分解到底盘 x、y 方向后叠加。 */
-static void EncoderDecomposeAxes(Encoder_TypeDef *encoder)
+/* 把角度差归一化到 (-PI, PI]，用于消除 yaw 绝对读数过零点（如 179.9度→-179.9度）
+   时直接相减产生的接近 2*PI 的假跳变。 */
+static float EncoderWrapAngleRad(float angle_rad)
+{
+    while (angle_rad > BSP_PI)
+    {
+        angle_rad -= 2.0f * BSP_PI;
+    }
+    while (angle_rad <= -BSP_PI)
+    {
+        angle_rad += 2.0f * BSP_PI;
+    }
+
+    return angle_rad;
+}
+
+/*
+ * 取两轴滚动距离相对上一次积分的增量，扣除底盘转动在各自安装点引入的
+ * 牵连线速度分量后，按安装角度投影为底盘车体系位移增量，再按当前 yaw
+ * 旋转到世界系并累加到 encoder->x_m/y_m。
+ *
+ * 推导：安装点 P 相对底盘几何中心偏移 r=(rx,ry)，该编码器滚动方向单位向量
+ * d=(cosθ,sinθ)，底盘角速度 ω 下 P 点的牵连速度为 ω×r=(-ω*ry, ω*rx)，编码器
+ * 测得的是该点合速度在 d 方向的投影：v_meas = vx*cosθ+vy*sinθ + ω*(rx*sinθ-ry*cosθ)。
+ * 对本周期积分，ω*dt 即为本周期 yaw 增量 dyaw，故：
+ *     ds_translation = ds_meas - dyaw*(rx*sinθ-ry*cosθ)
+ * 两轴的 ds_translation 再代入原分解公式（两安装角相差90度、构成正交基）
+ * 得到车体系位移增量 dx_body/dy_body，最后按 yaw 转世界系累加。
+ */
+static void EncoderIntegrateOdometry(Encoder_TypeDef *encoder)
 {
     float x_angle_rad = ENCODER_X_INSTALL_ANGLE_DEG * BSP_PI / 180.0f;
     float y_angle_rad = ENCODER_Y_INSTALL_ANGLE_DEG * BSP_PI / 180.0f;
+    float x_distance_m = encoder->x_axis.distance_m;
+    float y_distance_m = encoder->y_axis.distance_m;
+    float yaw_rad = Robot.chassis.pose.yaw_rad;
 
-    encoder->x_m = (encoder->x_axis.distance_m * cosf(x_angle_rad)) +
-                   (encoder->y_axis.distance_m * cosf(y_angle_rad));
-    encoder->y_m = (encoder->x_axis.distance_m * sinf(x_angle_rad)) +
-                   (encoder->y_axis.distance_m * sinf(y_angle_rad));
+    if (encoder->pose_initialized == 0U)
+    {
+        /* 上电首次调用：只记录积分基准，不累加位移，避免把上电瞬间的任意
+           状态（如尚未收到首帧反馈时的distance_m、默认yaw）误计入位移。 */
+        encoder->prev_x_axis_distance_m = x_distance_m;
+        encoder->prev_y_axis_distance_m = y_distance_m;
+        encoder->prev_yaw_rad = yaw_rad;
+        encoder->pose_initialized = 1U;
+        return;
+    }
+
+    {
+        float ds_x_meas = x_distance_m - encoder->prev_x_axis_distance_m;
+        float ds_y_meas = y_distance_m - encoder->prev_y_axis_distance_m;
+        float dyaw_rad = EncoderWrapAngleRad(yaw_rad - encoder->prev_yaw_rad);
+
+        float ds_x_translation = ds_x_meas -
+            dyaw_rad * ((ENCODER_X_OFFSET_X_M * sinf(x_angle_rad)) - (ENCODER_X_OFFSET_Y_M * cosf(x_angle_rad)));
+        float ds_y_translation = ds_y_meas -
+            dyaw_rad * ((ENCODER_Y_OFFSET_X_M * sinf(y_angle_rad)) - (ENCODER_Y_OFFSET_Y_M * cosf(y_angle_rad)));
+
+        float dx_body = (ds_x_translation * cosf(x_angle_rad)) + (ds_y_translation * cosf(y_angle_rad));
+        float dy_body = (ds_x_translation * sinf(x_angle_rad)) + (ds_y_translation * sinf(y_angle_rad));
+
+        /* 用本周期起止 yaw 的中点旋转到世界系，比只用起点或终点更准确，且
+           不需要额外状态。 */
+        float yaw_mid_rad = encoder->prev_yaw_rad + (dyaw_rad * 0.5f);
+        float cos_yaw = cosf(yaw_mid_rad);
+        float sin_yaw = sinf(yaw_mid_rad);
+
+        encoder->x_m += (dx_body * cos_yaw) - (dy_body * sin_yaw);
+        encoder->y_m += (dx_body * sin_yaw) + (dy_body * cos_yaw);
+    }
+
+    encoder->prev_x_axis_distance_m = x_distance_m;
+    encoder->prev_y_axis_distance_m = y_distance_m;
+    encoder->prev_yaw_rad = yaw_rad;
 }
 
 void EncoderInit(Encoder_TypeDef *encoder,
@@ -122,6 +186,10 @@ void EncoderInit(Encoder_TypeDef *encoder,
     EncoderAxisInit(&encoder->y_axis, y_fdcan_handle, y_node_id);
     encoder->x_m = 0.0f;
     encoder->y_m = 0.0f;
+    encoder->prev_x_axis_distance_m = 0.0f;
+    encoder->prev_y_axis_distance_m = 0.0f;
+    encoder->prev_yaw_rad = 0.0f;
+    encoder->pose_initialized = 0U;
 
     if (x_fdcan_handle == y_fdcan_handle)
     {
@@ -157,14 +225,14 @@ void EncoderUpdate(Encoder_TypeDef *encoder)
     while (1)
     {
         /* 浮点距离换算与累加已在EncoderAxisParseFeedback()回调（FDCAN接收中断上下文）
-           中完成；本任务只负责周期发送位置请求帧、以及把两轴累计距离按安装角度
-           分解叠加为底盘坐标。 */
+           中完成；本任务只负责周期发送位置请求帧、以及调用EncoderIntegrateOdometry()
+           把两轴累计距离增量融合yaw、转换为底盘世界系位置。 */
         EncoderAxisRequestPosition(&encoder->x_axis);
         EncoderAxisRequestPosition(&encoder->y_axis);
 
         osDelay(ENCODER_UPDATE_PERIOD_MS);
 
-        EncoderDecomposeAxes(encoder);
+        EncoderIntegrateOdometry(encoder);
 
         /*暂时将码盘数据直接赋值给底盘坐标*/
         ChassisSetPosition((Chassis_TypeDef *)&Robot.chassis, Robot.encoder.x_m, Robot.encoder.y_m);
