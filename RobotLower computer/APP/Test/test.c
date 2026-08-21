@@ -63,7 +63,7 @@ typedef enum
 
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_DONE;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_X;
 
     (void)argument;
 
@@ -90,7 +90,7 @@ void TestChassisSetPositionTask(void *argument)
         }
 
         case TEST_POSITION_STATE_START_MOVE_Y:
-            ChassisSetTranslation(&Robot.chassis, 0.0f, 1.0f); /* 绝对目标(-2, 2),x原样带上避免被打断拉回0 */
+            ChassisSetTranslation(&Robot.chassis, 0.0f, 2.0f); /* 绝对目标(-2, 2),x原样带上避免被打断拉回0 */
             state = TEST_POSITION_STATE_DONE;
             break;
 
