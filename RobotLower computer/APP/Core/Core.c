@@ -46,7 +46,7 @@ void RobotInit(void)
     Robot_TypeDef *robot = (Robot_TypeDef *)&Robot;
 
     RoboticArmInit(&robot->roboticarm,
-                   ROBOTICARM_LIFT_FDCAN_HANDLE, ROBOTICARM_LIFT_ID,
+                   NULL, ROBOTICARM_LIFT_ID,
                    ROBOTICARM_FORWARD_UART_HANDLE, ROBOTICARM_FORWARD_ID,
                    ROBOTICARM_ROTATE_UART_HANDLE, ROBOTICARM_ROTATE_ID);
 
@@ -56,21 +56,12 @@ void RobotInit(void)
        DMA接收(HAL_UARTEx_ReceiveToIdle_DMA);huart1由CubeMX固定分配,非占位句柄,无需判空 */
     Zigbee_Init(&robot->zigbee);
 
-    /* VISION_UART_HANDLE在CubeMX完成分配前于bsp_config.h中为NULL占位,Vision_Init内部
-       自行判空,无需在此额外判断 */
-    Vision_Init(&robot->vision);
+    /* USART1 连接新增板。后者将主控下发的原始 J60 CAN 帧转发到 FDCAN2，并回传反馈帧。 */
+    J60UartBridge_Init(&robot->j60_bridge, &huart1);
+    J60UartBridge = &robot->j60_bridge;
 
     /* 各外设句柄在CubeMX完成分配前于bsp_config.h中为NULL占位,逐个判空后再启动,
        句柄补齐后无需再改这里 */
-    if (robot->roboticarm.lift_motor.FDCAN_Handle != NULL)
-    {
-        uint16_t lift_feedback_base = (uint16_t)((J60_RESPONSE_FEEDBACK << J60_CAN_ID_RESPONSE_SHIFT) |
-                                                 (J60_CMD_CONTROL << J60_CAN_ID_COMMAND_SHIFT));
-        FDCANStandardInit(robot->roboticarm.lift_motor.FDCAN_Handle,
-                          lift_feedback_base + J60_ID_MIN,
-                          lift_feedback_base + J60_ID_MAX);
-    }
-
     if (robot->chassis.drive.motor_group.FDCAN_Handle != NULL)
     {
         FDCANStandardInit(robot->chassis.drive.motor_group.FDCAN_Handle,
@@ -155,21 +146,24 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             if (Robot->pickup.pickup_return_state == ROBOT_STATE_MOVE4)
             {
                 RoboticArmPickupStoreLowMotion(&Robot->roboticarm, &Robot->pickup.pick_state,
-                                               kfs_height_table[Robot->pickup.kfs_target_index - 1U]);
+                                               kfs_height_table[Robot->pickup.kfs_target_index - 1U],
+                                               &Robot->pickup.flip_target);
             }
             else if (Robot->pickup.pickup_return_state == ROBOT_STATE_MOVE5)
             {
                 RoboticArmPickupStoreHighMotion(&Robot->roboticarm, &Robot->pickup.pick_state,
-                                                kfs_height_table[Robot->pickup.kfs_target_index - 1U]);
+                                                kfs_height_table[Robot->pickup.kfs_target_index - 1U],
+                                                &Robot->pickup.flip_target);
             }
             else
             {
-                RoboticArmPickupHoldMotion(&Robot->roboticarm, &Robot->pickup.pick_state,
-                                           kfs_height_table[Robot->pickup.kfs_target_index - 1U]);
+                RoboticArmPickupStoreTopMotion(&Robot->roboticarm, &Robot->pickup.pick_state,
+                                               kfs_height_table[Robot->pickup.kfs_target_index - 1U],
+                                               &Robot->pickup.flip_target);
             }
 
-            /* StoreLow/StoreHigh完成后回到VOID;Hold完成后停在HOLD,同样视为本次拾取完成 */
-            if (Robot->pickup.pick_state == PICKUP_STATE_VOID || Robot->pickup.pick_state == PICKUP_STATE_HOLD)
+            /* 每次抓取均在存放并复位后回到 VOID。 */
+            if (Robot->pickup.pick_state == PICKUP_STATE_VOID)
             {
                 Robot->pickup.kfs_last_index = Robot->pickup.kfs_target_index;
                 if (Robot->pickup.pickup_return_state != ROBOT_STATE_MOVE6)

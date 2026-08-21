@@ -40,10 +40,7 @@
 #define CHASSIS_FDCAN_HANDLE &hfdcan1 /* 底盘四台M3508电调组FDCAN句柄,占位待定 */
 #define CHASSIS_CTRL_ID 0x200u    /* 底盘电调组控制帧ID,占位待定 */
 
-/* 视觉(Vision)模块挂载串口句柄,占位:CubeMX尚未分配对应UART外设,暂不接实际句柄,
-   待确定后直接改这里的宏值即可 */
-#define VISION_UART_HANDLE (&huart1)
-
 #define ZIGBEE_UART_HANDLE (huart9)
+#define VISION_UART_HANDLE NULL /* 视觉未使用，USART1 保留给 J60 CAN 网关。 */
 
 #endif /* __BSP_CONFIG_H__ */

@@ -1,5 +1,11 @@
 #include "J60.h"
+#include "J60UartBridge.h"
 #include <string.h>
+
+J60UartBridge_TypeDef *J60UartBridge = NULL;
+
+/* 设为 1U 时，经 USART1 将原始 J60 CAN 帧发送给新增板，由其 FDCAN2 转发给电机。 */
+#define J60_USE_UART_BRIDGE (1U)
 
 static uint16_t J60FloatToUint(float value, float min, float max, uint8_t bits)
 {
@@ -63,7 +69,12 @@ static void J60MotorSendControl(J60Motor_TypeDef *motor)
     uint8_t data[J60_CAN_FRAME_LENGTH];
 
     J60PackControlFrame(&motor->control, data);
+#if J60_USE_UART_BRIDGE
+    /* 主控只负责规划和打包；新增板不解析载荷，直接将此 CAN 帧转发至 J60。 */
+    J60UartBridge_SendCanFrame(J60UartBridge, J60CommandId(motor->id, J60_CMD_CONTROL, J60_RESPONSE_REQUEST), data, J60_CAN_FRAME_LENGTH);
+#else
     FDCANSendStandard(motor->FDCAN_Handle, J60CommandId(motor->id, J60_CMD_CONTROL, J60_RESPONSE_REQUEST), data, J60_CAN_FRAME_LENGTH);
+#endif
 }
 
 void J60MotorInit(J60Motor_TypeDef *motor, FDCAN_HandleTypeDef *FDCAN_Handle, uint8_t id)
@@ -111,14 +122,24 @@ void J60MotorEnable(J60Motor_TypeDef *motor)
 {
     uint8_t data[J60_CAN_FRAME_LENGTH] = {0};
 
+#if J60_USE_UART_BRIDGE
+    /* 使能命令同样通过 bridge 保持原始 CAN ID 和 DLC=0。 */
+    J60UartBridge_SendCanFrame(J60UartBridge, J60CommandId(motor->id, J60_CMD_ENABLE, J60_RESPONSE_REQUEST), data, 0U);
+#else
     FDCANSendStandard(motor->FDCAN_Handle, J60CommandId(motor->id, J60_CMD_ENABLE, J60_RESPONSE_REQUEST), data, 0U);
+#endif
 }
 
 void J60MotorDisable(J60Motor_TypeDef *motor)
 {
     uint8_t data[J60_CAN_FRAME_LENGTH] = {0};
 
+#if J60_USE_UART_BRIDGE
+    /* 失能命令同样通过 bridge 保持原始 CAN ID 和 DLC=0。 */
+    J60UartBridge_SendCanFrame(J60UartBridge, J60CommandId(motor->id, J60_CMD_DISABLE, J60_RESPONSE_REQUEST), data, 0U);
+#else
     FDCANSendStandard(motor->FDCAN_Handle, J60CommandId(motor->id, J60_CMD_DISABLE, J60_RESPONSE_REQUEST), data, 0U);
+#endif
 }
 
 uint8_t J60MotorParseFeedback(J60Motor_TypeDef *motor, uint32_t std_id, const uint8_t *rx_data)

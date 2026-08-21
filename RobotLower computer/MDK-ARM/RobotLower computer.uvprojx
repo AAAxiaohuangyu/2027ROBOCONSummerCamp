@@ -946,6 +946,11 @@
               <FilePath>..\APP\Common\J60.c</FilePath>
             </File>
             <File>
+              <FileName>J60UartBridge.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Common\J60UartBridge.c</FilePath>
+            </File>
+            <File>
               <FileName>M3508.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\APP\Common\M3508.c</FilePath>

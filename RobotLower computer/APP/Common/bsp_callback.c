@@ -16,13 +16,6 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data) != HAL_OK)
         return;
 
-    if (Robot.roboticarm.lift_motor.FDCAN_Handle != NULL &&
-        hfdcan->Instance == Robot.roboticarm.lift_motor.FDCAN_Handle->Instance &&
-        J60MotorParseFeedback(&Robot.roboticarm.lift_motor, rx_header.Identifier, rx_data))
-    {
-        return;
-    }
-
     if (Robot.chassis.drive.motor_group.FDCAN_Handle != NULL &&
         hfdcan->Instance == Robot.chassis.drive.motor_group.FDCAN_Handle->Instance)
     {
@@ -69,9 +62,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         return;
     }
 
-    if (VISION_UART_HANDLE != NULL && huart->Instance == VISION_UART_HANDLE->Instance)
+    /* 新增板将 J60 的 CAN 反馈封装为串口帧回传，解析后仍复用原 J60 反馈处理函数。 */
+    if (huart->Instance == huart1.Instance)
     {
-        Vision_RxEventHandler(&Robot.vision, huart, Size);
+        J60UartBridge_RxEventHandler(&Robot.j60_bridge, huart, Size, &Robot.roboticarm.lift_motor);
         return;
     }
 

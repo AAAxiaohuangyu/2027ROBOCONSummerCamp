@@ -2,6 +2,7 @@
 #define __CORE_H_
 
 #include "RoboticArm.h"
+#include "J60UartBridge.h"
 #include "chassis.h"
 #include "encoder.h"
 #include "zigbee.h"
@@ -57,6 +58,7 @@ typedef enum
 typedef struct
 {
     PickupState_TypeDef pick_state;
+    float flip_target; /* 当前 KFS 吸附后需要到达的 180 度翻转绝对目标。 */
 
     uint8_t kfs_last_index;         /* 上一次到位的KFS序号,1~ROBOT_KFS_COUNT,0表示仍在启动区 */
     uint8_t kfs_target_index;       /* 当前目标KFS序号,由视觉判断结果给出 */
@@ -70,6 +72,7 @@ typedef struct
 {
     RobotState_TypeDef state;
     RoboticArm_TypeDef roboticarm;
+    J60UartBridge_TypeDef j60_bridge;
     Chassis_TypeDef chassis;
     Encoder_TypeDef encoder;
     ZigbeeHandle_TypeDef zigbee;
