@@ -8,8 +8,8 @@ void TestChassisEncoderRxInit(void)
     HAL_Delay(1000);
     ChassisInit(&Robot.chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
     FDCANStandardInit(Robot.chassis.drive.motor_group.FDCAN_Handle,
-                       M3508_FEEDBACK_ID_BASE + M3508_ID_MIN,
-                       M3508_FEEDBACK_ID_BASE + M3508_ID_MAX); /* 过滤器0 -> RXFIFO0 */
+                      M3508_FEEDBACK_ID_BASE + M3508_ID_MIN,
+                      M3508_FEEDBACK_ID_BASE + M3508_ID_MAX); /* 过滤器0 -> RXFIFO0 */
 
     EncoderInit(&Robot.encoder,
                 ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID,
@@ -47,10 +47,12 @@ void TestChassisSetVelocityTask(void *argument)
    START_MOVE_Y以实现转弯圆滑过渡,而非在拐角处完全停顿 */
 typedef enum
 {
-    TEST_POSITION_STATE_START_MOVE_X,
-    TEST_POSITION_STATE_WAIT_MOVE_X,
-    TEST_POSITION_STATE_START_MOVE_Y,
-    TEST_POSITION_STATE_WAIT_MOVE_Y,
+    TEST_POSITION_STATE_START_MOVE_1,
+    TEST_POSITION_STATE_WAIT_MOVE_1,
+    TEST_POSITION_STATE_START_MOVE_2,
+    TEST_POSITION_STATE_WAIT_MOVE_2,
+    TEST_POSITION_STATE_START_MOVE_3,
+    TEST_POSITION_STATE_WAIT_MOVE_3,
     TEST_POSITION_STATE_DONE,
 } TestPositionState_TypeDef;
 
@@ -63,7 +65,7 @@ typedef enum
 
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_X;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_1;
 
     (void)argument;
 
@@ -71,32 +73,43 @@ void TestChassisSetPositionTask(void *argument)
     {
         switch (state)
         {
-        case TEST_POSITION_STATE_START_MOVE_X:
+        case TEST_POSITION_STATE_START_MOVE_1:
             osDelay(500);
-            ChassisSetTranslation(&Robot.chassis, 2.0f, 0.0f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
-            state = TEST_POSITION_STATE_DONE;
+            ChassisSetTranslation(&Robot.chassis, 0.8f, -0.65f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
+            state = TEST_POSITION_STATE_WAIT_MOVE_1;
             break;
 
-        case TEST_POSITION_STATE_WAIT_MOVE_X:
+        case TEST_POSITION_STATE_WAIT_MOVE_1:
         {
             float corner_tolerance = TEST_CORNER_BLEND_K *
-                SpeedPlanDecelDistance(&Robot.chassis.displacement_plan.translation_x);
+                                     SpeedPlanDecelDistance(&Robot.chassis.displacement_plan.translation_x);
             if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
 
             if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
-                state = TEST_POSITION_STATE_START_MOVE_Y;
+                state = TEST_POSITION_STATE_START_MOVE_2;
             break;
         }
 
-        case TEST_POSITION_STATE_START_MOVE_Y:
-            ChassisSetTranslation(&Robot.chassis, 0.0f, 2.0f); /* 绝对目标(-2, 2),x原样带上避免被打断拉回0 */
-            state = TEST_POSITION_STATE_DONE;
+        case TEST_POSITION_STATE_START_MOVE_2:
+            ChassisSetTranslation(&Robot.chassis, 2.85f, -0.65f); /* 绝对目标(-2, 2),x原样带上避免被打断拉回0 */
+            state = TEST_POSITION_STATE_WAIT_MOVE_2;
             break;
 
-        case TEST_POSITION_STATE_WAIT_MOVE_Y:
-            if (ChassisTranslationReached(&Robot.chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                state = TEST_POSITION_STATE_DONE;
+        case TEST_POSITION_STATE_WAIT_MOVE_2:
+        {
+            float corner_tolerance = (TEST_CORNER_BLEND_K - 0.2f) *
+                                      SpeedPlanDecelDistance(&Robot.chassis.displacement_plan.translation_x);
+            if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
+                corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
+            if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
+                state = TEST_POSITION_STATE_START_MOVE_3;
+            break;
+        }
+
+        case TEST_POSITION_STATE_START_MOVE_3:
+            ChassisSetTranslation(&Robot.chassis, 3.35f, -0.05f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
+            state = TEST_POSITION_STATE_DONE;
             break;
 
         case TEST_POSITION_STATE_DONE:
