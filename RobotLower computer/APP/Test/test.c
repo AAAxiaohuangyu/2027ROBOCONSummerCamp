@@ -58,6 +58,13 @@ typedef enum
     TEST_POSITION_STATE_START_MOVE_4,
     TEST_POSITION_STATE_WAIT_MOVE_4,
     TEST_POSITION_STATE_START_MOVE_5,
+    TEST_POSITION_STATE_WAIT_MOVE_5,
+    TEST_POSITION_STATE_START_MOVE_6,
+    TEST_POSITION_STATE_WAIT_MOVE_6,
+    TEST_POSITION_STATE_START_MOVE_7,
+    TEST_POSITION_STATE_WAIT_MOVE_7,
+    TEST_POSITION_STATE_START_MOVE_8,
+    TEST_POSITION_STATE_WAIT_MOVE_8,
     TEST_POSITION_STATE_DONE,
 } TestPositionState_TypeDef;
 
@@ -137,7 +144,7 @@ void TestChassisSetPositionTask(void *argument)
                     CHASSIS_TRACK_TRANSLATION_X_ALT_KD,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_OUT,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_IOUT);
-            ChassisSetTranslation(&Robot.chassis, 0.3f, -2.1f);
+            ChassisSetTranslation(&Robot.chassis, 0.35f, -2.1f);
             state = TEST_POSITION_STATE_WAIT_MOVE_4;
             break;
         }
@@ -148,28 +155,80 @@ void TestChassisSetPositionTask(void *argument)
             if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
             if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
-                state = TEST_POSITION_STATE_DONE;
+                state = TEST_POSITION_STATE_START_MOVE_5;
             break;
         }
 
         case TEST_POSITION_STATE_START_MOVE_5:
         {
-            /* 离开MOVE_4/WAIT_MOVE_4,x方向切回默认跟踪参数组 */
+            /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x方向切到第三套跟踪参数组 */
             PIDInit(&Robot.chassis.displacement_plan.translation_x.track_pid,
-                    CHASSIS_TRACK_TRANSLATION_X_KP,
-                    CHASSIS_TRACK_TRANSLATION_X_KI,
-                    CHASSIS_TRACK_TRANSLATION_X_KD,
-                    CHASSIS_TRACK_TRANSLATION_X_MAX_OUT,
-                    CHASSIS_TRACK_TRANSLATION_X_MAX_IOUT);
-            ChassisSetTranslation(&Robot.chassis, -0.25f, -3.45f);
-            state = TEST_POSITION_STATE_DONE;
+                    CHASSIS_TRACK_TRANSLATION_X_ALT2_KP,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT2_KI,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT2_KD,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT2_MAX_OUT,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT2_MAX_IOUT);
+            ChassisSetTranslation(&Robot.chassis, 0.35f, -3.42f);
+            state = TEST_POSITION_STATE_WAIT_MOVE_5;
+            break;
+        }
+
+        case TEST_POSITION_STATE_WAIT_MOVE_5:
+        {
+            if (ChassisTranslationReached(&Robot.chassis, 3.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+                state = TEST_POSITION_STATE_START_MOVE_6;
+            break;
+        }
+
+        case TEST_POSITION_STATE_START_MOVE_6:
+        {
+            osDelay(1000);
+            ChassisSetTranslation(&Robot.chassis, 0.35f, -4.6f);
+            state = TEST_POSITION_STATE_WAIT_MOVE_6;
+            break;
+        }
+
+        case TEST_POSITION_STATE_WAIT_MOVE_6:
+        {
+            if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+                state = TEST_POSITION_STATE_START_MOVE_7;
+            break;
+        }
+
+        case TEST_POSITION_STATE_START_MOVE_7:
+        {
+            osDelay(1000);
+            ChassisSetTranslation(&Robot.chassis, 0.35f, -5.79f);
+            state = TEST_POSITION_STATE_WAIT_MOVE_7;
+            break;
+        }
+
+        case TEST_POSITION_STATE_WAIT_MOVE_7:
+        {
+            if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+                state = TEST_POSITION_STATE_START_MOVE_8;
+            break;
+        }
+
+        case TEST_POSITION_STATE_START_MOVE_8:
+        {
+            osDelay(1000);
+            ChassisSetTranslation(&Robot.chassis, 0.35f, -6.98f);
+            state = TEST_POSITION_STATE_WAIT_MOVE_8;
+            break;
+        }
+
+        case TEST_POSITION_STATE_WAIT_MOVE_8:
+        {
+            if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+                state = TEST_POSITION_STATE_DONE;
             break;
         }
 
         case TEST_POSITION_STATE_DONE:
         default:
             break;
-        }
+        } 
 
         osDelay(ROBOT_STATE_UPDATE_PERIOD_MS);
     }
