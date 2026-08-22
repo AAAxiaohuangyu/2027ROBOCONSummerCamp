@@ -1,6 +1,8 @@
 #include "test.h"
 #include "Core.h"
 #include "bsp_config.h"
+#include "chassis_config.h"
+#include "ControlAlgorithm.h"
 #include "cmsis_os.h"
 
 void TestChassisEncoderRxInit(void)
@@ -53,6 +55,9 @@ typedef enum
     TEST_POSITION_STATE_WAIT_MOVE_2,
     TEST_POSITION_STATE_START_MOVE_3,
     TEST_POSITION_STATE_WAIT_MOVE_3,
+    TEST_POSITION_STATE_START_MOVE_4,
+    TEST_POSITION_STATE_WAIT_MOVE_4,
+    TEST_POSITION_STATE_START_MOVE_5,
     TEST_POSITION_STATE_DONE,
 } TestPositionState_TypeDef;
 
@@ -75,7 +80,7 @@ void TestChassisSetPositionTask(void *argument)
         {
         case TEST_POSITION_STATE_START_MOVE_1:
             osDelay(500);
-            ChassisSetTranslation(&Robot.chassis, 0.8f, -0.65f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
+            ChassisSetTranslation(&Robot.chassis, 0.8f, -0.65f);
             state = TEST_POSITION_STATE_WAIT_MOVE_1;
             break;
 
@@ -92,14 +97,14 @@ void TestChassisSetPositionTask(void *argument)
         }
 
         case TEST_POSITION_STATE_START_MOVE_2:
-            ChassisSetTranslation(&Robot.chassis, 3.3f, -0.65f); /* 绝对目标(-2, 2),x原样带上避免被打断拉回0 */
+            ChassisSetTranslation(&Robot.chassis, 3.3f, -0.65f);
             state = TEST_POSITION_STATE_WAIT_MOVE_2;
             break;
 
         case TEST_POSITION_STATE_WAIT_MOVE_2:
         {
-            float corner_tolerance = (TEST_CORNER_BLEND_K+0.3f) *
-                                      SpeedPlanDecelDistance(&Robot.chassis.displacement_plan.translation_x);
+            float corner_tolerance = (TEST_CORNER_BLEND_K + 0.3f) *
+                                     SpeedPlanDecelDistance(&Robot.chassis.displacement_plan.translation_x);
             if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
             if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
@@ -108,9 +113,58 @@ void TestChassisSetPositionTask(void *argument)
         }
 
         case TEST_POSITION_STATE_START_MOVE_3:
-            ChassisSetTranslation(&Robot.chassis, 3.3f, -0.1f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
+        {
+            ChassisSetTranslation(&Robot.chassis, 3.3f, -0.1f);
+            state = TEST_POSITION_STATE_WAIT_MOVE_3;
+            break;
+        }
+
+        case TEST_POSITION_STATE_WAIT_MOVE_3:
+        {
+            if (ChassisTranslationReached(&Robot.chassis, 4.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+                state = TEST_POSITION_STATE_START_MOVE_4;
+            break;
+        }
+
+        case TEST_POSITION_STATE_START_MOVE_4:
+        {
+            osDelay(800);
+            /* MOVE_4/WAIT_MOVE_4阶段x方向回退幅度大,临时切到备用跟踪参数组,
+               离开该阶段(START_MOVE_5)后切回默认组 */
+            PIDInit(&Robot.chassis.displacement_plan.translation_x.track_pid,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT_KP,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT_KI,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT_KD,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_OUT,
+                    CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_IOUT);
+            ChassisSetTranslation(&Robot.chassis, 0.3f, -2.1f);
+            state = TEST_POSITION_STATE_WAIT_MOVE_4;
+            break;
+        }
+
+        case TEST_POSITION_STATE_WAIT_MOVE_4:
+        {
+            float corner_tolerance = (TEST_CORNER_BLEND_K)*SpeedPlanDecelDistance(&Robot.chassis.displacement_plan.translation_x);
+            if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
+                corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
+            if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
+                state = TEST_POSITION_STATE_DONE;
+            break;
+        }
+
+        case TEST_POSITION_STATE_START_MOVE_5:
+        {
+            /* 离开MOVE_4/WAIT_MOVE_4,x方向切回默认跟踪参数组 */
+            PIDInit(&Robot.chassis.displacement_plan.translation_x.track_pid,
+                    CHASSIS_TRACK_TRANSLATION_X_KP,
+                    CHASSIS_TRACK_TRANSLATION_X_KI,
+                    CHASSIS_TRACK_TRANSLATION_X_KD,
+                    CHASSIS_TRACK_TRANSLATION_X_MAX_OUT,
+                    CHASSIS_TRACK_TRANSLATION_X_MAX_IOUT);
+            ChassisSetTranslation(&Robot.chassis, -0.25f, -3.45f);
             state = TEST_POSITION_STATE_DONE;
             break;
+        }
 
         case TEST_POSITION_STATE_DONE:
         default:
