@@ -92,13 +92,13 @@ void TestChassisSetPositionTask(void *argument)
         }
 
         case TEST_POSITION_STATE_START_MOVE_2:
-            ChassisSetTranslation(&Robot.chassis, 2.85f, -0.65f); /* 绝对目标(-2, 2),x原样带上避免被打断拉回0 */
+            ChassisSetTranslation(&Robot.chassis, 3.3f, -0.65f); /* 绝对目标(-2, 2),x原样带上避免被打断拉回0 */
             state = TEST_POSITION_STATE_WAIT_MOVE_2;
             break;
 
         case TEST_POSITION_STATE_WAIT_MOVE_2:
         {
-            float corner_tolerance = (TEST_CORNER_BLEND_K - 0.2f) *
+            float corner_tolerance = (TEST_CORNER_BLEND_K+0.3f) *
                                       SpeedPlanDecelDistance(&Robot.chassis.displacement_plan.translation_x);
             if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
@@ -108,7 +108,7 @@ void TestChassisSetPositionTask(void *argument)
         }
 
         case TEST_POSITION_STATE_START_MOVE_3:
-            ChassisSetTranslation(&Robot.chassis, 3.35f, -0.05f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
+            ChassisSetTranslation(&Robot.chassis, 3.3f, -0.1f); /* 绝对目标(-2, 0),只在进入本状态时下发一次 */
             state = TEST_POSITION_STATE_DONE;
             break;
 
