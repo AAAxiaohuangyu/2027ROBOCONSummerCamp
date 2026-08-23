@@ -70,11 +70,11 @@ typedef enum
 
 /* MOVE_9(上斜坡)：码盘 y 轴世界系累计位置(Robot.encoder.y_m,与 chassis->pose.y_m
    同一坐标系)到达该值附近即认为冲坡到位,暂定,需实测标定后手动修改 */
-#define TEST_MOVE_9_ENCODER_Y_TARGET_M (-11.0f)
+#define TEST_MOVE_9_ENCODER_Y_TARGET_M (-10.38f)
 
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_9;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_1;
 
     (void)argument;
 
