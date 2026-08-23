@@ -10,10 +10,6 @@
  *   2. 在周期任务（≤100ms）中调用 Zigbee_ErrorHandler(&Robot.zigbee)
  *   3. Zigbee_Send(&Robot.zigbee, &control_data)的调用大约在100-200Hz，确保数据完整性和实时性
  *   4. 接收时采用中断接收，定时解析
- *
- * AT指令使用：
- *   1. Zigbee_SendAT(&Robot.zigbee, "AT\r\n");
- *   2. printf("Zigbee response: %s\r\n", (const char *)Zigbee_GetATResponse(&Robot.zigbee));
  */
 #include "zigbee.h"
 #include "usart.h"
@@ -53,10 +49,11 @@ static void data_pack(uint8_t *buf, const ZigbeeData_TypeDef *data)
      * 四个0/1指令合并到一个字节：
      * bit0：抓取
      * bit1：急停
+     * bit2：模式
      */
     command_byte |= (uint8_t)((data->command.grab & 0x01U) << 0U);
     command_byte |= (uint8_t)((data->command.emergency_stop & 0x01U) << 1U);
-
+    command_byte |= (uint8_t)((data->command.mode & 0x01U) << 2U);
     buf[12] = command_byte;
 }
 
@@ -86,9 +83,10 @@ static void data_unpack(ZigbeeData_TypeDef *data, const uint8_t *buf)
     /* 翻转关节指令 */
     data->joint.flip =
         (int16_t)(((uint16_t)buf[10] << 8U) | buf[11]);
-    /* 解析四个0/1指令 */
+    /* 解析三个0/1指令 */
     data->command.grab = (buf[12] >> 0U) & 0x01U;
     data->command.emergency_stop = (buf[12] >> 1U) & 0x01U;
+    data->command.mode = (buf[12] >> 2U) & 0x01U;
 }
 
 /* 从 DMA 缓冲中搜索并解析一帧 */
@@ -194,18 +192,6 @@ void Zigbee_ErrorHandler(ZigbeeHandle_TypeDef *zigbee)
     }
 }
 
-void Zigbee_SendAT(ZigbeeHandle_TypeDef *zigbee, const char *command)
-{
-    uint16_t rx_len;
-
-    memset(zigbee->at_response, 0, sizeof(zigbee->at_response));
-
-    /* 发送 AT 指令 */
-    HAL_UART_Transmit(&ZIGBEE_UART_HANDLE, (uint8_t *)command, strlen(command), HAL_MAX_DELAY);
-
-    /* 接收返回消息 */
-    HAL_UARTEx_ReceiveToIdle(&ZIGBEE_UART_HANDLE, zigbee->at_response, sizeof(zigbee->at_response) - 1U, &rx_len, 1000U);
-}
 
 void Zigbee_RxEventHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *huart, uint16_t Size)
 {

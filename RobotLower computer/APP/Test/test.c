@@ -58,6 +58,7 @@ typedef enum
     TEST_POSITION_STATE_WAIT_MOVE_8,
     TEST_POSITION_STATE_START_MOVE_9,
     TEST_POSITION_STATE_WAIT_MOVE_9,
+    TEST_MANUAL_STATE,
     TEST_POSITION_STATE_DONE,
 } TestPositionState_TypeDef;
 
@@ -250,9 +251,14 @@ void TestChassisSetPositionTask(void *argument)
         {
             if (Robot.encoder.y_m <= TEST_MOVE_9_ENCODER_Y_TARGET_M)
             {
-                ChassisStop(&Robot.chassis);
-                state = TEST_POSITION_STATE_DONE;
+                state = TEST_MANUAL_STATE;
             }
+            break;
+        }
+
+        case TEST_MANUAL_STATE:
+        {
+            ChassisStop(&Robot.chassis);
             break;
         }
 

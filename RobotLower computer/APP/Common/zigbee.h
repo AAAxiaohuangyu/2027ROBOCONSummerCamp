@@ -57,6 +57,7 @@ typedef struct
 {
     uint8_t grab;           /**< 抓取指令 */
     uint8_t emergency_stop; /**< 急停指令 */
+    uint8_t mode;           /* 模式选择，默认0 自动 */
 } Command_TypeDef;
 
 typedef struct
@@ -102,7 +103,6 @@ HAL_StatusTypeDef Zigbee_Receive(ZigbeeHandle_TypeDef *zigbee, ZigbeeData_TypeDe
  * @note   须在周期性任务中调用，建议周期 ≤ 100ms
  */
 void Zigbee_ErrorHandler(ZigbeeHandle_TypeDef *zigbee);
-void Zigbee_SendAT(ZigbeeHandle_TypeDef *zigbee, const char *command);
 
 /* 供上层在HAL_UARTEx_RxEventCallback中调用(huart匹配ZIGBEE_UART_HANDLE时):解析本次DMA空闲线
    事件收到的数据并重新挂起下一次接收;HAL回调全局唯一,不能在本文件内直接实现,由bsp_callback.c
