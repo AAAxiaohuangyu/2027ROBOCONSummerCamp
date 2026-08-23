@@ -45,6 +45,13 @@ extern "C" {
    打断(同向/反向)逻辑接管、平滑续走,不会有速度突变。
 */
 
+/* chassis->velocity_mode 取值。 */
+#define CHASSIS_MODE_POSITION (0U) /* 位移 S 曲线,x/y/yaw 三轴均由规划器+跟踪器给出速度。 */
+#define CHASSIS_MODE_VELOCITY (1U) /* ChassisSetVelocity 原始速度,三轴均直接下发、不重新计算。 */
+#define CHASSIS_MODE_RAMP (2U)     /* 上坡模式:x、偏航仍走位移 S 曲线跟踪,y 轴固定速度
+                                       ramp_vy_mps,不经过 y 方向的规划与跟踪,见
+                                       ChassisSetRampVelocity。 */
+
 /* 驱动硬件与麦轮运动学:电机组、轮序到电调 ID 的映射、逆解参数。 */
 typedef struct
 {
@@ -81,7 +88,13 @@ typedef struct
     Chassis_DisplacementPlan_t displacement_plan;  /* 位移模式下的 S 曲线规划状态。 */
 
     ChassisMecanum_BodyVelocity_t velocity; /* 当前下发的车体速度 Vx/Vy/Wz。 */
-    uint8_t velocity_mode; /* 1:ChassisSetVelocity 原始速度生效;0:位移 S 曲线生效。 */
+    uint8_t velocity_mode; /* CHASSIS_MODE_POSITION:位移 S 曲线三轴均生效;
+                               CHASSIS_MODE_VELOCITY:ChassisSetVelocity 原始速度三轴均生效;
+                               CHASSIS_MODE_RAMP:x、偏航仍走位移 S 曲线跟踪,y 轴改为固定
+                               速度 ramp_vy_mps,见 ChassisSetRampVelocity。 */
+    float ramp_vy_mps; /* CHASSIS_MODE_RAMP 下 y 轴下发的固定车体速度,由
+                           ChassisSetRampVelocity 写入,该模式下不经过 y 方向的
+                           S 曲线规划与跟踪。 */
 
     ChassisMecanum_BodyVelocity_t actual_velocity; /* 麦轮正解算得到的当前实际车体速度 Vx/Vy/Wz。 */
 
@@ -108,6 +121,12 @@ void ChassisSetTranslation(Chassis_TypeDef *chassis, float x_target_m, float y_t
    规划,不影响平移目标;运动过程速度由 ChassisUpdate 中的规划器结合
    跟踪器给出,跟踪方式与平移 x/y 一致(直接以 pose.yaw_rad 为实际反馈) */
 void ChassisSetYaw(Chassis_TypeDef *chassis, float dyaw_rad);
+
+/* 上坡接口:切到 CHASSIS_MODE_RAMP,y 轴固定车体速度 vy_mps 立即生效、不经过
+   y 方向 S 曲线规划与跟踪;x、偏航沿用调用前 ChassisSetTranslation/ChassisSetYaw
+   已下发的目标,继续走各自的 S 曲线跟踪(闭环纠偏),不会被本接口打断或重新规划。
+   用于上斜坡等 y 轴需匀速冲坡、x/yaw 仍需保持的场景 */
+void ChassisSetRampVelocity(Chassis_TypeDef *chassis, float vy_mps);
 
 /* 位姿写入接口:直接覆盖 pose.x_m/y_m(不改 yaw_rad),供外部里程计/位姿融合
    模块(如编码器积分)按周期写入当前位置,本文件不做任何计算或校验 */

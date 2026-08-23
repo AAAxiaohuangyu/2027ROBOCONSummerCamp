@@ -32,15 +32,6 @@ void TestEncoderUpdateTask(void *argument)
     EncoderUpdate(&Robot.encoder); /* 周期发位置请求触发encoder应答 */
 }
 
-void TestChassisSetVelocityTask(void *argument)
-{
-    for (;;)
-    {
-        ChassisSetVelocity(&Robot.chassis, 0.0f, 0.0f, 0.0f); /* 固定测试速度,验证电机能否按目标转动;TestChassisUpdateTask持续下发该速度对应的控制帧 */
-        osDelay(100);
-    }
-}
-
 /* TestChassisSetPositionTask状态机各状态:START_*只在进入时下发一次ChassisSetTranslation
    (该函数每次调用都会令S曲线重新规划,跑向同一目标期间不能重复调用;x/y现为世界系绝对
    目标,START_MOVE_Y必须原样带上START_MOVE_X已下发的x目标,否则x会被打断拉回0);
@@ -49,7 +40,6 @@ void TestChassisSetVelocityTask(void *argument)
    START_MOVE_Y以实现转弯圆滑过渡,而非在拐角处完全停顿 */
 typedef enum
 {
-    TEST_POSITION_STATE_WAIT_MOVE_VELOCITY,
     TEST_POSITION_STATE_START_MOVE_1,
     TEST_POSITION_STATE_WAIT_MOVE_1,
     TEST_POSITION_STATE_START_MOVE_2,
@@ -66,6 +56,8 @@ typedef enum
     TEST_POSITION_STATE_WAIT_MOVE_7,
     TEST_POSITION_STATE_START_MOVE_8,
     TEST_POSITION_STATE_WAIT_MOVE_8,
+    TEST_POSITION_STATE_START_MOVE_9,
+    TEST_POSITION_STATE_WAIT_MOVE_9,
     TEST_POSITION_STATE_DONE,
 } TestPositionState_TypeDef;
 
@@ -76,9 +68,13 @@ typedef enum
    但也会让实际路径更早偏离(-2,0)这个中间点 */
 #define TEST_CORNER_BLEND_K (1.7f)
 
+/* MOVE_9(上斜坡)：码盘 y 轴世界系累计位置(Robot.encoder.y_m,与 chassis->pose.y_m
+   同一坐标系)到达该值附近即认为冲坡到位,暂定,需实测标定后手动修改 */
+#define TEST_MOVE_9_ENCODER_Y_TARGET_M (-11.0f)
+
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_WAIT_MOVE_VELOCITY;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_9;
 
     (void)argument;
 
@@ -86,11 +82,6 @@ void TestChassisSetPositionTask(void *argument)
     {
         switch (state)
         {
-        case TEST_POSITION_STATE_WAIT_MOVE_VELOCITY:
-            ChassisSetVelocity(&Robot.chassis, 0.0f, -1.0f,0.0f);
-            state = TEST_POSITION_STATE_DONE;
-            break;
-
         case TEST_POSITION_STATE_START_MOVE_1:
             osDelay(500);
             ChassisSetTranslation(&Robot.chassis, 0.8f, -0.65f);
@@ -241,7 +232,27 @@ void TestChassisSetPositionTask(void *argument)
         case TEST_POSITION_STATE_WAIT_MOVE_8:
         {
             if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+                state = TEST_POSITION_STATE_START_MOVE_9;
+            break;
+        }
+
+        case TEST_POSITION_STATE_START_MOVE_9:
+        {
+            /* x、偏航沿用 MOVE_8 已下发的目标继续跟踪(不重新调用
+               ChassisSetTranslation/ChassisSetYaw),仅 y 轴切到固定速度冲坡 */
+            osDelay(1000);
+            ChassisSetRampVelocity(&Robot.chassis, -1.2f);
+            state = TEST_POSITION_STATE_WAIT_MOVE_9;
+            break;
+        }
+
+        case TEST_POSITION_STATE_WAIT_MOVE_9:
+        {
+            if (Robot.encoder.y_m <= TEST_MOVE_9_ENCODER_Y_TARGET_M)
+            {
+                ChassisStop(&Robot.chassis);
                 state = TEST_POSITION_STATE_DONE;
+            }
             break;
         }
 

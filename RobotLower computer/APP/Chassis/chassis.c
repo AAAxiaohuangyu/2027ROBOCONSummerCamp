@@ -68,7 +68,8 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
     chassis->velocity.vx_mps = 0.0f;
     chassis->velocity.vy_mps = 0.0f;
     chassis->velocity.wz_radps = 0.0f;
-    chassis->velocity_mode = 0U;
+    chassis->velocity_mode = CHASSIS_MODE_POSITION;
+    chassis->ramp_vy_mps = 0.0f;
 
     chassis->actual_velocity.vx_mps = 0.0f;
     chassis->actual_velocity.vy_mps = 0.0f;
@@ -81,7 +82,7 @@ void ChassisInit(Chassis_TypeDef *chassis, FDCAN_HandleTypeDef *can_handle, uint
 
 void ChassisSetVelocity(Chassis_TypeDef *chassis, float vx_mps, float vy_mps, float wz_radps)
 {
-    chassis->velocity_mode = 1U;
+    chassis->velocity_mode = CHASSIS_MODE_VELOCITY;
     chassis->velocity.vx_mps = vx_mps;
     chassis->velocity.vy_mps = vy_mps;
     chassis->velocity.wz_radps = wz_radps;
@@ -89,7 +90,7 @@ void ChassisSetVelocity(Chassis_TypeDef *chassis, float vx_mps, float vy_mps, fl
 
 void ChassisStop(Chassis_TypeDef *chassis)
 {
-    chassis->velocity_mode = 1U;
+    chassis->velocity_mode = CHASSIS_MODE_VELOCITY;
     chassis->velocity.vx_mps = 0.0f;
     chassis->velocity.vy_mps = 0.0f;
     chassis->velocity.wz_radps = 0.0f;
@@ -97,7 +98,7 @@ void ChassisStop(Chassis_TypeDef *chassis)
 
 void ChassisSetTranslation(Chassis_TypeDef *chassis, float x_target_m, float y_target_m)
 {
-    chassis->velocity_mode = 0U;
+    chassis->velocity_mode = CHASSIS_MODE_POSITION;
 
     if (fabsf(x_target_m - chassis->displacement_plan.translation_target_x_m) > CHASSIS_SPEEDPLAN_CONTROL_THRESHOLD)
         chassis->displacement_plan.translation_x.state = init;
@@ -112,13 +113,20 @@ void ChassisSetYaw(Chassis_TypeDef *chassis, float dyaw_rad)
 {
     float yaw_target_rad = chassis->pose.yaw_rad + dyaw_rad;
 
-    chassis->velocity_mode = 0U;
+    chassis->velocity_mode = CHASSIS_MODE_POSITION;
 
     if (fabsf(yaw_target_rad - chassis->displacement_plan.yaw_target_rad) > CHASSIS_SPEEDPLAN_CONTROL_THRESHOLD)
         chassis->displacement_plan.yaw.state = init;
 
     chassis->displacement_plan.yaw_target_rad = yaw_target_rad;
 }
+
+void ChassisSetRampVelocity(Chassis_TypeDef *chassis, float vy_mps)
+{
+    chassis->velocity_mode = CHASSIS_MODE_RAMP;
+    chassis->ramp_vy_mps = vy_mps;
+}
+
 
 void ChassisSetPosition(Chassis_TypeDef *chassis, float x_m, float y_m)
 {
@@ -143,7 +151,7 @@ void ChassisUpdate(Chassis_TypeDef *chassis, const Yis512_TypeDef *yis512)
 
         chassis->pose.yaw_rad = yis512->yaw_deg * BSP_PI / 180.0f;
 
-        if (chassis->velocity_mode == 0U)
+        if (chassis->velocity_mode == CHASSIS_MODE_POSITION)
         {
             SpeedPlanUpdate(&chassis->displacement_plan.translation_x, chassis->pose.x_m,
                                  chassis->displacement_plan.translation_target_x_m);
@@ -155,6 +163,19 @@ void ChassisUpdate(Chassis_TypeDef *chassis, const Yis512_TypeDef *yis512)
             /* 全局跟踪 */
             chassis->velocity.vx_mps = PositionTrack(&chassis->displacement_plan.translation_x, chassis->pose.x_m);
             chassis->velocity.vy_mps = PositionTrack(&chassis->displacement_plan.translation_y, chassis->pose.y_m);
+            chassis->velocity.wz_radps = PositionTrack(&chassis->displacement_plan.yaw, chassis->pose.yaw_rad);
+        }
+        else if (chassis->velocity_mode == CHASSIS_MODE_RAMP)
+        {
+            /* y 轴不参与规划与跟踪,直接下发固定速度;x、偏航沿用各自已下发的
+               目标继续闭环跟踪 */
+            SpeedPlanUpdate(&chassis->displacement_plan.translation_x, chassis->pose.x_m,
+                                 chassis->displacement_plan.translation_target_x_m);
+            SpeedPlanUpdate(&chassis->displacement_plan.yaw, chassis->pose.yaw_rad,
+                                 chassis->displacement_plan.yaw_target_rad);
+
+            chassis->velocity.vx_mps = PositionTrack(&chassis->displacement_plan.translation_x, chassis->pose.x_m);
+            chassis->velocity.vy_mps = chassis->ramp_vy_mps;
             chassis->velocity.wz_radps = PositionTrack(&chassis->displacement_plan.yaw, chassis->pose.yaw_rad);
         }
 
