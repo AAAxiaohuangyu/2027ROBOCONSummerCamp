@@ -49,6 +49,7 @@ void TestChassisSetVelocityTask(void *argument)
    START_MOVE_Y以实现转弯圆滑过渡,而非在拐角处完全停顿 */
 typedef enum
 {
+    TEST_POSITION_STATE_WAIT_MOVE_VELOCITY,
     TEST_POSITION_STATE_START_MOVE_1,
     TEST_POSITION_STATE_WAIT_MOVE_1,
     TEST_POSITION_STATE_START_MOVE_2,
@@ -77,7 +78,7 @@ typedef enum
 
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_1;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_WAIT_MOVE_VELOCITY;
 
     (void)argument;
 
@@ -85,6 +86,11 @@ void TestChassisSetPositionTask(void *argument)
     {
         switch (state)
         {
+        case TEST_POSITION_STATE_WAIT_MOVE_VELOCITY:
+            ChassisSetVelocity(&Robot.chassis, 0.0f, -1.0f,0.0f);
+            state = TEST_POSITION_STATE_DONE;
+            break;
+
         case TEST_POSITION_STATE_START_MOVE_1:
             osDelay(500);
             ChassisSetTranslation(&Robot.chassis, 0.8f, -0.65f);
@@ -161,7 +167,8 @@ void TestChassisSetPositionTask(void *argument)
 
         case TEST_POSITION_STATE_START_MOVE_5:
         {
-            /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x方向切到第三套跟踪参数组 */
+            /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x跟踪切到第三套参数组;
+               y轴的备用速度规划/跟踪参数组从MOVE_6起才切换 */
             PIDInit(&Robot.chassis.displacement_plan.translation_x.track_pid,
                     CHASSIS_TRACK_TRANSLATION_X_ALT2_KP,
                     CHASSIS_TRACK_TRANSLATION_X_ALT2_KI,
@@ -183,6 +190,19 @@ void TestChassisSetPositionTask(void *argument)
         case TEST_POSITION_STATE_START_MOVE_6:
         {
             osDelay(1000);
+            /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
+               y跟踪也切到备用参数组 */
+            SpeedPlanInit(&Robot.chassis.displacement_plan.translation_y,
+                          CHASSIS_PLAN_TRANSLATION_Y_ALT_MAX_ACCEL_MPS2,
+                          CHASSIS_PLAN_TRANSLATION_Y_ALT_MAX_SPEED_MPS,
+                          CHASSIS_PLAN_TRANSLATION_Y_ALT_MAX_JERK_MPS3,
+                          CHASSIS_TRACK_TRANSLATION_DEADBAND_M);
+            PIDInit(&Robot.chassis.displacement_plan.translation_y.track_pid,
+                    CHASSIS_TRACK_TRANSLATION_Y_ALT_KP,
+                    CHASSIS_TRACK_TRANSLATION_Y_ALT_KI,
+                    CHASSIS_TRACK_TRANSLATION_Y_ALT_KD,
+                    CHASSIS_TRACK_TRANSLATION_Y_ALT_MAX_OUT,
+                    CHASSIS_TRACK_TRANSLATION_Y_ALT_MAX_IOUT);
             ChassisSetTranslation(&Robot.chassis, 0.35f, -4.6f);
             state = TEST_POSITION_STATE_WAIT_MOVE_6;
             break;
@@ -228,7 +248,7 @@ void TestChassisSetPositionTask(void *argument)
         case TEST_POSITION_STATE_DONE:
         default:
             break;
-        } 
+        }
 
         osDelay(ROBOT_STATE_UPDATE_PERIOD_MS);
     }
