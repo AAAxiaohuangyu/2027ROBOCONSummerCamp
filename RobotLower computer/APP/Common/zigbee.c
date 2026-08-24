@@ -23,16 +23,13 @@ static void data_pack(uint8_t *buf, const ZigbeeData_TypeDef *data)
     memcpy(&buf[0], &data->chassis.speed_vx, sizeof(float));
     memcpy(&buf[4], &data->chassis.speed_vy, sizeof(float));
     memcpy(&buf[8], &data->chassis.omega, sizeof(float));
-    memcpy(&buf[12], &data->joint.forward, sizeof(float));
-    memcpy(&buf[16], &data->joint.backward, sizeof(float));
-    memcpy(&buf[20], &data->joint.lift, sizeof(float));
-    memcpy(&buf[24], &data->joint.down, sizeof(float));
-    memcpy(&buf[28], &data->joint.positive_flip, sizeof(float));
-    memcpy(&buf[32], &data->joint.negative_flip, sizeof(float));
+    memcpy(&buf[12], &data->joint.front_back, sizeof(float));
+    memcpy(&buf[16], &data->joint.up_down, sizeof(float));
+    memcpy(&buf[20], &data->joint.flip, sizeof(float));
     command_byte |= (uint8_t)((data->command.grab & 0x01U) << 0U);
     command_byte |= (uint8_t)((data->command.emergency_stop & 0x01U) << 1U);
     command_byte |= (uint8_t)((data->command.mode & 0x01U) << 2U);
-    buf[36] = command_byte;
+    buf[24] = command_byte;
 }
 
 /* 从 buf按大端字节序解析到 ZigbeeData_TypeDef */
@@ -41,15 +38,12 @@ static void data_unpack(ZigbeeData_TypeDef *data, const uint8_t *buf)
     memcpy(&data->chassis.speed_vx, &buf[0], sizeof(float));
     memcpy(&data->chassis.speed_vy, &buf[4], sizeof(float));
     memcpy(&data->chassis.omega, &buf[8], sizeof(float));
-    memcpy(&data->joint.forward, &buf[12], sizeof(float));
-    memcpy(&data->joint.backward, &buf[16], sizeof(float));
-    memcpy(&data->joint.lift, &buf[20], sizeof(float));
-    memcpy(&data->joint.down, &buf[24], sizeof(float));
-    memcpy(&data->joint.positive_flip, &buf[28], sizeof(float));
-    memcpy(&data->joint.negative_flip, &buf[32], sizeof(float));
-    data->command.grab = (buf[36] >> 0U) & 0x01U;
-    data->command.emergency_stop = (buf[36] >> 1U) & 0x01U;
-    data->command.mode = (buf[36] >> 2U) & 0x01U;
+    memcpy(&data->joint.front_back, &buf[12], sizeof(float));
+    memcpy(&data->joint.up_down, &buf[16], sizeof(float));
+    memcpy(&data->joint.flip, &buf[20], sizeof(float));
+    data->command.grab = (buf[24] >> 0U) & 0x01U;
+    data->command.emergency_stop = (buf[24] >> 1U) & 0x01U;
+    data->command.mode = (buf[24] >> 2U) & 0x01U;
 }
 
 /* 从 DMA 缓冲中搜索并解析一帧 */
@@ -75,7 +69,6 @@ static void frame_parse(ZigbeeHandle_TypeDef *zigbee, const uint8_t *buf, uint16
         }
 
         data_unpack(&zigbee->rx_data, &buf[i + 3U]);
-        zigbee->explained_data = zigbee->rx_data;
         zigbee->rx_valid = 1U;
         zigbee->status.rx_count++;
         zigbee->status.last_rx_tick = HAL_GetTick();
@@ -100,7 +93,6 @@ HAL_StatusTypeDef Zigbee_Init(ZigbeeHandle_TypeDef *zigbee)
 {
     memset(&zigbee->status, 0, sizeof(zigbee->status));
     memset(&zigbee->rx_data, 0, sizeof(zigbee->rx_data));
-    memset(&zigbee->explained_data, 0, sizeof(zigbee->explained_data));
     zigbee->rx_valid = 0U;
     zigbee->status.state = ZIGBEE_STATE_DISCONNECTED;
     zigbee->status.last_rx_tick = HAL_GetTick(); /* 防止上电立即误判超时 */

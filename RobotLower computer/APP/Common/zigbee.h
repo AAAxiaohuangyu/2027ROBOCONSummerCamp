@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 /* DMA 接收缓冲区大小 */
-#define ZIGBEE_RX_BUF_SIZE 40U
+#define ZIGBEE_RX_BUF_SIZE 28U
 
 /* 接收超时阈值 ms */
 #define ZIGBEE_RX_TIMEOUT_MS 500U
@@ -28,7 +28,7 @@
  *
  * 总计37字节
  */
-#define ZIGBEE_PAYLOAD_LEN 37U
+#define ZIGBEE_PAYLOAD_LEN 25U
 
 /* 用于接收AT指令初始化时的返回情况 */
 #define ZIGBEE_AT_RX_SIZE 64U
@@ -40,17 +40,11 @@ typedef struct
     float omega;    /**< 旋转速度 */
 } ZigbeeChassisCmd_TypeDef;
 
-/*
-0:停止,1:正方向运动,2负方向运动
-*/
 typedef struct
 {
-    float forward;
-    float backward;
-    float lift;
-    float down;
-    float positive_flip;
-    float negative_flip;
+    float front_back; /**< 前后关节速度，正负表示方向 */
+    float up_down;    /**< 上下关节速度，正负表示方向 */
+    float flip;       /**< 正逆翻转速度，正负表示方向 */
 } Joint_TypeDef;
 
 /*
@@ -94,7 +88,6 @@ typedef struct
     ZigbeeData_TypeDef tx_data;                                 // 发送数据
     uint8_t rx_valid;                                           /**< 新帧就绪标志 */
     ZigbeeStatus_TypeDef status;                                /**< 连接状态与统计信息 */
-    ZigbeeData_TypeDef explained_data;                          /**< 解析后数据,持续保持最新一帧,不随Zigbee_Receive消费而清空 */
 } ZigbeeHandle_TypeDef;
 
 HAL_StatusTypeDef Zigbee_Init(ZigbeeHandle_TypeDef *zigbee);
