@@ -60,6 +60,8 @@ void RobotInit(void)
        自行判空,无需在此额外判断 */
     Vision_Init(&Robot.vision);
 
+    Yesense_Init(&Robot.yis512, YESENSE_UART_HANDLE);
+
     /* 各外设句柄在CubeMX完成分配前于bsp_config.h中为NULL占位,逐个判空后再启动,
        句柄补齐后无需再改这里 */
     if (Robot.roboticarm.lift_motor.FDCAN_Handle != NULL)

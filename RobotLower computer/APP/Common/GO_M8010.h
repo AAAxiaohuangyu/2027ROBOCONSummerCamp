@@ -107,7 +107,7 @@ typedef struct
 typedef struct
 {
     uint8_t id;                /* 电机RS485地址 */
-    UART_HandleTypeDef *huart; /* 该电机挂载的RS485串口实例,组内所有电机须为同一实例(半双工共享总线) */
+    UART_HandleTypeDef *huart; /* 该电机挂载的RS485串口实例 */
     GOM8010Control_TypeDef control;
     GOM8010Feedback_TypeDef feedback;
 } GOM8010Motor_TypeDef;
@@ -122,12 +122,11 @@ typedef struct
     uint8_t motor_count;                 /* 共享这条总线的电机数,>1时才需要轮转避让 */
 } GOM8010BusArbiter_TypeDef;
 
-/* GO电机组:电机数组 + 这条总线的仲裁表,是本驱动对外暴露的唯一顶层类型。组内所有电机共享
-   同一路RS485总线(半双工,同一huart) */
+/* GO电机组:电机数组 + 每条RS485总线各自的仲裁表。相同huart的电机共享仲裁表,不同huart独立收发。 */
 typedef struct
 {
     GOM8010Motor_TypeDef motors[GOM8010_GROUP_MAX_MOTORS];
-    GOM8010BusArbiter_TypeDef arbiter;
+    GOM8010BusArbiter_TypeDef arbiters[GOM8010_GROUP_MAX_MOTORS];
     uint8_t motor_count;
 } GOM8010Group_TypeDef;
 
@@ -136,7 +135,7 @@ void GOM8010GroupInit(GOM8010Group_TypeDef *group);
 
 /* 向电机组添加一个电机(control含plan、按GO_M8010_POS_CTRL_*默认参数,feedback均在此一并初始化),
    返回其在组内的下标(后续GOM8010GroupSetTarget等接口按此下标操作),组已满返回0xFF。
-   组内所有电机须挂在同一路RS485总线(同一huart实例)上,共享同一份仲裁表 */
+   相同huart实例上的电机共享一份仲裁表。 */
 uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_HandleTypeDef *huart);
 
 /* 下发新的目标位置,切换为模式0(位置模式)并(重新)触发规划;运动中调用即为打断 */

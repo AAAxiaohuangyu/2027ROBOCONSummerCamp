@@ -228,16 +228,33 @@ static void GOM8010MotorParseFeedback(GOM8010Motor_TypeDef *motor, uint16_t size
     GOM8010ParseFeedbackFrame(&motor->feedback);
 }
 
+static GOM8010BusArbiter_TypeDef *GOM8010GroupGetBusArbiter(GOM8010Group_TypeDef *group,
+                                                              UART_HandleTypeDef *huart)
+{
+    uint8_t i;
+
+    if (huart == NULL)
+        return NULL;
+
+    for (i = 0U; i < group->motor_count; i++)
+    {
+        if (group->motors[i].huart == huart)
+            return &group->arbiters[i];
+    }
+
+    return NULL;
+}
+
 /* 尝试为group内index号电机发起一次请求(打包控制帧+发送+挂起本电机的接收缓冲区)。同一总线
    上还有其他电机的应答未到/未超时,或刚轮到过本电机、总线上还有别的电机没轮到时,本次跳过不
    发送,返回0;发送成功返回1 */
 static uint8_t GOM8010GroupRequest(GOM8010Group_TypeDef *group, uint8_t index)
 {
     GOM8010Motor_TypeDef *motor = &group->motors[index];
-    GOM8010BusArbiter_TypeDef *bus = &group->arbiter;
+    GOM8010BusArbiter_TypeDef *bus = GOM8010GroupGetBusArbiter(group, motor->huart);
     uint32_t now;
 
-    if (motor->huart == NULL)
+    if (bus == NULL)
         return 0U;
 
     now = HAL_GetTick();
@@ -301,7 +318,16 @@ uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_Handl
     motor->control.kd = motor->control.position_param.kd;
     motor->control.position_target = 0.0f;
 
-    group->arbiter.motor_count++;
+    {
+        GOM8010BusArbiter_TypeDef *bus = GOM8010GroupGetBusArbiter(group, huart);
+
+        if (bus == NULL)
+        {
+            /* 当前电机是这条UART总线的第一个成员，使用自身下标的仲裁表。 */
+            bus = &group->arbiters[index];
+        }
+        bus->motor_count++;
+    }
     group->motor_count++;
     return index;
 }
@@ -368,9 +394,9 @@ void GOM8010GroupUpdate(GOM8010Group_TypeDef *group)
 
 void GOM8010GroupRxEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart, uint16_t size)
 {
-    GOM8010BusArbiter_TypeDef *bus = &group->arbiter;
+    GOM8010BusArbiter_TypeDef *bus = GOM8010GroupGetBusArbiter(group, huart);
 
-    if (huart == NULL || bus->pending_motor == NULL || bus->pending_motor->huart == NULL ||
+    if (bus == NULL || bus->pending_motor == NULL || bus->pending_motor->huart == NULL ||
         bus->pending_motor->huart->Instance != huart->Instance)
         return; /* 不是本组总线的事件,或总线上没有电机在等应答(意外/迟到事件),丢弃 */
 

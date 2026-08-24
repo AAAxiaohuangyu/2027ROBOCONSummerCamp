@@ -26,8 +26,11 @@
 #define ROBOTICARM_LIFT_FDCAN_HANDLE &hfdcan1 /* 升降电机(J60)FDCAN句柄,占位待定 */
 #define ROBOTICARM_LIFT_ID 1u                /* 升降电机(J60)CAN地址,占位待定 */
 
-#define ROBOTICARM_FORWARD_UART_HANDLE &huart3 /* 前后平移电机(GO)RS485串口句柄,1 Mbps */
-#define ROBOTICARM_FORWARD_ID 3u            /* 前后平移电机(GO)RS485地址,占位待定 */
+#define ROBOTICARM_RS485_1_UART_HANDLE (&huart5) /* RS485-1: UART5, 4 Mbps (GO-M8010 fixed baud rate) */
+
+/* GO-M8010 地址3接在 RS485-1 上。 */
+#define ROBOTICARM_FORWARD_UART_HANDLE ROBOTICARM_RS485_1_UART_HANDLE
+#define ROBOTICARM_FORWARD_ID 3u            /* 前后平移电机(GO)RS485地址 */
 
 #define ROBOTICARM_ROTATE_UART_HANDLE &huart3 /* 自转电机(GO)RS485串口句柄,1 Mbps */
 #define ROBOTICARM_ROTATE_ID 7u            /* 自转电机(GO)RS485地址,占位待定 */
@@ -40,8 +43,14 @@
 
 /* 视觉(Vision)模块挂载串口句柄,占位:CubeMX尚未分配对应UART外设,暂不接实际句柄,
    待确定后直接改这里的宏值即可 */
-#define VISION_UART_HANDLE (&huart1)
+/* USART1 is reserved for the YIS512. Assign another free UART before enabling
+   the vision receiver, because a UART DMA stream may only have one owner. */
+#define VISION_UART_HANDLE ((UART_HandleTypeDef *)0)
 
-#define ZIGBEE_UART_HANDLE (huart9)
+/* YIS512 standard-protocol output, 460800 baud, 8N1. */
+#define YESENSE_UART_HANDLE (&huart1)
+
+/* 当前 CubeMX 工程未生成 huart9；先挂载到已存在的 UART4，实际硬件接口确认后仅需修改此宏。 */
+#define ZIGBEE_UART_HANDLE (huart4)
 
 #endif /* __BSP_CONFIG_H__ */

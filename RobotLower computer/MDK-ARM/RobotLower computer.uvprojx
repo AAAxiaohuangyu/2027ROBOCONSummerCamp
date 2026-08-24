@@ -336,7 +336,7 @@
               <MiscControls></MiscControls>
               <Define>USE_PWR_LDO_SUPPLY,USE_HAL_DRIVER,STM32H723xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../APP/Common;../APP/Core;../APP/Flip;../APP/Pickup;../APP/Chassis;../APP/Roboticarm;../APP/Vision;../APP/Test</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../APP/Common;../APP/Core;../APP/Flip;../APP/Pickup;../APP/Chassis;../APP/Roboticarm;../APP/Vision;../APP/Yesense;../APP/Test</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -916,6 +916,11 @@
           <GroupName>Common</GroupName>
           <Files>
             <File>
+              <FileName>yesense.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Yesense\yesense.c</FilePath>
+            </File>
+            <File>
               <FileName>fdcan_common.c</FileName>
               <FileType>1</FileType>
               <FilePath>../APP/Common/fdcan_common.c</FilePath>
@@ -964,6 +969,16 @@
               <FileName>encoder.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\APP\Common\encoder.c</FilePath>
+            </File>
+            <File>
+              <FileName>Servo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Common\Servo.c</FilePath>
+            </File>
+            <File>
+              <FileName>ServoDebug.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Common\ServoDebug.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1041,9 +1056,169 @@
               <FilePath>..\APP\Test\test.c</FilePath>
             </File>
             <File>
-              <FileName>encoder_baudrate_switch.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\APP\Test\encoder_baudrate_switch.c</FilePath>
+              <FileName>test.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Test\test.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Headers</GroupName>
+          <Files>
+            <File>
+              <FileName>chassis_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Chassis\chassis_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>chassis_mecanum.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Chassis\chassis_mecanum.h</FilePath>
+            </File>
+            <File>
+              <FileName>chassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Chassis\chassis.h</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_callback.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\bsp_callback.h</FilePath>
+            </File>
+            <File>
+              <FileName>ControlAlgorithm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\ControlAlgorithm.h</FilePath>
+            </File>
+            <File>
+              <FileName>encoder.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\encoder.h</FilePath>
+            </File>
+            <File>
+              <FileName>fdcan_common.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\fdcan_common.h</FilePath>
+            </File>
+            <File>
+              <FileName>GasPump.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\GasPump.h</FilePath>
+            </File>
+            <File>
+              <FileName>GO_M8010.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\GO_M8010.h</FilePath>
+            </File>
+            <File>
+              <FileName>J60.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\J60.h</FilePath>
+            </File>
+            <File>
+              <FileName>M3508.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\M3508.h</FilePath>
+            </File>
+            <File>
+              <FileName>motor_goto_zero.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\motor_goto_zero.h</FilePath>
+            </File>
+            <File>
+              <FileName>StrategyAlogrithm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\StrategyAlogrithm.h</FilePath>
+            </File>
+            <File>
+              <FileName>zigbee.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Common\zigbee.h</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Core\bsp_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>Core.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Core\Core.h</FilePath>
+            </File>
+            <File>
+              <FileName>flip.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Flip\flip.h</FilePath>
+            </File>
+            <File>
+              <FileName>Pickup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Pickup\Pickup.h</FilePath>
+            </File>
+            <File>
+              <FileName>RoboticArm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Roboticarm\RoboticArm.h</FilePath>
+            </File>
+            <File>
+              <FileName>test.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Test\test.h</FilePath>
+            </File>
+            <File>
+              <FileName>vision.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Vision\vision.h</FilePath>
+            </File>
+            <File>
+              <FileName>yesense.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\Yesense\yesense.h</FilePath>
+            </File>
+            <File>
+              <FileName>dma.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Core\Inc\dma.h</FilePath>
+            </File>
+            <File>
+              <FileName>fdcan.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Core\Inc\fdcan.h</FilePath>
+            </File>
+            <File>
+              <FileName>FreeRTOSConfig.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Core\Inc\FreeRTOSConfig.h</FilePath>
+            </File>
+            <File>
+              <FileName>gpio.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Core\Inc\gpio.h</FilePath>
+            </File>
+            <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Core\Inc\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>stm32h7xx_hal_conf.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Core\Inc\stm32h7xx_hal_conf.h</FilePath>
+            </File>
+            <File>
+              <FileName>stm32h7xx_it.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Core\Inc\stm32h7xx_it.h</FilePath>
+            </File>
+            <File>
+              <FileName>usart.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Core\Inc\usart.h</FilePath>
+            </File>
+            <File>
+              <FileName>RTE_Components.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>RTE\_RobotLower_computer\RTE_Components.h</FilePath>
             </File>
           </Files>
         </Group>

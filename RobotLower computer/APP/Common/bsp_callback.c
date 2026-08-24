@@ -71,5 +71,11 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         return;
     }
 
+    if (YESENSE_UART_HANDLE != NULL && huart->Instance == YESENSE_UART_HANDLE->Instance)
+    {
+        Yesense_RxEventHandler(&Robot.yis512, huart, Size);
+        return;
+    }
+
     GOM8010GroupRxEvent(&Robot.roboticarm.go_motors, huart, Size);
 }

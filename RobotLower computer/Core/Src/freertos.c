@@ -26,7 +26,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "test.h"
-#include "encoder_baudrate_switch.h"
+#include "Core.h"
+#include "bsp_config.h"
+#include "ServoDebug.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,13 +67,6 @@ const osThreadAttr_t TestArmMotionTask_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-osThreadId_t EncoderBaudrateSwitchTaskHandle;
-uint8_t EncoderBaudrateSwitchEnabled;
-const osThreadAttr_t EncoderBaudrateSwitchTask_attributes = {
-  .name = "EncoderBaudrateSwitchTask",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -97,9 +92,15 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
+  /* The YIS512 receiver is independent of the robot state machine and must
+     start even when the current firmware is running only a test task. */
+  Yesense_Init(&Robot.yis512, YESENSE_UART_HANDLE);
   TestChassisSpeedPlanInit();
   TestArmTestEnabled = TestArmMotionInit();
-  EncoderBaudrateSwitchEnabled = EncoderBaudrateSwitchInit();
+  if (ServoDebugInit() != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -130,11 +131,6 @@ void MX_FREERTOS_Init(void) {
     TestArmControlTaskHandle = osThreadNew(TestArmControlTask, NULL, &TestArmControlTask_attributes);
     TestArmMotionTaskHandle = osThreadNew(TestArmMotionTask, NULL, &TestArmMotionTask_attributes);
   }
-  if (EncoderBaudrateSwitchEnabled != 0U)
-  {
-    EncoderBaudrateSwitchTaskHandle = osThreadNew(EncoderBaudrateSwitchTask, NULL, &EncoderBaudrateSwitchTask_attributes);
-  }
-
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -156,6 +152,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
+    ServoDebugUpdate();
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */

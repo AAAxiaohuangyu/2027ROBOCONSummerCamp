@@ -1,3 +1,4 @@
+#include "main.h"
 #include "test.h"
 #include "StrategyAlogrithm.h"
 #include "usart.h"
@@ -12,13 +13,36 @@
 #define TEST_CHASSIS_PLAN_DISTANCE_M  (1.0f)
 #define TEST_CHASSIS_VOFA_PERIOD_MS   (20U)
 
-/* 机械臂单项调试选择：默认关闭。修改TEST_ARM_MODE、重新编译烧录后生效。 */
+/*
+ * 机械臂调试总开关：正常使用保持 NONE。
+ * 单电机定位测试步骤：
+ * 1. 确认机械臂周围无障碍物，急停可用；先使用很小的目标位置变化。
+ * 2. 将 TEST_ARM_MODE 改为 TEST_ARM_MODE_SINGLE_MOTOR。
+ * 3. 在下方选择 TEST_ARM_MOTOR，并填写 TEST_ARM_MOTOR_MOVE_DISTANCE_M。
+ * 4. 编译、下载、复位；程序等待 TEST_ARM_START_DELAY_MS 后开始运动。
+ * 5. Keil Watch 查看 TestArmMotorReached 和 TestArmFinished：均为 1U 表示到位。
+ */
 #define TEST_ARM_MODE_NONE             (0U)
 #define TEST_ARM_MODE_FLIP             (1U)
 #define TEST_ARM_MODE_PICKUP_STORE_LOW (2U)
 #define TEST_ARM_MODE_PICKUP_STORE_HIGH (3U)
 #define TEST_ARM_MODE_PICKUP_HOLD      (4U)
-#define TEST_ARM_MODE                  TEST_ARM_MODE_NONE
+#define TEST_ARM_MODE_SINGLE_MOTOR     (5U)
+#define TEST_ARM_MODE                  TEST_ARM_MODE_SINGLE_MOTOR
+
+/*
+ * 单电机位置测试参数。
+ * LIFT 和 FORWARD 使用相对移动距离，单位 m；正负号决定运动方向。
+ * 任务读取真实反馈位置后，按 RoboticArm.h 的 K 值换算为电机目标角度。
+ * 第一次测试建议仅填写 0.005f~0.010f，确认方向后再扩大距离。
+ */
+#define TEST_ARM_MOTOR_LIFT            (0U) /* J60 升降电机 */
+#define TEST_ARM_MOTOR_FORWARD         (1U) /* GO 前后电机 */
+#define TEST_ARM_MOTOR                 TEST_ARM_MOTOR_LIFT /* 二选一：LIFT / FORWARD */
+#define TEST_ARM_MOTOR_MOVE_DISTANCE_M (0.50f)              /* LIFT/FORWARD 相对移动距离，单位 m */
+#define TEST_ARM_MOTOR_TOLERANCE_M     (0.001f)            /* 到位允许误差，单位 m（1 mm） */
+/* 当前 J60 升降电机正方向与机械臂“向上”为反向，因此测试中取 -1。 */
+#define TEST_ARM_LIFT_DIRECTION        (-1.0f)
 
 /* 拾取测试使用的KFS高度；HOLD测试到位后保持吸附的时长。 */
 #define TEST_ARM_PICKUP_HEIGHT         PICKUP_HEIGHT_LOW
@@ -39,11 +63,21 @@ SpeedPlan_TypeDef TestChassisPlan;
 float TestChassisVirtualPosition;
 float TestChassisVirtualTarget;
 
-/* 全局变量可直接在Keil Watch观察测试模式和状态机进度。 */
+/*
+ * Keil Watch 调试变量：
+ * TestArmActive=1U 表示测试正在运行；0U 表示已结束。
+ * TestArmFinished=1U 表示当前测试动作完成。
+ * TestArmMotorReached=1U 表示单电机实际位移误差进入 TOLERANCE_M 范围。
+ * TestArmMotorActualAngle 是当前测试电机的实际反馈角度，单位 rad。
+ * TestArmMotorTargetPosition 是当前测试电机的目标角度，单位 rad。
+ */
 uint8_t TestArmActive;
 uint8_t TestArmFinished;
 FlipState_TypeDef TestArmFlipState;
 PickupState_TypeDef TestArmPickupState;
+uint8_t TestArmMotorReached;
+float TestArmMotorActualAngle;
+float TestArmMotorTargetPosition;
 
 static TestChassisJustFloatFrame_TypeDef TestChassisVofaFrame =
 {
@@ -115,6 +149,9 @@ uint8_t TestArmMotionInit(void)
     TestArmFinished = 0U;
     TestArmFlipState = FLIP_STATE_UP;
     TestArmPickupState = PICKUP_STATE_RAISE;
+    TestArmMotorReached = 0U;
+    TestArmMotorActualAngle = 0.0f;
+    TestArmMotorTargetPosition = 0.0f;
     return 1U;
 #endif
 }
@@ -135,6 +172,25 @@ void TestArmMotionTask(void *argument)
 
     (void)argument;
     osDelay(TEST_ARM_START_DELAY_MS);
+
+#if TEST_ARM_MODE == TEST_ARM_MODE_SINGLE_MOTOR
+    /* 延时结束后只下发一次目标；控制任务持续发送该目标并刷新反馈。 */
+#if TEST_ARM_MOTOR == TEST_ARM_MOTOR_LIFT
+    /* delta_height = LIFT_K * delta_theta，因此 delta_theta = delta_height / LIFT_K。 */
+    TestArmMotorTargetPosition = Robot.roboticarm.lift_motor.feedback.position +
+                                 TEST_ARM_LIFT_DIRECTION * TEST_ARM_MOTOR_MOVE_DISTANCE_M /
+                                 ROBOTICARM_LIFT_K;
+    J60MotorSetTarget(&Robot.roboticarm.lift_motor, TestArmMotorTargetPosition);
+#elif TEST_ARM_MOTOR == TEST_ARM_MOTOR_FORWARD
+    /* delta_distance = FORWARD_K * delta_theta，因此 delta_theta = delta_distance / FORWARD_K。 */
+    TestArmMotorTargetPosition = Robot.roboticarm.go_motors.motors[ROBOTICARM_GO_FORWARD].feedback.position +
+                                 TEST_ARM_MOTOR_MOVE_DISTANCE_M / ROBOTICARM_FORWARD_K;
+    GOM8010GroupSetTarget(&Robot.roboticarm.go_motors, ROBOTICARM_GO_FORWARD,
+                          TestArmMotorTargetPosition);
+#else
+#error "TEST_ARM_MOTOR must be LIFT or FORWARD"
+#endif
+#endif
 
     while (TestArmActive != 0U)
     {
@@ -162,14 +218,36 @@ void TestArmMotionTask(void *argument)
             else if ((HAL_GetTick() - hold_start_tick) >= TEST_ARM_HOLD_DURATION_MS)
                 TestArmFinished = 1U;
         }
+#elif TEST_ARM_MODE == TEST_ARM_MODE_SINGLE_MOTOR
+        /* 将电机角度误差按机构 K 值换算为米，再判断是否到位。 */
+#if TEST_ARM_MOTOR == TEST_ARM_MOTOR_LIFT
+        float position_error_m = (Robot.roboticarm.lift_motor.feedback.position -
+                                  TestArmMotorTargetPosition) * ROBOTICARM_LIFT_K;
+        TestArmMotorActualAngle = Robot.roboticarm.lift_motor.feedback.position;
+#elif TEST_ARM_MOTOR == TEST_ARM_MOTOR_FORWARD
+        float position_error_m = (Robot.roboticarm.go_motors.motors[ROBOTICARM_GO_FORWARD].feedback.position -
+                                  TestArmMotorTargetPosition) * ROBOTICARM_FORWARD_K;
+        TestArmMotorActualAngle = Robot.roboticarm.go_motors.motors[ROBOTICARM_GO_FORWARD].feedback.position;
+#else
+#error "TEST_ARM_MOTOR must be LIFT or FORWARD"
+#endif
+        if (position_error_m < 0.0f)
+            position_error_m = -position_error_m;
+        if (position_error_m <= TEST_ARM_MOTOR_TOLERANCE_M)
+        {
+            TestArmMotorReached = 1U;
+            TestArmFinished = 1U;
+        }
 #else
         TestArmFinished = 1U;
 #endif
 
         if (TestArmFinished != 0U)
         {
-            /* 所有测试结束时关闭气泵；电机保持最后一个已到位目标。 */
+            /* 单电机测试不操作气泵；所有电机保持最后一个已到位目标。 */
+#if TEST_ARM_MODE != TEST_ARM_MODE_SINGLE_MOTOR
             RoboticArmReleaseMotion();
+#endif
             TestArmActive = 0U;
         }
 

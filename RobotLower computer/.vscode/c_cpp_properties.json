@@ -1,0 +1,58 @@
+{
+    "configurations": [
+        {
+            "name": "Keil-ArmCC-RobotLower",
+            "compilerPath": "E:/Keli5/ARM/ARMCC/Bin/armcc.exe",
+            "includePath": [
+                "${workspaceFolder}/Core/Inc",
+                "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+                "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+                "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+                "${workspaceFolder}/Drivers/CMSIS/Include",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
+                "${workspaceFolder}/APP/Common",
+                "${workspaceFolder}/APP/Core",
+                "${workspaceFolder}/APP/Flip",
+                "${workspaceFolder}/APP/Pickup",
+                "${workspaceFolder}/APP/Chassis",
+                "${workspaceFolder}/APP/Roboticarm",
+                "${workspaceFolder}/APP/Vision",
+                "${workspaceFolder}/APP/Yesense",
+                "${workspaceFolder}/APP/Test",
+                "${workspaceFolder}/Core/Src",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang",
+                "${workspaceFolder}/MDK-ARM",
+                "E:/Keli5/ARM/ARMCC/include",
+                "E:/Keli5/ARM/ARMCC/include/rw"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/Core/Inc",
+                    "${workspaceFolder}/Core/Src",
+                    "${workspaceFolder}/APP",
+                    "${workspaceFolder}/Drivers",
+                    "${workspaceFolder}/Middlewares",
+                    "${workspaceFolder}/MDK-ARM"
+                ],
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "defines": [
+                "USE_PWR_LDO_SUPPLY",
+                "USE_HAL_DRIVER",
+                "STM32H723xx",
+                "__CC_ARM",
+                "__arm__",
+                "__weak=",
+                "__packed=",
+                "__align(x)=",
+                "__irq="
+            ],
+            "cStandard": "c11",
+            "intelliSenseMode": "windows-gcc-arm"
+        }
+    ],
+    "version": 4
+}

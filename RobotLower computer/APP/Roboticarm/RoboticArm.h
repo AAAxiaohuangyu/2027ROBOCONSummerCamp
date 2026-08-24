@@ -35,10 +35,10 @@ ROBOTICARM_FORWARD_K、ROBOTICARM_FORWARD_THRESHOLD、ROBOTICARM_ROD_LENGTH、RO
 #define ROBOTICARM_BASE_X (0.0f) /* 升降机构安装点在底盘坐标系下的x坐标,待标定 */
 #define ROBOTICARM_BASE_Y (0.0f) /* 升降机构安装点在底盘坐标系下的y坐标,待标定 */
 
-#define ROBOTICARM_LIFT_K (0.00955f)     /* 升降机构:height = LIFT_K * theta + LIFT_THRESHOLD,待标定 */
+#define ROBOTICARM_LIFT_K (0.025f)       /* 升降机构:齿轮半径24 mm, height = K * theta + threshold */
 #define ROBOTICARM_LIFT_THRESHOLD (0.0f) /* 升降机构:theta=0时对应的初始高度,待标定 */
 
-#define ROBOTICARM_FORWARD_K (0.00955f)     /* 前后机构:distance = FORWARD_K * theta + FORWARD_THRESHOLD,待标定 */
+#define ROBOTICARM_FORWARD_K (0.060f)     /* 前后机构:distance = FORWARD_K * theta + FORWARD_THRESHOLD,待标定 */
 #define ROBOTICARM_FORWARD_THRESHOLD (0.0f) /* 前后机构:theta=0时对应的初始前伸距离,待标定 */
 
 #define ROBOTICARM_ROD_LENGTH (0.0f) /* 末端固定杆长度,沿y轴方向,待标定 */
