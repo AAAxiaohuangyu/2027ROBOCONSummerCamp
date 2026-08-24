@@ -6,31 +6,18 @@
 
 #define VISION_FRAME_SOF0         (0xA5U)
 #define VISION_FRAME_SOF1         (0x5AU)
-#define VISION_FRAME_TYPE_KFS     (0x01U)
-#define VISION_KFS_PAYLOAD_LEN    (10U)
 #define VISION_FRAME_SIZE         (15U)
 
 /* UART空闲线DMA接收缓冲区大小,与单帧定长一致 */
 #define VISION_RX_BUF_SIZE        (VISION_FRAME_SIZE)
 
-#define VISION_CORRECT_COLOUR KFS_COLOUR_BLUE //需要拿取的KFS的颜色
-
-/* 视觉端发送的颜色编码。 */
-typedef enum
-{
-    KFS_COLOUR_BLUE = 0U,
-    KFS_COLOUR_RED = 1U,
-    KFS_COLOUR_UNKNOWN = 0xFFU
-} KFS_COLOUR;
-
 /* 提供给主控的视觉识别结果。 */
 typedef struct
 {
-    KFS_COLOUR current_colour; /* 当前待抓取 KFS 的颜色。 */
-    KFS_COLOUR next_colour;    /* 下一块待抓取 KFS 的颜色。 */
     float chassis_x;           /* 小车 x 坐标，由视觉端发送。 */
     float chassis_y;           /* 小车 y 坐标，由视觉端发送。 */
     uint8_t rx_dma_buf[VISION_RX_BUF_SIZE]; /* UART空闲线DMA接收缓冲 */
+    uint8_t KFS_DIFF;
 } VisionHandle_TypeDef;
 
 /*

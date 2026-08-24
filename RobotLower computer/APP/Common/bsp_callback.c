@@ -88,4 +88,9 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     {
         Zigbee_RxErrorHandler(&Robot.zigbee, huart);
     }
+
+    else if (huart->Instance == VISION_UART_HANDLE->Instance)
+    {
+        HAL_UARTEx_ReceiveToIdle_DMA(huart, Robot.vision.rx_dma_buf, VISION_RX_BUF_SIZE);
+    }
 }

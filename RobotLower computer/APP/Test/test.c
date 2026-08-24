@@ -22,6 +22,8 @@ void TestChassisEncoderRxInit(void)
     /* 开启UART9空闲线DMA接收;之后每帧到达都由HAL_UARTEx_RxEventCallback(bsp_callback.c)
        中断驱动解析,持续更新Robot.zigbee.explained_data,不需要额外的周期任务 */
     Zigbee_Init(&Robot.zigbee);
+
+    Vision_Init(&Robot.vision);
 }
 
 void TestChassisUpdateTask(void *argument)
