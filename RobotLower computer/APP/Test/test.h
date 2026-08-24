@@ -2,17 +2,21 @@
 #define __TEST_H_
 
 /*
- * 底盘(M3508)+ Encoder + YIS512 CAN接收测试:只拉起需要测的子系统,不进RobotInit/整机状态机。
+ * 底盘(M3508)+ Encoder + YIS512 + ZigBee 接收测试:只拉起需要测的子系统,不进RobotInit/整机状态机。
  * 验收不看本模块的代码,直接在调试器Watch窗口看:
  *   Robot.chassis.drive.motor_group.motor[0..3].feedback.update_cnt 持续增长
  *     -> 过滤器0/RXFIFO0 收到了3508反馈帧;
  *   Robot.encoder.x_axis/y_axis.raw_position_count 随实际转动变化
  *     -> 过滤器1/RXFIFO1 收到了encoder应答帧;
  *   Robot.yis512.update_cnt 持续增长(pitch/roll/yaw_deg随姿态变化)
- *     -> 扩展过滤器0/RXFIFO0 收到了YIS512欧拉角帧。
+ *     -> 扩展过滤器0/RXFIFO0 收到了YIS512欧拉角帧;
+ *   Robot.zigbee.explained_data 持续按最新一帧更新(Robot.zigbee.status.rx_count随之增长)
+ *     -> UART9空闲线DMA收到了ZigBee控制帧。
  */
 
-/* 初始化底盘、编码器与YIS512,配置好FDCAN过滤器/FIFO,供RTOS启动前调用一次 */
+/* 初始化底盘、编码器、YIS512与ZigBee,配置好FDCAN过滤器/FIFO与UART9空闲线DMA接收,
+   供RTOS启动前调用一次;ZigBee之后的持续接收完全由HAL_UARTEx_RxEventCallback
+   (bsp_callback.c)中断驱动,不需要额外的周期任务 */
 void TestChassisEncoderRxInit(void);
 
 /* RTOS任务入口:持续下发底盘控制帧(速度维持ChassisInit给的默认0),触发电调反馈 */

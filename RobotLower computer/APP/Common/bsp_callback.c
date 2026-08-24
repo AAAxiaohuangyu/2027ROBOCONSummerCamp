@@ -77,3 +77,15 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 
     GOM8010GroupRxEvent(&Robot.roboticarm.go_motors, huart, Size);
 }
+
+/* UART接收出现溢出/帧/噪声等错误:DMA接收模式下HAL会把该错误当作阻塞错误处理,自动中止
+   当前DMA接收并将RxState还原为READY,若不在此重新挂起,对应串口会永久停止接收。
+   目前仅ZigBee在此恢复;Vision/GO电机组若排查到同样的"错误后彻底失联"现象,需要照此
+   补充各自的错误恢复处理 */
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == ZIGBEE_UART_HANDLE.Instance)
+    {
+        Zigbee_RxErrorHandler(&Robot.zigbee, huart);
+    }
+}

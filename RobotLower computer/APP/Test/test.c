@@ -18,6 +18,10 @@ void TestChassisEncoderRxInit(void)
                 ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID); /* 过滤器0 -> RXFIFO1 */
 
     Yis512Init(&Robot.yis512); /* 扩展过滤器0 -> RXFIFO0 */
+
+    /* 开启UART9空闲线DMA接收;之后每帧到达都由HAL_UARTEx_RxEventCallback(bsp_callback.c)
+       中断驱动解析,持续更新Robot.zigbee.explained_data,不需要额外的周期任务 */
+    Zigbee_Init(&Robot.zigbee);
 }
 
 void TestChassisUpdateTask(void *argument)
@@ -75,12 +79,18 @@ typedef enum
 
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_1;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_DONE;
 
     (void)argument;
 
     for (;;)
     {
+
+        if (Robot.zigbee.rx_data.command.mode == 1)
+        {
+            state = TEST_MANUAL_STATE;
+        }
+
         switch (state)
         {
         case TEST_POSITION_STATE_START_MOVE_1:
@@ -258,7 +268,13 @@ void TestChassisSetPositionTask(void *argument)
 
         case TEST_MANUAL_STATE:
         {
-            ChassisStop(&Robot.chassis);
+            ChassisSetVelocity(&Robot.chassis, Robot.zigbee.rx_data.chassis.speed_vx, Robot.zigbee.rx_data.chassis.speed_vy, Robot.zigbee.rx_data.chassis.omega);
+
+            if(Robot.zigbee.rx_data.command.emergency_stop == 1)
+            {
+                ChassisStop(&Robot.chassis);
+            }
+
             break;
         }
 

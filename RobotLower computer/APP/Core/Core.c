@@ -84,7 +84,7 @@ void RobotInit(void)
     RoboticArmEnable(&robot->roboticarm);
 }
 
-void RobotStateUpdate(Robot_TypeDef *Robot)
+/*void RobotStateUpdate(Robot_TypeDef *Robot)
 {
     while (1)
     {
@@ -98,21 +98,18 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             break;
 
         case ROBOT_STATE_MOVE1:
-            /* 从启动区运动到翻转区 */
             ChassisSetTranslation(&Robot->chassis, ROBOT_MOVE_START_TO_FLIP_X, ROBOT_MOVE_START_TO_FLIP_Y);
             if (ChassisTranslationReached(&Robot->chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
                 Robot->state = ROBOT_STATE_FLIP;
             break;
 
         case ROBOT_STATE_FLIP:
-            /* 翻转KFS */
             RoboticArmFlipMotion(&Robot->roboticarm, &Robot->flip_state);
             if (Robot->flip_state == FLIP_STATE_DONE)
                 Robot->state = ROBOT_STATE_MOVE2;
             break;
 
         case ROBOT_STATE_MOVE2:
-            /* 从翻转区返回启动区 */
             ChassisSetTranslation(&Robot->chassis, ROBOT_MOVE_FLIP_TO_START_X, ROBOT_MOVE_FLIP_TO_START_Y);
             if (ChassisTranslationReached(&Robot->chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
             {
@@ -122,14 +119,9 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             break;
 
         case ROBOT_STATE_VISION_WAIT:
-            /* 等待视觉判断下一个KFS是否需要抓取,判断结果就绪前底盘/机械臂均保持当前状态不动;
-               next_colour仍为KFS_COLOUR_UNKNOWN(尚未收到有效视觉帧)时继续等待 */
             if (Robot->vision.next_colour != KFS_COLOUR_UNKNOWN)
             {
-                uint8_t default_index = (Robot->pickup.vision_next_state == ROBOT_STATE_MOVE3) ? 1U : (uint8_t)(Robot->pickup.kfs_last_index + 1U);
-
-                /* next_colour与VISION_CORRECT_COLOUR相符则该候选工位就是需要抓取的目标;
-                   不符则说明该工位颜色错误,需跳过,顺延到下一个工位 */
+                uint8_t default_index = (Robot->pickup.vision_next_state == ROBOT_STATE_MOVE3) ? 1U : (uint8_t)(Robot->pickup.kfs_last_index + 1U);;
                 Robot->pickup.kfs_target_index = (Robot->vision.next_colour == VISION_CORRECT_COLOUR) ? default_index : (uint8_t)(default_index + 1U);
                 Robot->state = Robot->pickup.vision_next_state;
             }
@@ -138,7 +130,7 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
         case ROBOT_STATE_MOVE3:
         case ROBOT_STATE_MOVE4:
         case ROBOT_STATE_MOVE5:
-            /* 运动到当前目标KFS工位,到位后执行PICKUP,完成后返回的状态按MOVE3/4/5依次递进 */
+    
             RobotMoveToKfs(Robot, Robot->pickup.kfs_target_index);
             if (ChassisTranslationReached(&Robot->chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
             {
@@ -150,8 +142,7 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             break;
 
         case ROBOT_STATE_PICKUP:
-            /* 拾取当前目标KFS,吸取高度由KFS序号(1~4:高低高低)查表决定;
-               本轮第1/2/3次拾取动作固定为存底层/存上层/保持真空(由pickup_return_state区分次序) */
+        
             if (Robot->pickup.pickup_return_state == ROBOT_STATE_MOVE4)
             {
                 RoboticArmPickupStoreLowMotion(&Robot->roboticarm, &Robot->pickup.pick_state,
@@ -168,7 +159,6 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
                                            kfs_height_table[Robot->pickup.kfs_target_index - 1U]);
             }
 
-            /* StoreLow/StoreHigh完成后回到VOID;Hold完成后停在HOLD,同样视为本次拾取完成 */
             if (Robot->pickup.pick_state == PICKUP_STATE_VOID || Robot->pickup.pick_state == PICKUP_STATE_HOLD)
             {
                 Robot->pickup.kfs_last_index = Robot->pickup.kfs_target_index;
@@ -185,7 +175,6 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             break;
 
         case ROBOT_STATE_MOVE6:
-            /* 最后一个正确的KFS拾取完成,上斜坡 */
             ChassisSetTranslation(&Robot->chassis, ROBOT_MOVE_UP_SLOPE_X, ROBOT_MOVE_UP_SLOPE_Y);
             if (ChassisTranslationReached(&Robot->chassis, ROBOT_CHASSIS_POSITION_TOLERANCE_M))
                 Robot->state = ROBOT_STATE_MANUAL;
@@ -193,20 +182,15 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
 
         case ROBOT_STATE_MANUAL:
         {
-            /* 手动操作模式,持续按zigbee最新解析出的数据(explained_data)下发,不消费
-               rx_valid;某个周期没有收到新帧时explained_data保持上一帧内容,目标继续按
-               原样下发,不会"冻结"或回零 */
             float lift_velocity = 0.0f;
             float forward_velocity = 0.0f;
             float rotate_velocity = 0.0f;
 
-            /* 底盘直接下发原始速度,不经过位移S曲线规划 */
+          
             ChassisSetVelocity(&Robot->chassis, (float)Robot->zigbee.explained_data.chassis.speed_vx,
                                (float)Robot->zigbee.explained_data.chassis.speed_vy,
                                (float)Robot->zigbee.explained_data.chassis.omega);
 
-            /* 机械臂三电机均采用定速模式,速度大小固定为ROBOT_MANUAL_ARM_VELOCITY,
-               方向由对应关节指令决定(0:停止,1:正方向,2:负方向) */
             if (Robot->zigbee.explained_data.joint.up_down == 1)
                 lift_velocity = ROBOT_MANUAL_ARM_VELOCITY;
             else if (Robot->zigbee.explained_data.joint.up_down == 2)
@@ -226,7 +210,7 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             GOM8010GroupSetVelocityTarget(&Robot->roboticarm.go_motors, ROBOTICARM_GO_FORWARD, forward_velocity);
             GOM8010GroupSetVelocityTarget(&Robot->roboticarm.go_motors, ROBOTICARM_GO_ROTATE, rotate_velocity);
 
-            /* 抓取、急停均通过gaspump接口控制气泵开关;急停优先于抓取指令,强制关闭气泵 */
+          
             if (Robot->zigbee.explained_data.command.emergency_stop != 0U)
                 RoboticArmReleaseMotion();
             else if (Robot->zigbee.explained_data.command.grab != 0U)
@@ -244,3 +228,4 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
         osDelay(ROBOT_STATE_UPDATE_PERIOD_MS);
     }
 }
+*/

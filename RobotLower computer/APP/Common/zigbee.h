@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 /* DMA 接收缓冲区大小 */
-#define ZIGBEE_RX_BUF_SIZE 64U
+#define ZIGBEE_RX_BUF_SIZE 40U
 
 /* 接收超时阈值 ms */
 #define ZIGBEE_RX_TIMEOUT_MS 500U
@@ -18,26 +18,26 @@
 
 /*
  * 有效载荷：
- * chassis.speed_vx        2字节
- * chassis.speed_vy        2字节
- * chassis.omega           2字节
- * joint.front_back        2字节
- * joint.up_down           2字节
- * joint.flip              2字节
+ * chassis.speed_vx        4字节
+ * chassis.speed_vy        4字节
+ * chassis.omega           4字节
+ * joint.front_back        4字节
+ * joint.up_down           4字节
+ * joint.flip              4字节
  * command                 1字节
  *
- * 总计13字节
+ * 总计37字节
  */
-#define ZIGBEE_PAYLOAD_LEN 13U
+#define ZIGBEE_PAYLOAD_LEN 37U
 
 /* 用于接收AT指令初始化时的返回情况 */
 #define ZIGBEE_AT_RX_SIZE 64U
 
 typedef struct
 {
-    int16_t speed_vx; /**< 平动x轴速度 */
-    int16_t speed_vy; /**< 平动y轴速度 */
-    int16_t omega;    /**< 旋转速度 */
+    float speed_vx; /**< 平动x轴速度 */
+    float speed_vy; /**< 平动y轴速度 */
+    float omega;    /**< 旋转速度 */
 } ZigbeeChassisCmd_TypeDef;
 
 /*
@@ -45,9 +45,12 @@ typedef struct
 */
 typedef struct
 {
-    int16_t front_back; /**< 前后关节指令 */
-    int16_t up_down;    /**< 上下关节指令 */
-    int16_t flip;       /**< 翻转关节指令 */
+    float forward;
+    float backward;
+    float lift;
+    float down;
+    float positive_flip;
+    float negative_flip;
 } Joint_TypeDef;
 
 /*
@@ -108,6 +111,11 @@ void Zigbee_ErrorHandler(ZigbeeHandle_TypeDef *zigbee);
    事件收到的数据并重新挂起下一次接收;HAL回调全局唯一,不能在本文件内直接实现,由bsp_callback.c
    统一分发 */
 void Zigbee_RxEventHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *huart, uint16_t Size);
+
+/* 供上层在HAL_UART_ErrorCallback中调用(huart匹配ZIGBEE_UART_HANDLE时):DMA接收模式下任何接收
+   错误(溢出/帧/噪声等)都会被HAL判定为阻塞错误,自动中止DMA接收并把RxState还原为READY,
+   之后必须主动重新挂起接收,否则该串口会永久停止接收;HAL回调全局唯一,由bsp_callback.c统一分发 */
+void Zigbee_RxErrorHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *huart);
 
 const ZigbeeStatus_TypeDef *Zigbee_GetStatus(const ZigbeeHandle_TypeDef *zigbee);
 const uint8_t *Zigbee_GetATResponse(const ZigbeeHandle_TypeDef *zigbee);

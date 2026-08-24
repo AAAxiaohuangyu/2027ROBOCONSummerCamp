@@ -20,73 +20,36 @@
 static void data_pack(uint8_t *buf, const ZigbeeData_TypeDef *data)
 {
     uint8_t command_byte = 0U;
-
-    /* 底盘平动x轴速度 */
-    buf[0] = (uint8_t)((uint16_t)data->chassis.speed_vx >> 8U);
-    buf[1] = (uint8_t)((uint16_t)data->chassis.speed_vx);
-
-    /* 底盘平动y轴速度 */
-    buf[2] = (uint8_t)((uint16_t)data->chassis.speed_vy >> 8U);
-    buf[3] = (uint8_t)((uint16_t)data->chassis.speed_vy);
-
-    /* 底盘旋转速度 */
-    buf[4] = (uint8_t)((uint16_t)data->chassis.omega >> 8U);
-    buf[5] = (uint8_t)((uint16_t)data->chassis.omega);
-
-    /* 前后关节指令 */
-    buf[6] = (uint8_t)((uint16_t)data->joint.front_back >> 8U);
-    buf[7] = (uint8_t)((uint16_t)data->joint.front_back);
-
-    /* 上下关节指令 */
-    buf[8] = (uint8_t)((uint16_t)data->joint.up_down >> 8U);
-    buf[9] = (uint8_t)((uint16_t)data->joint.up_down);
-
-    /* 翻转关节指令 */
-    buf[10] = (uint8_t)((uint16_t)data->joint.flip >> 8U);
-    buf[11] = (uint8_t)((uint16_t)data->joint.flip);
-
-    /*
-     * 四个0/1指令合并到一个字节：
-     * bit0：抓取
-     * bit1：急停
-     * bit2：模式
-     */
+    memcpy(&buf[0], &data->chassis.speed_vx, sizeof(float));
+    memcpy(&buf[4], &data->chassis.speed_vy, sizeof(float));
+    memcpy(&buf[8], &data->chassis.omega, sizeof(float));
+    memcpy(&buf[12], &data->joint.forward, sizeof(float));
+    memcpy(&buf[16], &data->joint.backward, sizeof(float));
+    memcpy(&buf[20], &data->joint.lift, sizeof(float));
+    memcpy(&buf[24], &data->joint.down, sizeof(float));
+    memcpy(&buf[28], &data->joint.positive_flip, sizeof(float));
+    memcpy(&buf[32], &data->joint.negative_flip, sizeof(float));
     command_byte |= (uint8_t)((data->command.grab & 0x01U) << 0U);
     command_byte |= (uint8_t)((data->command.emergency_stop & 0x01U) << 1U);
     command_byte |= (uint8_t)((data->command.mode & 0x01U) << 2U);
-    buf[12] = command_byte;
+    buf[36] = command_byte;
 }
 
-/* 从 buf（19 字节）按大端字节序解析到 ZigbeeData_TypeDef */
+/* 从 buf按大端字节序解析到 ZigbeeData_TypeDef */
 static void data_unpack(ZigbeeData_TypeDef *data, const uint8_t *buf)
 {
-    /* 底盘x轴平动速度 */
-    data->chassis.speed_vx =
-        (int16_t)(((uint16_t)buf[0] << 8U) | buf[1]);
-
-    /* 底盘y轴平动速度 */
-    data->chassis.speed_vy =
-        (int16_t)(((uint16_t)buf[2] << 8U) | buf[3]);
-
-    /* 底盘旋转速度 */
-    data->chassis.omega =
-        (int16_t)(((uint16_t)buf[4] << 8U) | buf[5]);
-
-    /* 前后关节指令 */
-    data->joint.front_back =
-        (int16_t)(((uint16_t)buf[6] << 8U) | buf[7]);
-
-    /* 上下关节指令 */
-    data->joint.up_down =
-        (int16_t)(((uint16_t)buf[8] << 8U) | buf[9]);
-
-    /* 翻转关节指令 */
-    data->joint.flip =
-        (int16_t)(((uint16_t)buf[10] << 8U) | buf[11]);
-    /* 解析三个0/1指令 */
-    data->command.grab = (buf[12] >> 0U) & 0x01U;
-    data->command.emergency_stop = (buf[12] >> 1U) & 0x01U;
-    data->command.mode = (buf[12] >> 2U) & 0x01U;
+    memcpy(&data->chassis.speed_vx, &buf[0], sizeof(float));
+    memcpy(&data->chassis.speed_vy, &buf[4], sizeof(float));
+    memcpy(&data->chassis.omega, &buf[8], sizeof(float));
+    memcpy(&data->joint.forward, &buf[12], sizeof(float));
+    memcpy(&data->joint.backward, &buf[16], sizeof(float));
+    memcpy(&data->joint.lift, &buf[20], sizeof(float));
+    memcpy(&data->joint.down, &buf[24], sizeof(float));
+    memcpy(&data->joint.positive_flip, &buf[28], sizeof(float));
+    memcpy(&data->joint.negative_flip, &buf[32], sizeof(float));
+    data->command.grab = (buf[36] >> 0U) & 0x01U;
+    data->command.emergency_stop = (buf[36] >> 1U) & 0x01U;
+    data->command.mode = (buf[36] >> 2U) & 0x01U;
 }
 
 /* 从 DMA 缓冲中搜索并解析一帧 */
@@ -144,9 +107,6 @@ HAL_StatusTypeDef Zigbee_Init(ZigbeeHandle_TypeDef *zigbee)
 
     HAL_StatusTypeDef ret = HAL_UARTEx_ReceiveToIdle_DMA(&ZIGBEE_UART_HANDLE, zigbee->rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
 
-    /* 禁用半传输中断，避免在帧接收到一半时触发回调 */
-    __HAL_DMA_DISABLE_IT(ZIGBEE_UART_HANDLE.hdmarx, DMA_IT_HT);
-
     if (ret != HAL_OK)
         zigbee->status.state = ZIGBEE_STATE_ERROR;
 
@@ -156,6 +116,9 @@ HAL_StatusTypeDef Zigbee_Init(ZigbeeHandle_TypeDef *zigbee)
 HAL_StatusTypeDef Zigbee_Send(ZigbeeHandle_TypeDef *zigbee, const ZigbeeData_TypeDef *data)
 {
     if (data == NULL) return HAL_ERROR;
+
+    /* 保存最近一次待发送的数据，便于调试观察及状态追踪。 */
+    zigbee->tx_data = *data;
 
     zigbee->tx_buf[0] = ZIGBEE_FRAME_SOF0;
     zigbee->tx_buf[1] = ZIGBEE_FRAME_SOF1;
@@ -198,5 +161,15 @@ void Zigbee_RxEventHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *hua
     frame_parse(zigbee, zigbee->rx_dma_buf, Size);
 
     HAL_UARTEx_ReceiveToIdle_DMA(huart, zigbee->rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
-    __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
+}
+
+void Zigbee_RxErrorHandler(ZigbeeHandle_TypeDef *zigbee, UART_HandleTypeDef *huart)
+{
+    /* 溢出/帧/噪声等接收错误发生时，HAL已经在HAL_UART_IRQHandler内部把DMA接收中止并将
+       RxState还原为READY(见UART_EndRxTransfer+HAL_DMA_Abort_IT)，此处必须主动重新挂起，
+       否则该串口会永久停止接收，之后再也不会有任何RxEvent/Error回调 */
+    zigbee->status.error_count++;
+    zigbee->status.state = ZIGBEE_STATE_ERROR;
+
+    HAL_UARTEx_ReceiveToIdle_DMA(huart, zigbee->rx_dma_buf, ZIGBEE_RX_BUF_SIZE);
 }
