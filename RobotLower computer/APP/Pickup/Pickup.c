@@ -7,7 +7,6 @@ typedef enum
     PICKUP_OPERATION_HOLD           /* 只吸附，不进入储存区。 */
 } PickupOperation_TypeDef;
 
-/* 按当前 KFS 高度选择吸取位置的 z 坐标。 */
 static float PickupGetTargetZ(uint8_t pickup_height)
 {
     if (pickup_height == PICKUP_HEIGHT_HIGH)
@@ -18,7 +17,6 @@ static float PickupGetTargetZ(uint8_t pickup_height)
     return PICKUP_TARGET_Z_LOW;
 }
 
-/* 按存放层数选择放置位置的 z 坐标。 */
 static float PickupGetStorageZ(PickupOperation_TypeDef operation)
 {
     if (operation == PICKUP_OPERATION_STORE_HIGH)
@@ -29,12 +27,15 @@ static float PickupGetStorageZ(PickupOperation_TypeDef operation)
     return PICKUP_STORAGE_Z;
 }
 
-/* 三种拾取动作共用的非阻塞状态机，由主控周期调用推进。 */
 static void PickupRun(RoboticArm_TypeDef *arm,
                       PickupState_TypeDef *pickup_state,
                       uint8_t pickup_height,
                       PickupOperation_TypeDef operation)
 {
+    /*
+     * 三个公开接口都复用此状态机。operation 只影响抓取后的分支，避免复制三套
+     * 相同的“抬升、接近、下降、吸附”逻辑。PLACE 阶段才会改用储存高度。
+     */
     float target_x;
     float target_z;
 
@@ -114,6 +115,7 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_HOLD:
+        /* 保持状态不会自动复位；后续比赛任务应在合适时机显式释放该 KFS。 */
         /* 保持吸盘开启；由后续任务显式释放第三个 KFS。 */
         break;
 

@@ -104,12 +104,21 @@ void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float
 void RoboticArmSetRodRotation(RoboticArm_TypeDef *arm, float rotation_target)
 {
     uint16_t servo_pulse_us;
+    float target_error;
 
     /* ID 7 替换为 180 度舵机：0 rad 对应 0 度，pi rad 对应 180 度。 */
     if (rotation_target < 0.0f)
         rotation_target = 0.0f;
     if (rotation_target > BSP_PI)
         rotation_target = BSP_PI;
+
+    /* Flip/Pickup 会按周期重复提出同一目标；相同目标不能重复启动运动计时。 */
+    target_error = rotation_target - arm->rod_rotation;
+    if (target_error < 0.0f)
+        target_error = -target_error;
+    if ((target_error < 0.0001f) && (arm->rotate_motion_active != 0U))
+        return;
+
     servo_pulse_us = (uint16_t)((float)SERVO_INITIAL_PULSE_US +
                                 (float)SERVO_MOVE_PULSE_US * rotation_target / BSP_PI);
     ServoSetPulseUs(&arm->rotate_servo, servo_pulse_us);
