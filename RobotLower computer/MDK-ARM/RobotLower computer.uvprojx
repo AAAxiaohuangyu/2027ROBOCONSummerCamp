@@ -970,6 +970,11 @@
               <FileType>1</FileType>
               <FilePath>..\APP\Common\Servo.c</FilePath>
             </File>
+            <File>
+              <FileName>Relay.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\Common\Relay.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
