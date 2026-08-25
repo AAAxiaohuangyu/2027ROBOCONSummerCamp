@@ -64,35 +64,23 @@ static RobotState_TypeDef RobotSkipMove(uint8_t move_num, RobotState_TypeDef nex
 
 void RobotInit(void)
 {
-    /* RobotInit在调度器启动前单线程执行,不存在并发访问,可安全去除Robot的volatile限定 */
-    Robot_TypeDef *robot = (Robot_TypeDef *)&Robot;
-
     HAL_Delay(1000);
+    ChassisInit(&Robot.chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
+    FDCANStandardInit(Robot.chassis.drive.motor_group.FDCAN_Handle,
+                      M3508_FEEDBACK_ID_BASE + M3508_ID_MIN,
+                      M3508_FEEDBACK_ID_BASE + M3508_ID_MAX); /* 过滤器0 -> RXFIFO0 */
 
-    RoboticArmInit(&robot->roboticarm,
-                   ROBOTICARM_LIFT_FDCAN_HANDLE, ROBOTICARM_LIFT_ID,
-                   ROBOTICARM_FORWARD_UART_HANDLE, ROBOTICARM_FORWARD_ID,
-                   ROBOTICARM_ROTATE_UART_HANDLE, ROBOTICARM_ROTATE_ID);
-
-    ChassisInit(&robot->chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
-
-    EncoderInit(&robot->encoder,
+    EncoderInit(&Robot.encoder,
                 ENCODER_X_FDCAN_HANDLE, ENCODER_X_NODE_ID,
                 ENCODER_Y_FDCAN_HANDLE, ENCODER_Y_NODE_ID); /* 过滤器0 -> RXFIFO1 */
 
-    Yis512Init(&robot->yis512); /* 扩展过滤器0 -> RXFIFO0 */
+    Yis512Init(&Robot.yis512); /* 扩展过滤器0 -> RXFIFO0 */
 
-    /* 开启ZIGBEE_UART_HANDLE空闲线DMA接收;之后每帧到达都由HAL_UARTEx_RxEventCallback
-       (bsp_callback.c)中断驱动解析,持续更新Robot.zigbee.explained_data,不需要额外的
-       周期任务 */
-    Zigbee_Init(&robot->zigbee);
+    /* 开启UART9空闲线DMA接收;之后每帧到达都由HAL_UARTEx_RxEventCallback(bsp_callback.c)
+       中断驱动解析,持续更新Robot.zigbee.explained_data,不需要额外的周期任务 */
+    Zigbee_Init(&Robot.zigbee);
 
-    /* 视觉模块同样由HAL_UARTEx_RxEventCallback中断驱动解析,不需要额外的周期任务 */
-    Vision_Init(&robot->vision);
-
-    /* 各外设句柄在CubeMX完成分配前于bsp_config.h中为NULL占位,逐个判空后再启动,
-       句柄补齐后无需再改这里 */
-
+    Vision_Init(&Robot.vision);
     /*
     if (robot->roboticarm.lift_motor.FDCAN_Handle != NULL)
     {
@@ -114,7 +102,7 @@ void RobotInit(void)
     /* forward/rotate两个GO电机的接收挂起改由GOM8010GroupUpdate在每次真正发起请求时按需完成
        (RS485总线仲裁,避免同一huart被同时挂起两次接收),此处不再手动挂起 */
 
-    RoboticArmEnable(&robot->roboticarm);
+    //0RoboticArmEnable(&robot->roboticarm);
 }
 
 void RobotChassisUpdateTask(void *argument)
