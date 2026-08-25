@@ -102,7 +102,7 @@ void RobotInit(void)
     /* forward/rotate两个GO电机的接收挂起改由GOM8010GroupUpdate在每次真正发起请求时按需完成
        (RS485总线仲裁,避免同一huart被同时挂起两次接收),此处不再手动挂起 */
 
-    //0RoboticArmEnable(&robot->roboticarm);
+    //RoboticArmEnable(&robot->roboticarm);
 }
 
 void RobotChassisUpdateTask(void *argument)
@@ -119,7 +119,7 @@ void RobotEncoderUpdateTask(void *argument)
 
 void RobotStateUpdateTask(void *argument)
 {
-    RobotState_TypeDef state = ROBOT_STATE_DONE;
+    RobotState_TypeDef state = ROBOT_STATE_START_MOVE_1;
     Robot.vision.KFS_DIFF = 0;
 
     (void)argument;
@@ -192,7 +192,7 @@ void RobotStateUpdateTask(void *argument)
                     CHASSIS_TRACK_TRANSLATION_X_ALT_KD,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_OUT,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_IOUT);
-            ChassisSetTranslation(&Robot.chassis, 0.4f, -2.1f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -2.1f);
             state = ROBOT_STATE_WAIT_MOVE_4;
             break;
         }
@@ -212,7 +212,7 @@ void RobotStateUpdateTask(void *argument)
             /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x跟踪切到第三套参数组;
                y轴的备用速度规划/跟踪参数组从MOVE_6起才切换 */
             RobotApplyMove5Params();
-            ChassisSetTranslation(&Robot.chassis, 0.4f, -3.42f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -3.42f);
             state = ROBOT_STATE_WAIT_MOVE_5;
             break;
         }
@@ -230,7 +230,7 @@ void RobotStateUpdateTask(void *argument)
             /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
                y跟踪也切到备用参数组 */
             RobotApplyMove6Params();
-            ChassisSetTranslation(&Robot.chassis, 0.4f, -4.6f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -4.6f);
             state = ROBOT_STATE_WAIT_MOVE_6;
             break;
         }
@@ -245,7 +245,7 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_START_MOVE_7:
         {
             osDelay(1000);
-            ChassisSetTranslation(&Robot.chassis, 0.4f, -5.79f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -5.79f);
             state = ROBOT_STATE_WAIT_MOVE_7;
             break;
         }
@@ -260,7 +260,7 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_START_MOVE_8:
         {
             osDelay(1000);
-            ChassisSetTranslation(&Robot.chassis, 0.4f, -6.98f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -6.98f);
             state = ROBOT_STATE_WAIT_MOVE_8;
             break;
         }
