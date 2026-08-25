@@ -25,10 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "test.h"
-#include "Core.h"
-#include "bsp_config.h"
-#include "ServoDebug.h"
+#include "servo_test.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,25 +45,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-osThreadId_t TestChassisVofaTaskHandle;
-const osThreadAttr_t TestChassisVofaTask_attributes = {
-  .name = "TestChassisVofaTask",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-osThreadId_t TestArmControlTaskHandle;
-uint8_t TestArmTestEnabled;
-const osThreadAttr_t TestArmControlTask_attributes = {
-  .name = "TestArmControlTask",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
-};
-osThreadId_t TestArmMotionTaskHandle;
-const osThreadAttr_t TestArmMotionTask_attributes = {
-  .name = "TestArmMotionTask",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -92,12 +70,8 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-  /* The YIS512 receiver is independent of the robot state machine and must
-     start even when the current firmware is running only a test task. */
-  Yesense_Init(&Robot.yis512, YESENSE_UART_HANDLE);
-  TestChassisSpeedPlanInit();
-  TestArmTestEnabled = TestArmMotionInit();
-  if (ServoDebugInit() != HAL_OK)
+  /* 本测试固件只初始化 JP6 单舵机，不启动机械臂控制与测试任务。 */
+  if (ServoTestInit() != HAL_OK)
   {
     Error_Handler();
   }
@@ -124,13 +98,8 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  TestChassisVofaTaskHandle = osThreadNew(TestChassisVofaTask, NULL, &TestChassisVofaTask_attributes);
-  if (TestArmTestEnabled != 0U)
-  {
-    TestArmControlTaskHandle = osThreadNew(TestArmControlTask, NULL, &TestArmControlTask_attributes);
-    TestArmMotionTaskHandle = osThreadNew(TestArmMotionTask, NULL, &TestArmMotionTask_attributes);
-  }
+  /* 单舵机测试只使用默认任务，无需创建其他控制任务。 */
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -149,10 +118,13 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  /* Infinite loop */
+  /*
+   * ServoTestInit() 已在 MX_FREERTOS_Init() 中完成一次性初始化并输出 90 度 PWM。
+   * 此任务只在初始位稳定后触发一次相对 +90 度动作，随后不再修改角度。
+   */
   for (;;)
   {
-    ServoDebugUpdate();
+    ServoTestUpdate();
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */

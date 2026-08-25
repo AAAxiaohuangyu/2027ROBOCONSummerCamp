@@ -26,14 +26,10 @@
 #define ROBOTICARM_LIFT_FDCAN_HANDLE &hfdcan1 /* 升降电机(J60)FDCAN句柄,占位待定 */
 #define ROBOTICARM_LIFT_ID 1u                /* 升降电机(J60)CAN地址,占位待定 */
 
-#define ROBOTICARM_RS485_1_UART_HANDLE (&huart5) /* RS485-1: UART5, 4 Mbps (GO-M8010 fixed baud rate) */
+#define ROBOTICARM_FORWARD_UART_HANDLE (&huart4) /* 长门板 RS485-2：UART4，PC10=TX、PC11=RX、PA15=硬件DE，对外连接器为 CN8 */
+#define ROBOTICARM_FORWARD_ID 3u                  /* 前后平移 GO-M8010 的 RS485 地址；本次单轴测试只控制该 ID */
 
-/* GO-M8010 地址3接在 RS485-1 上。 */
-#define ROBOTICARM_FORWARD_UART_HANDLE ROBOTICARM_RS485_1_UART_HANDLE
-#define ROBOTICARM_FORWARD_ID 3u            /* 前后平移电机(GO)RS485地址 */
-
-#define ROBOTICARM_ROTATE_UART_HANDLE &huart3 /* 自转电机(GO)RS485串口句柄,1 Mbps */
-#define ROBOTICARM_ROTATE_ID 7u            /* 自转电机(GO)RS485地址,占位待定 */
+/* 原 RS485-3 / ID 7 自转 GO 电机已替换为 JP6(PB5/TIM3_CH2) PWM 舵机。 */
 
 /* 底盘(Chassis)四台M3508电调组挂载外设句柄与控制帧ID,占位:CubeMX尚未分配对应FDCAN外设、
    控制帧ID(M3508_CTRL_ID_1TO4/M3508_CTRL_ID_5TO8)也未确定,暂不接实际句柄,待确定后直接
@@ -43,12 +39,7 @@
 
 /* 视觉(Vision)模块挂载串口句柄,占位:CubeMX尚未分配对应UART外设,暂不接实际句柄,
    待确定后直接改这里的宏值即可 */
-/* USART1 is reserved for the YIS512. Assign another free UART before enabling
-   the vision receiver, because a UART DMA stream may only have one owner. */
-#define VISION_UART_HANDLE ((UART_HandleTypeDef *)0)
-
-/* YIS512 standard-protocol output, 460800 baud, 8N1. */
-#define YESENSE_UART_HANDLE (&huart1)
+#define VISION_UART_HANDLE (&huart1)
 
 /* 当前 CubeMX 工程未生成 huart9；先挂载到已存在的 UART4，实际硬件接口确认后仅需修改此宏。 */
 #define ZIGBEE_UART_HANDLE (huart4)

@@ -45,37 +45,42 @@ static void RobotMoveToKfs(Robot_TypeDef *Robot, uint8_t target_index)
 
 void RobotInit(void)
 {
-    RoboticArmInit(&Robot.roboticarm,
-                   ROBOTICARM_LIFT_FDCAN_HANDLE, ROBOTICARM_LIFT_ID,
-                   ROBOTICARM_FORWARD_UART_HANDLE, ROBOTICARM_FORWARD_ID,
-                   ROBOTICARM_ROTATE_UART_HANDLE, ROBOTICARM_ROTATE_ID);
+    /*
+     * 整机启动时先绑定机械臂电机的句柄与 ID，再配置接收过滤器，最后发送 J60
+     * 使能。真正的连续控制帧由独立 RoboticArmUpdate 任务发出；启用前须确认
+     * J60 与底盘共用 CAN 时的过滤器索引和接收范围不会互相覆盖。
+     */
+    /* RobotInit在调度器启动前单线程执行,不存在并发访问,可安全去除Robot的volatile限定 */
+    Robot_TypeDef *robot = (Robot_TypeDef *)&Robot;
 
-    ChassisInit(&Robot.chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
+    RoboticArmInit(&robot->roboticarm,
+                   ROBOTICARM_LIFT_FDCAN_HANDLE, ROBOTICARM_LIFT_ID,
+                   ROBOTICARM_FORWARD_UART_HANDLE, ROBOTICARM_FORWARD_ID);
+
+    ChassisInit(&robot->chassis, CHASSIS_FDCAN_HANDLE, CHASSIS_CTRL_ID);
 
     /* zigbee.c头部注释要求Zigbee_Init须在MX_USART1_UART_Init()之后调用,以开启huart1的
        DMA接收(HAL_UARTEx_ReceiveToIdle_DMA);huart1由CubeMX固定分配,非占位句柄,无需判空 */
-    Zigbee_Init(&Robot.zigbee);
+    Zigbee_Init(&robot->zigbee);
 
     /* VISION_UART_HANDLE在CubeMX完成分配前于bsp_config.h中为NULL占位,Vision_Init内部
        自行判空,无需在此额外判断 */
-    Vision_Init(&Robot.vision);
-
-    Yesense_Init(&Robot.yis512, YESENSE_UART_HANDLE);
+    Vision_Init(&robot->vision);
 
     /* 各外设句柄在CubeMX完成分配前于bsp_config.h中为NULL占位,逐个判空后再启动,
        句柄补齐后无需再改这里 */
-    if (Robot.roboticarm.lift_motor.FDCAN_Handle != NULL)
+    if (robot->roboticarm.lift_motor.FDCAN_Handle != NULL)
     {
         uint16_t lift_feedback_base = (uint16_t)((J60_RESPONSE_FEEDBACK << J60_CAN_ID_RESPONSE_SHIFT) |
                                                  (J60_CMD_CONTROL << J60_CAN_ID_COMMAND_SHIFT));
-        FDCANStandardInit(Robot.roboticarm.lift_motor.FDCAN_Handle,
+        FDCANStandardInit(robot->roboticarm.lift_motor.FDCAN_Handle,
                           lift_feedback_base + J60_ID_MIN,
                           lift_feedback_base + J60_ID_MAX);
     }
 
-    if (Robot.chassis.drive.motor_group.FDCAN_Handle != NULL)
+    if (robot->chassis.drive.motor_group.FDCAN_Handle != NULL)
     {
-        FDCANStandardInit(Robot.chassis.drive.motor_group.FDCAN_Handle,
+        FDCANStandardInit(robot->chassis.drive.motor_group.FDCAN_Handle,
                           M3508_FEEDBACK_ID_BASE + M3508_ID_MIN,
                           M3508_FEEDBACK_ID_BASE + M3508_ID_MAX);
     }
@@ -83,11 +88,16 @@ void RobotInit(void)
     /* forward/rotate两个GO电机的接收挂起改由GOM8010GroupUpdate在每次真正发起请求时按需完成
        (RS485总线仲裁,避免同一huart被同时挂起两次接收),此处不再手动挂起 */
 
-    RoboticArmEnable(&Robot.roboticarm);
+    RoboticArmEnable(&robot->roboticarm);
 }
 
 void RobotStateUpdate(Robot_TypeDef *Robot)
 {
+    /*
+     * 本函数是整机决策任务：决定下一步去哪里、翻转还是抓取。它只设置目标和
+     * 检查状态，不替代 RoboticArmUpdate；后者是独立执行任务，负责持续发送
+     * CAN/RS485 控制帧并把反馈换算为末端坐标。
+     */
     while (1)
     {
         switch (Robot->state)
@@ -200,7 +210,6 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
                原样下发,不会"冻结"或回零 */
             float lift_velocity = 0.0f;
             float forward_velocity = 0.0f;
-            float rotate_velocity = 0.0f;
 
             /* 底盘直接下发原始速度,不经过位移S曲线规划 */
             ChassisSetVelocity(&Robot->chassis, (float)Robot->zigbee.explained_data.chassis.speed_vx,
@@ -219,14 +228,13 @@ void RobotStateUpdate(Robot_TypeDef *Robot)
             else if (Robot->zigbee.explained_data.joint.front_back == 2)
                 forward_velocity = -ROBOT_MANUAL_ARM_VELOCITY;
 
-            if (Robot->zigbee.explained_data.joint.flip == 1)
-                rotate_velocity = ROBOT_MANUAL_ARM_VELOCITY;
-            else if (Robot->zigbee.explained_data.joint.flip == 2)
-                rotate_velocity = -ROBOT_MANUAL_ARM_VELOCITY;
-
             J60MotorSetVelocityTarget(&Robot->roboticarm.lift_motor, lift_velocity);
             GOM8010GroupSetVelocityTarget(&Robot->roboticarm.go_motors, ROBOTICARM_GO_FORWARD, forward_velocity);
-            GOM8010GroupSetVelocityTarget(&Robot->roboticarm.go_motors, ROBOTICARM_GO_ROTATE, rotate_velocity);
+            /* 舵机不支持 GO 的定速协议；手动 flip 正/反方向分别切换到 180/0 度。 */
+            if (Robot->zigbee.explained_data.joint.flip == 1)
+                RoboticArmSetRodRotation(&Robot->roboticarm, BSP_PI);
+            else if (Robot->zigbee.explained_data.joint.flip == 2)
+                RoboticArmSetRodRotation(&Robot->roboticarm, 0.0f);
 
             /* 抓取、急停均通过gaspump接口控制气泵开关;急停优先于抓取指令,强制关闭气泵 */
             if (Robot->zigbee.explained_data.command.emergency_stop != 0U)

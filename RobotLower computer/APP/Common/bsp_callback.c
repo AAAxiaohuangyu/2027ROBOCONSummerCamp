@@ -7,6 +7,11 @@
    再进入对应解析,避免不同子系统误解析对方的帧 */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
+    /*
+     * FIFO0 可同时接收 J60 与底盘电调反馈。先尝试按 CAN 外设实例和标准 ID
+     * 匹配升降 J60；不命中时再转交 M3508。回调只做收帧和解析，不运行规划或
+     * 长时间控制算法，周期发送由各自任务完成。
+     */
     FDCAN_RxHeaderTypeDef rx_header;
     uint8_t rx_data[8];
 
@@ -43,9 +48,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
     if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK)
         return;
 
-    if ((Robot.encoder.baudrate_target_handle != NULL &&
-         hfdcan->Instance == Robot.encoder.baudrate_target_handle->Instance) ||
-        (Robot.encoder.x_axis.FDCAN_Handle != NULL &&
+    if ((Robot.encoder.x_axis.FDCAN_Handle != NULL &&
          hfdcan->Instance == Robot.encoder.x_axis.FDCAN_Handle->Instance) ||
         (Robot.encoder.y_axis.FDCAN_Handle != NULL &&
          hfdcan->Instance == Robot.encoder.y_axis.FDCAN_Handle->Instance))
@@ -54,9 +57,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
     }
 }
 
-/* UART空闲线收到一帧:按huart实例分发。ZigBee走独立处理;forward/rotate两个GO电机可能共享
-   同一路RS485(huart),该情况由GOM8010GroupRxEvent内部按其仲裁表匹配处理,本函数不关心其
-   电机内部字段。HAL回调全局唯一,故所有使用该机制的模块都需经本函数分发,不能各自定义 */
+/* UART空闲线收到一帧：ID 7 已替换为 PWM 舵机，GO 组只接收前后轴 ID 3 的 UART4 回包。 */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart->Instance == ZIGBEE_UART_HANDLE.Instance)
@@ -71,11 +72,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         return;
     }
 
-    if (YESENSE_UART_HANDLE != NULL && huart->Instance == YESENSE_UART_HANDLE->Instance)
-    {
-        Yesense_RxEventHandler(&Robot.yis512, huart, Size);
-        return;
-    }
-
+    /* UART4上的ID3回包交给同一个GO电机组。 */
     GOM8010GroupRxEvent(&Robot.roboticarm.go_motors, huart, Size);
 }
