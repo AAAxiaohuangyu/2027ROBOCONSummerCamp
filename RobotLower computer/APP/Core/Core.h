@@ -7,6 +7,7 @@
 #include "zigbee.h"
 #include "vision.h"
 #include "yis512.h"
+#include "Servo.h"
 
 /* 转弯提前系数(无量纲):RobotStateUpdateTask处于WAIT_MOVE_X状态时,判断是否可以
    切换到START_MOVE_Y所用的容差为该系数乘以x轴当前速度对应的S曲线减速距离
@@ -65,6 +66,7 @@ typedef struct
     ZigbeeHandle_TypeDef zigbee;
     VisionHandle_TypeDef vision;
     Yis512_TypeDef yis512;
+    Servo_TypeDef servo;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
@@ -83,5 +85,7 @@ void RobotEncoderUpdateTask(void *argument);
 /* RTOS任务入口:推进机器人整体位移状态机,按序下发各段ChassisSetTranslation目标,
    全部到位后转入手柄(ZigBee)遥控的手动模式 */
 void RobotStateUpdateTask(void *argument);
+
+void RobotServoUpdateTask(void *argument);
 
 #endif

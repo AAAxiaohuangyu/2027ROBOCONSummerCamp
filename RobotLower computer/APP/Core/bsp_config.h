@@ -9,6 +9,7 @@
 
 #include "fdcan.h"
 #include "usart.h"
+#include "tim.h"
 
 /* 数学常量：float精度的圆周率，统一来源，避免各模块各自重复定义、精度不一致 */
 #define BSP_PI (3.14159265358979323846f)
@@ -45,5 +46,9 @@
 #define VISION_UART_HANDLE (&huart1)
 
 #define ZIGBEE_UART_HANDLE (huart9)
+
+/*JP6 舵机接口*/
+#define SERVO_PWM_TIMER_HANDLE htim3
+#define SERVO_PWM_CHANNEL TIM_CHANNEL_2
 
 #endif /* __BSP_CONFIG_H__ */

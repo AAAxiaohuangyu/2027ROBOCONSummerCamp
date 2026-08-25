@@ -45,6 +45,13 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+osThreadId_t RobotServoUpdateTaskHandle;
+const osThreadAttr_t RobotServoUpdateTask_attributes = {
+    .name = "RobotServoUpdateTask",
+    .stack_size = 256 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
+};
+
 osThreadId_t RobotChassisUpdateTaskHandle;
 const osThreadAttr_t RobotChassisUpdateTask_attributes = {
   .name = "RobotChassisUpdateTask",
@@ -118,6 +125,7 @@ void MX_FREERTOS_Init(void) {
   RobotChassisUpdateTaskHandle = osThreadNew(RobotChassisUpdateTask, NULL, &RobotChassisUpdateTask_attributes);
   RobotEncoderUpdateTaskHandle = osThreadNew(RobotEncoderUpdateTask, NULL, &RobotEncoderUpdateTask_attributes);
   RobotStateUpdateTaskHandle = osThreadNew(RobotStateUpdateTask, NULL, &RobotStateUpdateTask_attributes);
+  RobotServoUpdateTaskHandle = osThreadNew(RobotServoUpdateTask, NULL, &RobotServoUpdateTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 
