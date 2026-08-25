@@ -107,6 +107,18 @@ static void TestApplyMove6Params(void)
             CHASSIS_TRACK_TRANSLATION_Y_ALT_MAX_IOUT);
 }
 
+/* MOVE_9(上斜坡)阶段x跟踪切到第四套参数组(不重新调用ChassisSetTranslation,
+   仅切换跟踪增益) */
+static void TestApplyMove9Params(void)
+{
+    PIDInit(&Robot.chassis.displacement_plan.translation_x.track_pid,
+            CHASSIS_TRACK_TRANSLATION_X_ALT3_KP,
+            CHASSIS_TRACK_TRANSLATION_X_ALT3_KI,
+            CHASSIS_TRACK_TRANSLATION_X_ALT3_KD,
+            CHASSIS_TRACK_TRANSLATION_X_ALT3_MAX_OUT,
+            CHASSIS_TRACK_TRANSLATION_X_ALT3_MAX_IOUT);
+}
+
 /* Robot.vision.KFS_DIFF为1~5时分别跳过阶段5~9(即KFS_DIFF+4那一段的START/WAIT状态,
    直接进入下一阶段;跳过阶段9则直接进入TEST_MANUAL_STATE),其余KFS_DIFF值不处理 */
 static TestPositionState_TypeDef TestSkipMove(uint8_t move_num, TestPositionState_TypeDef next_state)
@@ -125,7 +137,7 @@ static TestPositionState_TypeDef TestSkipMove(uint8_t move_num, TestPositionStat
 
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_1;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_9;
     Robot.vision.KFS_DIFF = 0;
 
     (void)argument;
@@ -282,8 +294,10 @@ void TestChassisSetPositionTask(void *argument)
         case TEST_POSITION_STATE_START_MOVE_9:
         {
             /* x、偏航沿用 MOVE_8 已下发的目标继续跟踪(不重新调用
-               ChassisSetTranslation/ChassisSetYaw),仅 y 轴切到固定速度冲坡 */
+               ChassisSetTranslation/ChassisSetYaw),x跟踪切到第四套参数组,
+               仅 y 轴切到固定速度冲坡 */
             osDelay(1000);
+            TestApplyMove9Params();
             ChassisSetRampVelocity(&Robot.chassis, -1.2f);
             state = TEST_POSITION_STATE_WAIT_MOVE_9;
             break;
