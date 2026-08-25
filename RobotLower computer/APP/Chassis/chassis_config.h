@@ -53,7 +53,7 @@
 #define CHASSIS_PLAN_TRANSLATION_MAX_SPEED_MPS (1.6f)
 #define CHASSIS_PLAN_TRANSLATION_MAX_JERK_MPS3 (7.2f)
 
-/* y轴速度规划备用参数组:test.c状态机在TEST_POSITION_STATE_START_MOVE_6起~
+/* y轴速度规划备用参数组:Core.c的RobotStateUpdateTask状态机在ROBOT_STATE_START_MOVE_6起~
    WAIT_MOVE_8阶段将y轴S曲线规划器重新初始化为这一组上限,x轴不受影响,
    待整定。 */
 #define CHASSIS_PLAN_TRANSLATION_Y_ALT_MAX_ACCEL_MPS2 (4.4f)
@@ -75,7 +75,7 @@
 #define CHASSIS_TRACK_TRANSLATION_X_MAX_OUT (0.04f)
 #define CHASSIS_TRACK_TRANSLATION_X_MAX_IOUT (0.003f)
 
-/* x跟踪备用参数组:test.c状态机在TEST_POSITION_STATE_START_MOVE_4/WAIT_MOVE_4
+/* x跟踪备用参数组:Core.c的RobotStateUpdateTask状态机在ROBOT_STATE_START_MOVE_4/WAIT_MOVE_4
    阶段(大幅度x回退运动)临时切换到这一组,离开该阶段后切到下面第三组,
    待整定。 */
 #define CHASSIS_TRACK_TRANSLATION_X_ALT_KP (0.78f)
@@ -84,7 +84,7 @@
 #define CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_OUT (0.25f)
 #define CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_IOUT (0.01f)
 
-/* x跟踪第三套参数组:test.c状态机在TEST_POSITION_STATE_START_MOVE_5起~
+/* x跟踪第三套参数组:Core.c的RobotStateUpdateTask状态机在ROBOT_STATE_START_MOVE_5起~
    WAIT_MOVE_8阶段切换到这一组,待整定。 */
 #define CHASSIS_TRACK_TRANSLATION_X_ALT2_KP (0.75f)
 #define CHASSIS_TRACK_TRANSLATION_X_ALT2_KI (0.001f)
@@ -92,7 +92,7 @@
 #define CHASSIS_TRACK_TRANSLATION_X_ALT2_MAX_OUT (0.3f)
 #define CHASSIS_TRACK_TRANSLATION_X_ALT2_MAX_IOUT (0.015f)
 
-/* x跟踪第四套参数组:test.c状态机在TEST_POSITION_STATE_START_MOVE_9(上斜坡)
+/* x跟踪第四套参数组:Core.c的RobotStateUpdateTask状态机在ROBOT_STATE_START_MOVE_9(上斜坡)
    阶段切换到这一组,待整定。 */
 #define CHASSIS_TRACK_TRANSLATION_X_ALT3_KP (1.75f)
 #define CHASSIS_TRACK_TRANSLATION_X_ALT3_KI (0.001f)
@@ -106,7 +106,7 @@
 #define CHASSIS_TRACK_TRANSLATION_MAX_OUT (0.4f)
 #define CHASSIS_TRACK_TRANSLATION_MAX_IOUT (0.02f)
 
-/* y跟踪备用参数组:test.c状态机在TEST_POSITION_STATE_START_MOVE_6起~
+/* y跟踪备用参数组:Core.c的RobotStateUpdateTask状态机在ROBOT_STATE_START_MOVE_6起~
    WAIT_MOVE_8阶段切换到这一组,离开该区间(若有)可切回上面的默认组,
    待整定。 */
 #define CHASSIS_TRACK_TRANSLATION_Y_ALT_KP (0.9f)

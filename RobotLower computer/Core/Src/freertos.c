@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "test.h"
+#include "Core.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,30 +45,23 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-osThreadId_t TestChassisUpdateTaskHandle;
-const osThreadAttr_t TestChassisUpdateTask_attributes = {
-  .name = "TestChassisUpdateTask",
+osThreadId_t RobotChassisUpdateTaskHandle;
+const osThreadAttr_t RobotChassisUpdateTask_attributes = {
+  .name = "RobotChassisUpdateTask",
   .stack_size = 256 * 10,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
-osThreadId_t TestEncoderUpdateTaskHandle;
-const osThreadAttr_t TestEncoderUpdateTask_attributes = {
-  .name = "TestEncoderUpdateTask",
+osThreadId_t RobotEncoderUpdateTaskHandle;
+const osThreadAttr_t RobotEncoderUpdateTask_attributes = {
+  .name = "RobotEncoderUpdateTask",
   .stack_size = 256 * 10,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
-/*osThreadId_t TestChassisSetVelocityTaskHandle;
-const osThreadAttr_t TestChassisSetVelocityTask_attributes = {
-  .name = "TestChassisSetVelocityTask",
-  .stack_size = 256 * 10,
-  .priority = (osPriority_t) osPriorityNormal,
-};*/
-
-osThreadId_t TestChassisSetPositionTaskHandle;
-const osThreadAttr_t TestChassisSetPositionTask_attributes = {
-    .name = "TestChassisSetPositionTask",
+osThreadId_t RobotStateUpdateTaskHandle;
+const osThreadAttr_t RobotStateUpdateTask_attributes = {
+    .name = "RobotStateUpdateTask",
     .stack_size = 256 * 10,
     .priority = (osPriority_t)osPriorityNormal,
 };
@@ -97,7 +90,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-  TestChassisEncoderRxInit();
+  RobotInit();
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -122,10 +115,9 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  TestChassisUpdateTaskHandle = osThreadNew(TestChassisUpdateTask, NULL, &TestChassisUpdateTask_attributes);
-  TestEncoderUpdateTaskHandle = osThreadNew(TestEncoderUpdateTask, NULL, &TestEncoderUpdateTask_attributes);
-  /*TestChassisSetVelocityTaskHandle = osThreadNew(TestChassisSetVelocityTask, NULL, &TestChassisSetVelocityTask_attributes);*/
-  TestChassisSetPositionTaskHandle = osThreadNew(TestChassisSetPositionTask, NULL, &TestChassisSetPositionTask_attributes);
+  RobotChassisUpdateTaskHandle = osThreadNew(RobotChassisUpdateTask, NULL, &RobotChassisUpdateTask_attributes);
+  RobotEncoderUpdateTaskHandle = osThreadNew(RobotEncoderUpdateTask, NULL, &RobotEncoderUpdateTask_attributes);
+  RobotStateUpdateTaskHandle = osThreadNew(RobotStateUpdateTask, NULL, &RobotStateUpdateTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 

@@ -5,86 +5,83 @@
 #include "chassis.h"
 #include "encoder.h"
 #include "zigbee.h"
-#include "flip.h"
-#include "Pickup.h"
 #include "vision.h"
 #include "yis512.h"
 
-/* 机器人整体状态机状态,占位,具体状态由后续任务流程补充 */
+/* 转弯提前系数(无量纲):RobotStateUpdateTask处于WAIT_MOVE_X状态时,判断是否可以
+   切换到START_MOVE_Y所用的容差为该系数乘以x轴当前速度对应的S曲线减速距离
+   (SpeedPlanDecelDistance),而非固定的米数,因此能随速度规划参数自动适配;
+   k=1表示x刚进入减速阶段就切换,转弯越圆滑需要越大的k,但也会让实际路径更早
+   偏离中间点 */
+#define ROBOT_STATE_CORNER_BLEND_K (1.7f)
+
+/* MOVE_9(上斜坡)：码盘 y 轴世界系累计位置(Robot.encoder.y_m,与 chassis->pose.y_m
+   同一坐标系)到达该值附近即认为冲坡到位,暂定,需实测标定后手动修改 */
+#define ROBOT_STATE_MOVE_9_ENCODER_Y_TARGET_M (-10.38f)
+
+/* RobotStateUpdateTask状态机各状态:START_*只在进入时下发一次ChassisSetTranslation
+   (该函数每次调用都会令S曲线重新规划,跑向同一目标期间不能重复调用;x/y现为世界系绝对
+   目标,START_MOVE_Y必须原样带上START_MOVE_X已下发的x目标,否则x会被打断拉回0);
+   WAIT_MOVE_Y用固定容差轮询ChassisTranslationReached等待终点到位,WAIT_MOVE_X则用
+   ROBOT_STATE_CORNER_BLEND_K放大的动态容差提前判定"到位",在x轴尚未停稳前就切到
+   START_MOVE_Y以实现转弯圆滑过渡,而非在拐角处完全停顿 */
 typedef enum
 {
-    ROBOT_STATE_IDLE = 0, // 空闲状态
-    ROBOT_STATE_MOVE1,    // 从启动区运动到翻转区
-    ROBOT_STATE_FLIP,     // 翻转KFS
-    ROBOT_STATE_MOVE2,    // 从翻转区返回启动区
-    ROBOT_STATE_VISION_WAIT, // 等待视觉判断下一个KFS是否需要抓取(判断完成前保持当前位置)
-    ROBOT_STATE_MOVE3,    // 从启动区运动到第一个正确KFS位置(默认运动到KFS1,由视觉判断是否需要跳过默认位置)
-    ROBOT_STATE_MOVE4,    // 运动到第二个正确的FKS位置(默认运动到ROBOT_STATE_MOVE3的后一个位置,由视觉判断是否需要跳过默认位置)
-    ROBOT_STATE_MOVE5,    // 运动到第三个正确的FKS位置(默认运动到ROBOT_STATE_MOVE4的后一个位置,由视觉判断是否需要跳过默认位置)
-    ROBOT_STATE_PICKUP,   // 拾取KFS
-    ROBOT_STATE_MOVE6,    // 上斜坡
-    ROBOT_STATE_MANUAL,   // 手动操作模式
-
+   ROBOT_STATE_START_MOVE_1,
+   ROBOT_STATE_WAIT_MOVE_1,
+   ROBOT_STATE_START_MOVE_2,
+   ROBOT_STATE_WAIT_MOVE_2,
+   ROBOT_STATE_START_MOVE_3,
+   ROBOT_STATE_WAIT_MOVE_3,
+   ROBOT_STATE_START_MOVE_4,
+   ROBOT_STATE_WAIT_MOVE_4,
+   ROBOT_STATE_START_MOVE_5,
+   ROBOT_STATE_WAIT_MOVE_5,
+   ROBOT_STATE_START_MOVE_6,
+   ROBOT_STATE_WAIT_MOVE_6,
+   ROBOT_STATE_START_MOVE_7,
+   ROBOT_STATE_WAIT_MOVE_7,
+   ROBOT_STATE_START_MOVE_8,
+   ROBOT_STATE_WAIT_MOVE_8,
+   ROBOT_STATE_START_MOVE_9,
+   ROBOT_STATE_WAIT_MOVE_9,
+   ROBOT_STATE_MANUAL,
+   ROBOT_STATE_DONE,
 } RobotState_TypeDef;
-
-/* 场地KFS工位数量,固定为4个,从1开始编号 */
-#define ROBOT_KFS_COUNT (4U)
-
-/* 各段运动目标点的世界系绝对坐标(ChassisSetTranslation的x_target_m/y_target_m,
-   启动区为世界原点(0,0))与到位判定容差,占位,按实际场地尺寸标定后直接改这里的
-   数值;ChassisSetTranslation下发的是绝对目标而非相对位移,与运动起点无关 */
-#define ROBOT_MOVE_START_TO_FLIP_X (0.0f) /* 翻转区绝对坐标x */
-#define ROBOT_MOVE_START_TO_FLIP_Y (0.0f) /* 翻转区绝对坐标y */
-#define ROBOT_MOVE_FLIP_TO_START_X (0.0f) /* 启动区绝对坐标x,通常即世界原点0 */
-#define ROBOT_MOVE_FLIP_TO_START_Y (0.0f) /* 启动区绝对坐标y,通常即世界原点0 */
-#define ROBOT_MOVE_START_TO_KFS1_X (0.0f) /* KFS1绝对坐标x(相对启动区/世界原点) */
-#define ROBOT_MOVE_START_TO_KFS1_Y (0.0f) /* KFS1绝对坐标y(相对启动区/世界原点) */
-#define ROBOT_MOVE_KFS_STEP_X (0.0f) /* 相邻KFS工位绝对坐标间距x,用于按序号累加KFS绝对坐标 */
-#define ROBOT_MOVE_KFS_STEP_Y (0.0f) /* 相邻KFS工位绝对坐标间距y,用于按序号累加KFS绝对坐标 */
-#define ROBOT_MOVE_UP_SLOPE_X (0.0f) /* 斜坡上方绝对坐标x */
-#define ROBOT_MOVE_UP_SLOPE_Y (0.0f) /* 斜坡上方绝对坐标y */
-#define ROBOT_CHASSIS_POSITION_TOLERANCE_M (0.01f)
 
 /* 顶层状态机周期,单位ms */
 #define ROBOT_STATE_UPDATE_PERIOD_MS (5U)
 
-/* 手动模式下机械臂三电机(升降lift_motor、前后go_motors[ROBOTICARM_GO_FORWARD]、
-   自转go_motors[ROBOTICARM_GO_ROTATE])定速模式下的速度大小,三者共用同一数值,
-   方向由zigbee对应关节指令(0:停止,1:正方向,2:负方向)决定,占位,待标定 */
-#define ROBOT_MANUAL_ARM_VELOCITY (0.0f)
+/* ChassisTranslationReached的到位判定容差,单位m */
+#define ROBOT_CHASSIS_POSITION_TOLERANCE_M (0.01f)
 
-/* KFS拾取流程相关状态,集中存放拾取动作、KFS序号及视觉判断请求的进度 */
+/* 机器人整体状态,汇总各子系统的运行时状态,供RobotInit()统一初始化、各RTOS任务
+   共享访问 */
 typedef struct
 {
-    PickupState_TypeDef pick_state;
-
-    uint8_t kfs_last_index;         /* 上一次到位的KFS序号,1~ROBOT_KFS_COUNT,0表示仍在启动区 */
-    uint8_t kfs_target_index;       /* 当前目标KFS序号,由视觉判断结果给出 */
-    RobotState_TypeDef pickup_return_state; /* PICKUP完成后应返回的状态(MOVE4/MOVE5/MOVE6) */
-
-    RobotState_TypeDef vision_next_state; /* VISION_WAIT判断完成后应跳转的状态(MOVE3/MOVE4/MOVE5) */
-} RobotPickup_TypeDef;
-
-/* 机器人整体状态,占位,具体字段(各子系统状态、标志位等)由后续补充 */
-typedef struct
-{
-    RobotState_TypeDef state;
     RoboticArm_TypeDef roboticarm;
     Chassis_TypeDef chassis;
     Encoder_TypeDef encoder;
     ZigbeeHandle_TypeDef zigbee;
-    FlipState_TypeDef flip_state;
-    RobotPickup_TypeDef pickup;
     VisionHandle_TypeDef vision;
     Yis512_TypeDef yis512;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
 
-/* 初始化机器人整体状态机,占位,具体内容由后续补充 */
+/* 初始化机械臂、底盘、编码器、YIS512、ZigBee与视觉模块,配置好FDCAN过滤器/FIFO与
+   UART空闲线DMA接收,供RTOS启动前调用一次;ZigBee/视觉之后的持续接收完全由
+   HAL_UARTEx_RxEventCallback(bsp_callback.c)中断驱动,不需要额外的周期任务 */
 void RobotInit(void);
 
-/* 周期调用,推进机器人整体状态机,占位,具体内容由后续补充 */
-void RobotStateUpdate(Robot_TypeDef *Robot);
+/* RTOS任务入口:持续下发底盘控制帧,触发电调反馈 */
+void RobotChassisUpdateTask(void *argument);
+
+/* RTOS任务入口:周期发送编码器位置请求,触发编码器应答 */
+void RobotEncoderUpdateTask(void *argument);
+
+/* RTOS任务入口:推进机器人整体位移状态机,按序下发各段ChassisSetTranslation目标,
+   全部到位后转入手柄(ZigBee)遥控的手动模式 */
+void RobotStateUpdateTask(void *argument);
 
 #endif
