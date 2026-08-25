@@ -28,7 +28,7 @@
 /* ------------------------- 可调配置：集中在此处 ------------------------- */
 
 /* EncoderUpdate() 任务内部循环周期，单位 ms。当前编码器查询使用 10 ms。 */
-#define ENCODER_UPDATE_PERIOD_MS          (10U)
+#define ENCODER_UPDATE_PERIOD_MS          (3U)
 
 /*
  * 两只编码器挂载的 FDCAN 与节点 ID 集中在 Core/bsp_config.h 中定义（ENCODER_X_FDCAN_HANDLE

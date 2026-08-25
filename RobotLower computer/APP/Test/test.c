@@ -125,7 +125,8 @@ static TestPositionState_TypeDef TestSkipMove(uint8_t move_num, TestPositionStat
 
 void TestChassisSetPositionTask(void *argument)
 {
-    TestPositionState_TypeDef state = TEST_POSITION_STATE_DONE;
+    TestPositionState_TypeDef state = TEST_POSITION_STATE_START_MOVE_1;
+    Robot.vision.KFS_DIFF = 0;
 
     (void)argument;
 
@@ -198,7 +199,7 @@ void TestChassisSetPositionTask(void *argument)
                     CHASSIS_TRACK_TRANSLATION_X_ALT_KD,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_OUT,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_IOUT);
-            ChassisSetTranslation(&Robot.chassis, 0.35f, -2.1f);
+            ChassisSetTranslation(&Robot.chassis, 0.4f, -2.1f);
             state = TEST_POSITION_STATE_WAIT_MOVE_4;
             break;
         }
@@ -218,7 +219,7 @@ void TestChassisSetPositionTask(void *argument)
             /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x跟踪切到第三套参数组;
                y轴的备用速度规划/跟踪参数组从MOVE_6起才切换 */
             TestApplyMove5Params();
-            ChassisSetTranslation(&Robot.chassis, 0.35f, -3.42f);
+            ChassisSetTranslation(&Robot.chassis, 0.4f, -3.42f);
             state = TEST_POSITION_STATE_WAIT_MOVE_5;
             break;
         }
@@ -236,7 +237,7 @@ void TestChassisSetPositionTask(void *argument)
             /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
                y跟踪也切到备用参数组 */
             TestApplyMove6Params();
-            ChassisSetTranslation(&Robot.chassis, 0.35f, -4.6f);
+            ChassisSetTranslation(&Robot.chassis, 0.4f, -4.6f);
             state = TEST_POSITION_STATE_WAIT_MOVE_6;
             break;
         }
@@ -251,7 +252,7 @@ void TestChassisSetPositionTask(void *argument)
         case TEST_POSITION_STATE_START_MOVE_7:
         {
             osDelay(1000);
-            ChassisSetTranslation(&Robot.chassis, 0.35f, -5.79f);
+            ChassisSetTranslation(&Robot.chassis, 0.4f, -5.79f);
             state = TEST_POSITION_STATE_WAIT_MOVE_7;
             break;
         }
@@ -266,7 +267,7 @@ void TestChassisSetPositionTask(void *argument)
         case TEST_POSITION_STATE_START_MOVE_8:
         {
             osDelay(1000);
-            ChassisSetTranslation(&Robot.chassis, 0.35f, -6.98f);
+            ChassisSetTranslation(&Robot.chassis, 0.4f, -6.98f);
             state = TEST_POSITION_STATE_WAIT_MOVE_8;
             break;
         }
@@ -301,7 +302,7 @@ void TestChassisSetPositionTask(void *argument)
         {
             ChassisSetVelocity(&Robot.chassis, Robot.zigbee.rx_data.chassis.speed_vx, Robot.zigbee.rx_data.chassis.speed_vy, Robot.zigbee.rx_data.chassis.omega);
 
-            if(Robot.zigbee.rx_data.command.emergency_stop == 1)
+            if (Robot.zigbee.rx_data.command.emergency_stop == 1)
             {
                 ChassisStop(&Robot.chassis);
             }
