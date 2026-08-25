@@ -43,7 +43,7 @@
 
 /* 视觉(Vision)模块挂载串口句柄,占位:CubeMX尚未分配对应UART外设,暂不接实际句柄,
    待确定后直接改这里的宏值即可 */
-#define VISION_UART_HANDLE (&huart1)
+#define VISION_UART_HANDLE (&huart5)
 
 #define ZIGBEE_UART_HANDLE (huart9)
 
