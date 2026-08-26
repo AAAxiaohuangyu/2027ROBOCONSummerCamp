@@ -176,7 +176,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_FLIIP:
         {
-            // RoboticArmFlipMotion(&Robot.roboticarm,&Robot.flip);
+            RoboticArmFlipMotion(&Robot.roboticarm,&Robot.flip);
             break;
         }
 

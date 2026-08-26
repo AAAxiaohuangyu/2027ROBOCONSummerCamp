@@ -32,7 +32,7 @@
 
 #define ROBOTICARM_LIFT_K (-0.021f)     /* 升降机构:height = LIFT_K * theta,待标定 */
 
-#define ROBOTICARM_FORWARD_K (-0.032f)     /* 前后机构:distance = FORWARD_K * theta,待标定 */
+#define ROBOTICARM_FORWARD_K (0.032f)     /* 前后机构:distance = FORWARD_K * theta,待标定 */
 
 #define ROBOTICARM_CONTROL_PERIOD_MS (3U)
 
@@ -56,6 +56,10 @@ typedef struct
    float end_y;        /* 末端点y坐标(底盘坐标系),固定为0 */
    float end_z;        /* 末端点z坐标(底盘坐标系),即升降高度height */
    float rod_rotation; /* 杆绕自身轴线的自转角度,与rotate_servo->angle直接相等 */
+
+   float target_x;        /* 末端点x坐标目标值,跨状态机调用保持 */
+   float target_z;        /* 末端点z坐标目标值,跨状态机调用保持 */
+   float target_rotation; /* 杆自转角度目标值,跨状态机调用保持 */
 } RoboticArm_TypeDef;
 
 /* 初始化机械臂:依次初始化升降(J60/FDCAN)、前后(GO/RS485)两个电机驱动,初始化舵机;再按当前反馈位置(初始为0)计算一次
