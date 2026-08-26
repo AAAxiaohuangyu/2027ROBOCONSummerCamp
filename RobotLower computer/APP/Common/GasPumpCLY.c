@@ -19,7 +19,7 @@ void CLY_On(void)
 //吸盘释放
 void CLY_Off(void)
 {
-    HAL_GPIO_WritePin(CLY_GPIO_PORT, GASPUMP_GPIO_PIN, CLY_OFF);
+    HAL_GPIO_WritePin(CLY_GPIO_PORT, CLY_GPIO_PIN, CLY_OFF);
 }
 
 
