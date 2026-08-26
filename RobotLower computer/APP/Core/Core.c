@@ -119,7 +119,7 @@ void RobotServoUpdateTask(void *argument)
 
 void RobotStateUpdateTask(void *argument)
 {
-    RobotState_TypeDef state = ROBOT_STATE_START_MOVE_1;
+    RobotState_TypeDef state = ROBOT_STATE_START_MOVE_9;
     Robot.vision.KFS_DIFF = 0;
 
     (void)argument;

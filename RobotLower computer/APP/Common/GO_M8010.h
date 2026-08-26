@@ -12,9 +12,9 @@
 #define GO_M8010_REDUCTION_RATIO 6.33f /* 转子到输出端减速比,协议帧内部仍按转子侧数据收发,由驱动负责与本结构体的输出端数据互相换算 */
 
 /* 位置控制内置速度规划(七段S曲线)默认参数,调参从这里改 */
-#define GO_M8010_POS_CTRL_A_MAX 8.5f  /* 加速度上限 */
-#define GO_M8010_POS_CTRL_V_MAX 3.5f  /* 速度上限 */
-#define GO_M8010_POS_CTRL_J     32.0f /* 加加速度(jerk)上限 */
+#define GO_M8010_POS_CTRL_A_MAX 120.0f  /* 加速度上限 */
+#define GO_M8010_POS_CTRL_V_MAX 40.0f  /* 速度上限 */
+#define GO_M8010_POS_CTRL_J     600.0f /* 加加速度(jerk)上限 */
 #define GO_M8010_POS_CTRL_KP    0.55f /* 位置环增益kp */
 #define GO_M8010_POS_CTRL_KD    0.2f  /* 速度环增益kd */
 
@@ -93,12 +93,15 @@ typedef struct
     uint8_t error;
     float torque;   /* 输出端扭矩,驱动内部已由转子侧换算得到 */
     float speed;    /* 输出端转速,驱动内部已由转子侧换算得到 */
-    float position; /* 输出端位置,驱动内部已由转子侧换算得到 */
+    float position; /* 输出端位置,驱动内部已由转子侧换算得到,并已减去开机后第一帧位置(position_offset),即以上电时的位置为软件零点 */
     uint16_t force;
     uint16_t calc_crc;
     uint32_t bad_msg;
     uint8_t valid;
     GOM8010FeedbackPacket_TypeDef packet;
+
+    float position_offset; /* 开机后第一帧的原始位置,作为软件零点基准,由update_cnt==0时捕获 */
+    uint32_t update_cnt;    /* 累计解析成功的反馈帧次数,可用于判断电机是否离线 */
 } GOM8010Feedback_TypeDef;
 
 /* 单个电机:仅保存协议地址、挂载的串口与控制/反馈数据,不含总线仲裁状态(仲裁状态集中存在

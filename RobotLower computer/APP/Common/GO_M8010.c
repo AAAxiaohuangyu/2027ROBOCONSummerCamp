@@ -126,7 +126,9 @@ static void GOM8010PackControlFrame(GOM8010Motor_TypeDef *motor)
     uint8_t timeout = control->timeout;
     float torque = go_m8010_torque_output_to_rotor(control->torque);
     float speed = go_m8010_speed_output_to_rotor(control->speed);
-    float position = go_m8010_position_output_to_rotor(control->position);
+    /* control->position是软件零点坐标系(与feedback->position同系),打包发送前需加回position_offset
+       换算回电机原始坐标系,否则电机实际运动位置会偏差一个position_offset */
+    float position = go_m8010_position_output_to_rotor(control->position + motor->feedback.position_offset);
     float kp = control->kp;
     float kd = control->kd;
     int16_t torque_raw;
@@ -169,7 +171,8 @@ static void GOM8010PackControlFrame(GOM8010Motor_TypeDef *motor)
     go_m8010_put_u16_le(&frame[15], crc);
 }
 
-/* 解析16字节反馈帧:校验帧头与CRC后提取torque/speed/position及状态量 */
+/* 解析16字节反馈帧:校验帧头与CRC后提取torque/speed/position及状态量;第一帧的原始position作为
+   软件零点(position_offset),之后每帧position均减去该offset */
 static void GOM8010ParseFeedbackFrame(GOM8010Feedback_TypeDef *feedback)
 {
     const uint8_t *frame = feedback->packet.bytes;
@@ -178,6 +181,7 @@ static void GOM8010ParseFeedbackFrame(GOM8010Feedback_TypeDef *feedback)
     int16_t torque_raw;
     int16_t speed_raw;
     int32_t position_raw;
+    float position_output;
 
     feedback->valid = 0U;
     if ((frame[0] != 0xFDU) || (frame[1] != 0xEEU)) /* 反馈帧帧头 */
@@ -206,7 +210,13 @@ static void GOM8010ParseFeedbackFrame(GOM8010Feedback_TypeDef *feedback)
     feedback->force = (status_force >> 3) & 0x0FFFU; /* 高12位:末端力传感器读数 */
     feedback->torque = go_m8010_torque_rotor_to_output((float)torque_raw / 256.0f);
     feedback->speed = go_m8010_speed_rotor_to_output((float)speed_raw / 256.0f * PI2);
-    feedback->position = go_m8010_position_rotor_to_output((float)position_raw / 32768.0f * PI2);
+
+    position_output = go_m8010_position_rotor_to_output((float)position_raw / 32768.0f * PI2);
+    if (feedback->update_cnt == 0U)
+        feedback->position_offset = position_output;
+
+    feedback->position = position_output - feedback->position_offset;
+    feedback->update_cnt++;
     feedback->valid = 1U;
 }
 

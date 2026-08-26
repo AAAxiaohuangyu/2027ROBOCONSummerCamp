@@ -28,12 +28,12 @@ static uint16_t J60CommandId(uint8_t id, uint8_t command, uint8_t response)
            ((uint16_t)command << J60_CAN_ID_COMMAND_SHIFT);
 }
 
-/* 按协议打包8字节控制帧:位置/速度取自规划结果,kp/kd取自控制参数*/
-static void J60PackControlFrame(J60Control_TypeDef *control, uint8_t *data)
+/* 按协议打包8字节控制帧:位置取调用者传入的原始坐标系值(已加回position_offset),速度取自规划结果,kp/kd取自控制参数*/
+static void J60PackControlFrame(J60Control_TypeDef *control, float position_raw, uint8_t *data)
 {
     uint64_t frame = 0;
 
-    frame |= (uint64_t)J60FloatToUint(control->position, J60_POSITION_MIN, J60_POSITION_MAX, J60_CONTROL_POSITION_BITS);
+    frame |= (uint64_t)J60FloatToUint(position_raw, J60_POSITION_MIN, J60_POSITION_MAX, J60_CONTROL_POSITION_BITS);
     frame |= (uint64_t)J60FloatToUint(control->velocity, J60_VELOCITY_MIN, J60_VELOCITY_MAX, J60_CONTROL_VELOCITY_BITS) << J60_CONTROL_VELOCITY_SHIFT;
     frame |= (uint64_t)J60FloatToUint(control->kp, J60_KP_MIN, J60_KP_MAX, J60_CONTROL_KP_BITS) << J60_CONTROL_KP_SHIFT;
     frame |= (uint64_t)J60FloatToUint(control->kd, J60_KD_MIN, J60_KD_MAX, J60_CONTROL_KD_BITS) << J60_CONTROL_KD_SHIFT;
@@ -43,14 +43,20 @@ static void J60PackControlFrame(J60Control_TypeDef *control, uint8_t *data)
         data[i] = (uint8_t)(frame >> (8U * i));
 }
 
-/* 解析8字节反馈帧:位置/速度/扭矩/温度按协议位域提取 */
+/* 解析8字节反馈帧:位置/速度/扭矩/温度按协议位域提取;第一帧的原始位置作为软件零点(position_offset),
+   之后每帧position均减去该offset */
 static void J60ParseFeedbackFrame(J60Feedback_TypeDef *feedback, const uint8_t *rx_data)
 {
     uint64_t frame;
+    float position_raw;
 
     memcpy(&frame, rx_data, sizeof(frame));
 
-    feedback->position = J60UintToFloat(frame & J60_FEEDBACK_POSITION_MASK, J60_POSITION_MIN, J60_POSITION_MAX, J60_FEEDBACK_POSITION_BITS);
+    position_raw = J60UintToFloat(frame & J60_FEEDBACK_POSITION_MASK, J60_POSITION_MIN, J60_POSITION_MAX, J60_FEEDBACK_POSITION_BITS);
+    if (feedback->update_cnt == 0U)
+        feedback->position_offset = position_raw;
+
+    feedback->position = position_raw - feedback->position_offset;
     feedback->velocity = J60UintToFloat((frame >> J60_FEEDBACK_VELOCITY_SHIFT) & J60_FEEDBACK_POSITION_MASK, J60_VELOCITY_MIN, J60_VELOCITY_MAX, J60_FEEDBACK_VELOCITY_BITS);
     feedback->torque = J60UintToFloat((frame >> J60_FEEDBACK_TORQUE_SHIFT) & J60_FEEDBACK_TORQUE_MASK, J60_TORQUE_MIN, J60_TORQUE_MAX, J60_FEEDBACK_TORQUE_BITS);
     feedback->temperature_is_motor = (uint8_t)((frame >> J60_FEEDBACK_TEMP_SENSOR_SHIFT) & J60_FEEDBACK_TEMP_SENSOR_MASK);
@@ -61,8 +67,11 @@ static void J60ParseFeedbackFrame(J60Feedback_TypeDef *feedback, const uint8_t *
 static void J60MotorSendControl(J60Motor_TypeDef *motor)
 {
     uint8_t data[J60_CAN_FRAME_LENGTH];
+    /* control->position是软件零点坐标系(与feedback->position同系),打包发送前需加回position_offset
+       换算回电机原始坐标系,否则电机实际运动位置会偏差一个position_offset */
+    float position_raw = motor->control.position + motor->feedback.position_offset;
 
-    J60PackControlFrame(&motor->control, data);
+    J60PackControlFrame(&motor->control, position_raw, data);
     FDCANSendStandard(motor->FDCAN_Handle, J60CommandId(motor->id, J60_CMD_CONTROL, J60_RESPONSE_REQUEST), data, J60_CAN_FRAME_LENGTH);
 }
 

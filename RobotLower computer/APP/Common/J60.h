@@ -76,9 +76,9 @@ J60关节电机CAN通信协议(标准帧,DLC 8):
 #define J60_TEMPERATURE_OFFSET (-20.0f)
 
 /* 位置控制内置速度规划(七段S曲线)默认参数,调参从这里改 */
-#define J60_POS_CTRL_A_MAX 8.5f /* 加速度上限 */
-#define J60_POS_CTRL_V_MAX 3.5f /* 速度上限 */
-#define J60_POS_CTRL_J 32.0f    /* 加加速度(jerk)上限 */
+#define J60_POS_CTRL_A_MAX 60.0f /* 加速度上限 */
+#define J60_POS_CTRL_V_MAX 40.0f /* 速度上限 */
+#define J60_POS_CTRL_J 60.0f    /* 加加速度(jerk)上限 */
 #define J60_POS_CTRL_KP 12.0f   /* 位置环增益kp */
 #define J60_POS_CTRL_KD 2.5f    /* 速度环增益kd */
 
@@ -127,12 +127,13 @@ typedef struct
 
 typedef struct
 {
-    float position;
+    float position; /* 已减去开机后第一帧位置(position_offset),即以上电时的位置为软件零点 */
     float velocity;
     float torque;
     float temperature;
     uint8_t temperature_is_motor;
 
+    float position_offset;  /* 开机后第一帧的原始位置,作为软件零点基准,由update_cnt==0时捕获 */
     uint32_t update_cnt; // 累计收到反馈帧的次数,可用于判断电机是否离线
 } J60Feedback_TypeDef;
 
