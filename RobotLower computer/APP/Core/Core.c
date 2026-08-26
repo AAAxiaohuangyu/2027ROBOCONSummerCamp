@@ -81,21 +81,15 @@ void RobotInit(void)
     Zigbee_Init(&Robot.zigbee);
 
     Vision_Init(&Robot.vision);
-    /*
-    if (robot->roboticarm.lift_motor.FDCAN_Handle != NULL)
-    {
-        uint16_t lift_feedback_base = (uint16_t)((J60_RESPONSE_FEEDBACK << J60_CAN_ID_RESPONSE_SHIFT) |
-                                                 (J60_CMD_CONTROL << J60_CAN_ID_COMMAND_SHIFT));
-        FDCANStandardInit(robot->roboticarm.lift_motor.FDCAN_Handle,
-                          lift_feedback_base + J60_ID_MIN,
-                          lift_feedback_base + J60_ID_MAX);
-    }
-    */
 
-    /* forward/rotate两个GO电机的接收挂起改由GOM8010GroupUpdate在每次真正发起请求时按需完成
-       (RS485总线仲裁,避免同一huart被同时挂起两次接收),此处不再手动挂起 */
+    RoboticArmInit(&Robot.roboticarm, ROBOTICARM_LIFT_FDCAN_HANDLE, ROBOTICARM_LIFT_ID, ROBOTICARM_FORWARD_UART_HANDLE, ROBOTICARM_FORWARD_ID, SERVO_PWM_TIMER_HANDLE, SERVO_PWM_CHANNEL);
+    uint16_t lift_feedback_base = (uint16_t)((J60_RESPONSE_FEEDBACK << J60_CAN_ID_RESPONSE_SHIFT) |
+                                             (J60_CMD_CONTROL << J60_CAN_ID_COMMAND_SHIFT));
+    FDCANStandardInit(Robot.roboticarm.lift_motor.FDCAN_Handle,
+                      lift_feedback_base + J60_ID_MIN,
+                      lift_feedback_base + J60_ID_MAX);
 
-    //RoboticArmEnable(&robot->roboticarm);
+    RoboticArmEnable(&Robot.roboticarm);
 }
 
 void RobotChassisUpdateTask(void *argument)
@@ -110,9 +104,15 @@ void RobotEncoderUpdateTask(void *argument)
     EncoderUpdate(&Robot.encoder); /* 周期发位置请求触发encoder应答;函数内含while(1),此任务不会返回 */
 }
 
+void RobotRoboticArmUpdateTask(void *argument)
+{
+    (void)argument;
+    RoboticArmUpdate(&Robot.roboticarm); /* 周期下发J60/GO控制帧触发反馈;函数内含while(1),此任务不会返回 */
+}
+
 void RobotStateUpdateTask(void *argument)
 {
-    RobotState_TypeDef state = ROBOT_STATE_START_MOVE_1;
+    RobotState_TypeDef state = ROBOT_STATE_FLIIP;
     Robot.vision.KFS_DIFF = 0;
 
     (void)argument;
@@ -170,7 +170,13 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_WAIT_MOVE_3:
         {
             if (ChassisTranslationReached(&Robot.chassis, 4.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                state = ROBOT_STATE_START_MOVE_4;
+                state = ROBOT_STATE_FLIIP;
+            break;
+        }
+
+        case ROBOT_STATE_FLIIP:
+        {
+            // RoboticArmFlipMotion(&Robot.roboticarm,&Robot.flip);
             break;
         }
 

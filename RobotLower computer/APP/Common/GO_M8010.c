@@ -267,7 +267,10 @@ static uint8_t GOM8010GroupRequest(GOM8010Group_TypeDef *group, uint8_t index)
         return 0U; /* 总线上还有别的电机没轮到,先让给它,避免本电机连续独占总线 */
 
     GOM8010MotorSendControl(motor);
-    if (HAL_UARTEx_ReceiveToIdle_IT(motor->huart, motor->feedback.packet.bytes, GO_M8010_FEEDBACK_FRAME_SIZE) != HAL_OK)
+    /* 反馈帧长度固定已知,改用定长DMA接收(HAL_UART_Receive_DMA),避免电机内部分两段发送时
+       中间的短暂间隙被误判为空闲线(IDLE)从而提前把一帧切断——凑满GO_M8010_FEEDBACK_FRAME_SIZE
+       字节才会触发HAL_UART_RxCpltCallback,不受发送节奏影响 */
+    if (HAL_UART_Receive_DMA(motor->huart, motor->feedback.packet.bytes, GO_M8010_FEEDBACK_FRAME_SIZE) != HAL_OK)
         return 0U;
 
     bus->pending_motor = motor;
@@ -386,4 +389,22 @@ void GOM8010GroupRxEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart,
 
     GOM8010MotorParseFeedback(bus->pending_motor, size);
     bus->pending_motor = NULL; /* 释放总线,供下一个电机的请求使用 */
+}
+
+void GOM8010GroupRxErrorEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart)
+{
+    GOM8010BusArbiter_TypeDef *bus = &group->arbiter;
+
+    if (huart == NULL || bus->pending_motor == NULL || bus->pending_motor->huart == NULL ||
+        bus->pending_motor->huart->Instance != huart->Instance)
+        return; /* 不是本组总线的事件,或总线上没有电机在等应答(意外事件),丢弃 */
+
+    /* DMA接收模式下,溢出/帧/噪声等错误均被HAL当作阻塞错误处理:HAL_UART_IRQHandler内部已经
+       中止了本笔DMA接收并将RxState还原为READY(见UART_EndRxTransfer+HAL_DMA_Abort_IT),故此处
+       不需要重新挂起接收——只需提前释放总线,下一次GOM8010GroupUpdate即会为轮到的电机重新发起
+       请求并挂起接收。不在此提前释放的话,也会在GO_M8010_BUS_TIMEOUT_MS后被GOM8010GroupRequest
+       的超时逻辑释放,但会让总线上的其他电机多等这段时间 */
+    bus->pending_motor->feedback.valid = 0U;
+    bus->pending_motor->feedback.bad_msg++;
+    bus->pending_motor = NULL;
 }

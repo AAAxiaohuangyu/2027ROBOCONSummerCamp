@@ -32,7 +32,7 @@
 
 #define ROBOTICARM_LIFT_K (-0.021f)     /* 升降机构:height = LIFT_K * theta,待标定 */
 
-#define ROBOTICARM_FORWARD_K (0.032f)     /* 前后机构:distance = FORWARD_K * theta,待标定 */
+#define ROBOTICARM_FORWARD_K (-0.032f)     /* 前后机构:distance = FORWARD_K * theta,待标定 */
 
 #define ROBOTICARM_CONTROL_PERIOD_MS (3U)
 
@@ -58,8 +58,7 @@ typedef struct
    float rod_rotation; /* 杆绕自身轴线的自转角度,与rotate_servo->angle直接相等 */
 } RoboticArm_TypeDef;
 
-/* 初始化机械臂:依次初始化升降(J60/FDCAN)、前后(GO/RS485)两个电机驱动,并保存rotate_servo
-   指针(该舵机须已由调用者初始化,本函数不对其做Init);再按当前反馈位置(初始为0)计算一次
+/* 初始化机械臂:依次初始化升降(J60/FDCAN)、前后(GO/RS485)两个电机驱动,初始化舵机;再按当前反馈位置(初始为0)计算一次
    末端坐标与rod_rotation;本函数不下发使能,升降机构使用前需额外调用RoboticArmEnable */
 void RoboticArmInit(RoboticArm_TypeDef *arm,
                     FDCAN_HandleTypeDef *lift_FDCAN_Handle, uint8_t lift_id,

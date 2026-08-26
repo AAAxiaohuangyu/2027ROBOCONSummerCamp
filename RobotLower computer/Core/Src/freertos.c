@@ -65,6 +65,13 @@ const osThreadAttr_t RobotStateUpdateTask_attributes = {
     .stack_size = 256 * 10,
     .priority = (osPriority_t)osPriorityNormal,
 };
+
+osThreadId_t RobotRoboticArmUpdateTaskHandle;
+const osThreadAttr_t RobotRoboticArmUpdateTask_attributes = {
+    .name = "RobotRoboticArmUpdateTask",
+    .stack_size = 256 * 10,
+    .priority = (osPriority_t)osPriorityNormal,
+};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -118,6 +125,7 @@ void MX_FREERTOS_Init(void) {
   RobotChassisUpdateTaskHandle = osThreadNew(RobotChassisUpdateTask, NULL, &RobotChassisUpdateTask_attributes);
   RobotEncoderUpdateTaskHandle = osThreadNew(RobotEncoderUpdateTask, NULL, &RobotEncoderUpdateTask_attributes);
   RobotStateUpdateTaskHandle = osThreadNew(RobotStateUpdateTask, NULL, &RobotStateUpdateTask_attributes);
+  RobotRoboticArmUpdateTaskHandle = osThreadNew(RobotRoboticArmUpdateTask, NULL, &RobotRoboticArmUpdateTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 

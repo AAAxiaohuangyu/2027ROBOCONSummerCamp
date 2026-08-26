@@ -8,6 +8,7 @@
 #include "vision.h"
 #include "yis512.h"
 #include "Servo.h"
+#include "flip.h"
 
 /* 转弯提前系数(无量纲):RobotStateUpdateTask处于WAIT_MOVE_X状态时,判断是否可以
    切换到START_MOVE_Y所用的容差为该系数乘以x轴当前速度对应的S曲线减速距离
@@ -34,6 +35,7 @@ typedef enum
    ROBOT_STATE_WAIT_MOVE_2,
    ROBOT_STATE_START_MOVE_3,
    ROBOT_STATE_WAIT_MOVE_3,
+   ROBOT_STATE_FLIIP,
    ROBOT_STATE_START_MOVE_4,
    ROBOT_STATE_WAIT_MOVE_4,
    ROBOT_STATE_START_MOVE_5,
@@ -48,7 +50,8 @@ typedef enum
    ROBOT_STATE_WAIT_MOVE_9,
    ROBOT_STATE_MANUAL,
    ROBOT_STATE_DONE,
-} RobotState_TypeDef;
+}
+RobotState_TypeDef;
 
 /* 顶层状态机周期,单位ms */
 #define ROBOT_STATE_UPDATE_PERIOD_MS (5U)
@@ -66,6 +69,7 @@ typedef struct
     ZigbeeHandle_TypeDef zigbee;
     VisionHandle_TypeDef vision;
     Yis512_TypeDef yis512;
+    FlipState_TypeDef flip;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
@@ -80,6 +84,9 @@ void RobotChassisUpdateTask(void *argument);
 
 /* RTOS任务入口:周期发送编码器位置请求,触发编码器应答 */
 void RobotEncoderUpdateTask(void *argument);
+
+/* RTOS任务入口:周期下发J60(升降)/GO(前后平移)电机控制帧,触发各自反馈 */
+void RobotRoboticArmUpdateTask(void *argument);
 
 /* RTOS任务入口:推进机器人整体位移状态机,按序下发各段ChassisSetTranslation目标,
    全部到位后转入手柄(ZigBee)遥控的手动模式 */

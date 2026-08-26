@@ -155,9 +155,16 @@ void GOM8010GroupSetTorqueFeedforward(GOM8010Group_TypeDef *group, uint8_t index
    实际发送);调用前需已通过GOM8010GroupRxEvent更新过反馈 */
 void GOM8010GroupUpdate(GOM8010Group_TypeDef *group);
 
-/* 供上层在HAL_UARTEx_RxEventCallback中调用:按huart实例匹配组内总线上当前等待应答的电机并解析,
+/* 供上层在HAL_UART_RxCpltCallback中调用(反馈帧改用定长DMA接收,size固定传
+   GO_M8010_FEEDBACK_FRAME_SIZE):按huart实例匹配组内总线上当前等待应答的电机并解析,
    然后释放总线供下一个电机的请求使用。若huart不是本组的总线,或总线上并没有电机在等待应答
    (意外/迟到的事件),直接忽略 */
 void GOM8010GroupRxEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart, uint16_t size);
+
+/* 供上层在HAL_UART_ErrorCallback中调用:反馈帧改用DMA接收后,溢出/帧/噪声等错误会被HAL当作
+   阻塞错误处理,自动中止当前DMA接收并将RxState还原为READY,此处按huart实例匹配组内总线上
+   当前等待应答的电机并提前释放总线,避免其余电机多等一个GO_M8010_BUS_TIMEOUT_MS才能轮到。
+   若huart不是本组的总线,或总线上并没有电机在等待应答,直接忽略 */
+void GOM8010GroupRxErrorEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart);
 
 #endif /* __GO_M8010_H__ */
