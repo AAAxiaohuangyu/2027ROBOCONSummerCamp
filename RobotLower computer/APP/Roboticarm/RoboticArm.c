@@ -1,32 +1,31 @@
 #include "RoboticArm.h"
 #include "cmsis_os2.h"
 
-/* 根据三电机当前反馈转角,按几何关系正解出末端坐标与杆自转角度,写回arm对应字段 */
+/* 根据升降/前后两电机当前反馈转角,按几何关系正解出末端坐标,并将舵机当前指令角度
+   同步为杆自转角度,写回arm对应字段 */
 static void
 RoboticArmUpdateStateFromFeedback(RoboticArm_TypeDef *arm)
 {
     const GOM8010Feedback_TypeDef *forward_feedback = &arm->go_motors.motors[ROBOTICARM_GO_FORWARD].feedback;
-    const GOM8010Feedback_TypeDef *rotate_feedback = &arm->go_motors.motors[ROBOTICARM_GO_ROTATE].feedback;
-    float height = ROBOTICARM_LIFT_K * arm->lift_motor.feedback.position + ROBOTICARM_LIFT_THRESHOLD;
-    float distance = ROBOTICARM_FORWARD_K * forward_feedback->position + ROBOTICARM_FORWARD_THRESHOLD;
+    float height = ROBOTICARM_LIFT_K * arm->lift_motor.feedback.position;
+    float distance = ROBOTICARM_FORWARD_K * forward_feedback->position;
 
-    arm->end_x = ROBOTICARM_BASE_X + distance;
-    arm->end_y = ROBOTICARM_BASE_Y + ROBOTICARM_ROD_LENGTH;
-    arm->end_z = height + ROBOTICARM_END_Z_OFFSET;
-    arm->rod_rotation = rotate_feedback->position; /* 电机转角与杆自转角度直接相等 */
+    arm->end_x = distance;
+    arm->end_y = 0.0f;
+    arm->end_z = height;
+    arm->rod_rotation = arm->rotate_servo.angle; /* 舵机开环,指令角度即当前角度 */
 }
 
 void RoboticArmInit(RoboticArm_TypeDef *arm,
                     FDCAN_HandleTypeDef *lift_FDCAN_Handle, uint8_t lift_id,
-                    UART_HandleTypeDef *forward_huart, uint8_t forward_id,
-                    UART_HandleTypeDef *rotate_huart, uint8_t rotate_id)
+                    UART_HandleTypeDef *forward_huart, uint8_t forward_id,TIM_HandleTypeDef *htim,uint32_t channel)
 {
     J60MotorInit(&arm->lift_motor, lift_FDCAN_Handle, lift_id);
 
     GOM8010GroupInit(&arm->go_motors);
-    /* forward/rotate共享同一路RS485总线(huart由bsp_config.h配置),两者须为同一huart实例 */
     GOM8010GroupAddMotor(&arm->go_motors, forward_id, forward_huart);
-    GOM8010GroupAddMotor(&arm->go_motors, rotate_id, rotate_huart);
+
+    ServoInit(&arm->rotate_servo, htim, channel);
 
     RoboticArmUpdateStateFromFeedback(arm);
 }
@@ -34,11 +33,11 @@ void RoboticArmInit(RoboticArm_TypeDef *arm,
 void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float end_z_target,
                               float lift_torque_feedforward)
 {
-    float distance_target = end_x_target - ROBOTICARM_BASE_X;
-    float height_target = end_z_target - ROBOTICARM_END_Z_OFFSET;
+    float distance_target = end_x_target;
+    float height_target = end_z_target;
 
-    float theta_forward_target = (distance_target - ROBOTICARM_FORWARD_THRESHOLD) / ROBOTICARM_FORWARD_K;
-    float theta_lift_target = (height_target - ROBOTICARM_LIFT_THRESHOLD) / ROBOTICARM_LIFT_K;
+    float theta_forward_target = distance_target / ROBOTICARM_FORWARD_K;
+    float theta_lift_target = height_target / ROBOTICARM_LIFT_K;
 
     J60MotorSetTarget(&arm->lift_motor, theta_lift_target);
     J60MotorSetTorqueFeedforward(&arm->lift_motor, lift_torque_feedforward);
@@ -47,7 +46,7 @@ void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float
 
 void RoboticArmSetRodRotation(RoboticArm_TypeDef *arm, float rotation_target)
 {
-    GOM8010GroupSetTarget(&arm->go_motors, ROBOTICARM_GO_ROTATE, rotation_target); /* 电机转角与杆自转角度直接相等,无需换算 */
+    arm->rotate_servo.angle = rotation_target; /* 开环舵机,RobotServoUpdateTask按该角度持续输出PWM */
 }
 
 void RoboticArmUpdate(RoboticArm_TypeDef *arm)
@@ -56,6 +55,7 @@ void RoboticArmUpdate(RoboticArm_TypeDef *arm)
     {
         J60MotorUpdate(&arm->lift_motor);
         GOM8010GroupUpdate(&arm->go_motors);
+        ServoAngleUpdate(&arm->rotate_servo);
 
         RoboticArmUpdateStateFromFeedback(arm);
         osDelay(ROBOTICARM_CONTROL_PERIOD_MS);

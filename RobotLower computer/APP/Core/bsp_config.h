@@ -32,8 +32,7 @@
 #define ROBOTICARM_FORWARD_UART_HANDLE &huart3 /* 前后平移电机(GO)RS485串口句柄,占位待定 */
 #define ROBOTICARM_FORWARD_ID 3u            /* 前后平移电机(GO)RS485地址,占位待定 */
 
-#define ROBOTICARM_ROTATE_UART_HANDLE &huart3 /* 自转电机(GO)RS485串口句柄,占位待定 */
-#define ROBOTICARM_ROTATE_ID 7u            /* 自转电机(GO)RS485地址,占位待定 */
+/* 自转机构改为舵机(PWM开环),复用下方SERVO_PWM_*已初始化的Robot.servo,不再单独占用RS485地址 */
 
 /* 底盘(Chassis)四台M3508电调组挂载外设句柄与控制帧ID,占位:CubeMX尚未分配对应FDCAN外设、
    控制帧ID(M3508_CTRL_ID_1TO4/M3508_CTRL_ID_5TO8)也未确定,暂不接实际句柄,待确定后直接

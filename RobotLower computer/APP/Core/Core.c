@@ -81,7 +81,6 @@ void RobotInit(void)
     Zigbee_Init(&Robot.zigbee);
 
     Vision_Init(&Robot.vision);
-    ServoInit(&Robot.servo, &SERVO_PWM_TIMER_HANDLE, SERVO_PWM_CHANNEL);
     /*
     if (robot->roboticarm.lift_motor.FDCAN_Handle != NULL)
     {
@@ -109,12 +108,6 @@ void RobotEncoderUpdateTask(void *argument)
 {
     (void)argument;
     EncoderUpdate(&Robot.encoder); /* 周期发位置请求触发encoder应答;函数内含while(1),此任务不会返回 */
-}
-
-void RobotServoUpdateTask(void *argument)
-{
-    (void)argument;
-    ServoAngleUpdate(&Robot.servo);
 }
 
 void RobotStateUpdateTask(void *argument)

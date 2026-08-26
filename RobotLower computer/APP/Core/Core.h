@@ -66,7 +66,6 @@ typedef struct
     ZigbeeHandle_TypeDef zigbee;
     VisionHandle_TypeDef vision;
     Yis512_TypeDef yis512;
-    Servo_TypeDef servo;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;

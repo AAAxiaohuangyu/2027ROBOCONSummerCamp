@@ -17,8 +17,6 @@ void ServoInit(Servo_TypeDef *servo, TIM_HandleTypeDef *htim,uint32_t channel)
 
 void ServoAngleUpdate(Servo_TypeDef *servo)
 {
-    while(1)
-    {
         if (servo == NULL)
             return;
 
@@ -36,5 +34,4 @@ void ServoAngleUpdate(Servo_TypeDef *servo)
         __HAL_TIM_SET_COMPARE(servo->htim, servo->channel, compare);
 
         osDelay(SERVO_CONTROL_PERIOD);
-    }
 }
