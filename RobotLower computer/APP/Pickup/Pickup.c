@@ -32,10 +32,7 @@ static void PickupRun(RoboticArm_TypeDef *arm,
                       uint8_t pickup_height,
                       PickupOperation_TypeDef operation)
 {
-    /*
-     * 三个公开接口都复用此状态机。operation 只影响抓取后的分支，避免复制三套
-     * 相同的“抬升、接近、下降、吸附”逻辑。PLACE 阶段才会改用储存高度。
-     */
+    /* 三个公开接口复用同一状态机；operation 只决定吸附后的处理方式。 */
     float target_x;
     float target_z;
 
@@ -48,27 +45,20 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_RAISE:
-        /* 先原地抬升，避免平移时碰撞或推动 KFS。 */
+        /* 吸盘默认朝向 KFS，先原地上升到当前 KFS 的指定抓取高度。 */
         target_x = pickup_start_x;
-        target_z = pickup_start_z + PICKUP_SAFE_HEIGHT;
+        target_z = PickupGetTargetZ(pickup_height);
         RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
         if (PositionReached(arm, target_x, target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
             *pickup_state = PICKUP_STATE_APPROACH;
         break;
 
     case PICKUP_STATE_APPROACH:
-        /* 在安全高度移动至抓取点上方。 */
+        /* 保持指定高度向前伸出，直接到达 KFS 抓取位置。 */
         target_x = PICKUP_TARGET_X;
-        target_z = pickup_start_z + PICKUP_SAFE_HEIGHT;
+        target_z = PickupGetTargetZ(pickup_height);
         RoboticArmSetEndPosition(arm, target_x, target_z, GravityCompensationLift);
         if (PositionReached(arm, target_x, target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
-            *pickup_state = PICKUP_STATE_LOWER;
-        break;
-
-    case PICKUP_STATE_LOWER:
-        /* 下降到 KFS 的抓取高度。 */
-        RoboticArmSetEndPosition(arm, PICKUP_TARGET_X, target_z, GravityCompensationLift);
-        if (PositionReached(arm, PICKUP_TARGET_X, target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
             *pickup_state = PICKUP_STATE_GRIP;
         break;
 
@@ -82,8 +72,16 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         }
         else
         {
-            *pickup_state = PICKUP_STATE_RETRACT;
+            /* 前两件先翻转 180 度，再返回存放区。 */
+            *pickup_state = PICKUP_STATE_ROTATE;
         }
+        break;
+
+    case PICKUP_STATE_ROTATE:
+        /* 舵机角度使用弧度；180 度参数集中在 Pickup.h。 */
+        RoboticArmSetRodRotation(arm, PICKUP_SERVO_FLIP_ANGLE_RAD);
+        if (RotationReached(arm, PICKUP_SERVO_FLIP_ANGLE_RAD, PICKUP_SERVO_ANGLE_TOLERANCE_RAD))
+            *pickup_state = PICKUP_STATE_RETRACT;
         break;
 
     case PICKUP_STATE_RETRACT:
@@ -104,7 +102,14 @@ static void PickupRun(RoboticArm_TypeDef *arm,
     case PICKUP_STATE_RELEASE:
         /* 仅在存放位置确认到位后松开 KFS。 */
         RoboticArmReleaseMotion();
-        *pickup_state = PICKUP_STATE_RESET;
+        *pickup_state = PICKUP_STATE_RESET_ROTATION;
+        break;
+
+    case PICKUP_STATE_RESET_ROTATION:
+        /* KFS 放下后，舵机回到 0 度，准备下一次抓取。 */
+        RoboticArmSetRodRotation(arm, PICKUP_SERVO_HOME_ANGLE_RAD);
+        if (RotationReached(arm, PICKUP_SERVO_HOME_ANGLE_RAD, PICKUP_SERVO_ANGLE_TOLERANCE_RAD))
+            *pickup_state = PICKUP_STATE_RESET;
         break;
 
     case PICKUP_STATE_RESET:
@@ -119,7 +124,7 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         /* 保持吸盘开启；由后续任务显式释放第三个 KFS。 */
         break;
 
-    default:
+    默认:
         /* 非法状态恢复为空闲状态。 */
         *pickup_state = PICKUP_STATE_VOID;
         break;
