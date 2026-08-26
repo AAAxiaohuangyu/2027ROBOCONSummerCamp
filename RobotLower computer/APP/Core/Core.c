@@ -112,7 +112,7 @@ void RobotEncoderUpdateTask(void *argument)
 
 void RobotStateUpdateTask(void *argument)
 {
-    RobotState_TypeDef state = ROBOT_STATE_START_MOVE_9;
+    RobotState_TypeDef state = ROBOT_STATE_START_MOVE_1;
     Robot.vision.KFS_DIFF = 0;
 
     (void)argument;
