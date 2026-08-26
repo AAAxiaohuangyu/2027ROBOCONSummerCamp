@@ -3,6 +3,11 @@
 
 #include "RoboticArm.h"
 
+/*
+ * 抓取模块将“到 KFS 抓取”的公共路径与“抓到后如何处理”分离。前半段逻辑共用，
+ * StoreLow、StoreHigh、Hold 仅决定吸附后是放到底层、上层还是持续保持。
+ */
+
 /* 抓取路径标定值，单位为 m；由机械臂零位和实际 KFS 尺寸确定。 */
 #define pickup_start_x              (0.0f) /* 机械臂复位点 x。 */
 #define pickup_start_z              (0.0f) /* 机械臂复位点 z。 */
@@ -15,6 +20,9 @@
 #define PICKUP_STORAGE_STACK_HEIGHT (0.0f) /* 上层 KFS 相对底层的 z 增量。 */
 #define PICKUP_POSITION_TOLERANCE_X (0.005f)
 #define PICKUP_POSITION_TOLERANCE_Z (0.005f)
+#define PICKUP_SERVO_HOME_ANGLE_RAD (0.0f)       /* 舵机初始角度。 */
+#define PICKUP_SERVO_FLIP_ANGLE_RAD (BSP_PI)     /* 舵机翻转角度：180 度。 */
+#define PICKUP_SERVO_ANGLE_TOLERANCE_RAD (0.005f)
 
 typedef enum
 {
@@ -23,12 +31,20 @@ typedef enum
     PICKUP_STATE_APPROACH, /* 在安全高度移动至抓取点正上方。 */
     PICKUP_STATE_LOWER,    /* 下降至当前 KFS 的抓取高度。 */
     PICKUP_STATE_GRIP,     /* 开启吸盘并根据动作类型选择后续路径。 */
+    PICKUP_STATE_ROTATE,   /* 前两件吸住后由舵机翻转 KFS 180 度。 */
     PICKUP_STATE_RETRACT,  /* 保持抓取高度平移至储存区上方。 */
     PICKUP_STATE_PLACE,    /* 降至低位或高位储存坐标。 */
     PICKUP_STATE_RELEASE,  /* 仅储存动作关闭吸盘，释放 KFS。 */
+    PICKUP_STATE_RESET_ROTATION, /* 释放后将舵机返回 0 度。 */
     PICKUP_STATE_RESET,    /* 放置完成后返回复位点。 */
     PICKUP_STATE_HOLD       /* 吸盘保持开启，等待主控切换到后续任务。 */
 } PickupState_TypeDef;
+
+/*
+ * pickup_height 表示待抓 KFS 位于高层或低层，和抓到后存放的层数没有直接关系。
+ * 外层应在一次新动作开始前将 *pickup_state 置为 PICKUP_STATE_RAISE，随后每个
+ * 控制周期调用同一个公开接口，直到其进入 VOID 或 HOLD。
+ */
 
 #define PICKUP_HEIGHT_LOW           (0U)
 #define PICKUP_HEIGHT_HIGH          (1U)
