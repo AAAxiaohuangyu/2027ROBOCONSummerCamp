@@ -71,6 +71,10 @@ typedef struct
     Yis512_TypeDef yis512;
     FlipState_TypeDef flip;
     RobotState_TypeDef state;
+    uint32_t time_stamp;
+    /* 由RobotStateUpdateTask根据当前是否处于ROBOT_STATE_FLIIP阶段置位/清零,
+       RobotFlipUpdateTask据此决定本周期是否推进flip状态机 */
+    uint8_t flip_active;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
@@ -94,5 +98,9 @@ void RobotRoboticArmUpdateTask(void *argument);
 void RobotStateUpdateTask(void *argument);
 
 void RobotServoUpdateTask(void *argument);
+
+/* RTOS任务入口:独立推进flip状态机,仅在Robot.flip_active(由RobotStateUpdateTask的
+   ROBOT_STATE_FLIIP阶段置位)为真时才调用RoboticArmFlipMotion */
+void RobotFlipUpdateTask(void *argument);
 
 #endif

@@ -4,7 +4,7 @@
 #include "ControlAlgorithm.h"
 #include "cmsis_os2.h"
 
-Robot_TypeDef Robot;
+Robot_TypeDef Robot = {0};
 
 /* MOVE_5~MOVE_8阶段x跟踪固定切到第三套参数组,MOVE_6~MOVE_8阶段y轴固定切到备用
    速度规划/跟踪参数组;这两次切换本应分别发生在START_MOVE_5/START_MOVE_6状态,
@@ -110,6 +110,20 @@ void RobotRoboticArmUpdateTask(void *argument)
     RoboticArmUpdate(&Robot.roboticarm); /* 周期下发J60/GO控制帧触发反馈;函数内含while(1),此任务不会返回 */
 }
 
+void RobotFlipUpdateTask(void *argument)
+{
+    (void)argument;
+
+    for (;;)
+    {
+        if (Robot.flip_active)
+        {
+            RoboticArmFlipMotion(&Robot.roboticarm, &Robot.chassis, &Robot.flip);
+        }
+        osDelay(ROBOT_STATE_UPDATE_PERIOD_MS);
+    }
+}
+
 void RobotStateUpdateTask(void *argument)
 {
     Robot.state = ROBOT_STATE_FLIIP;
@@ -175,10 +189,9 @@ void RobotStateUpdateTask(void *argument)
         }
 
         case ROBOT_STATE_FLIIP:
-        {
-            //RoboticArmFlipMotion(&Robot.roboticarm,&Robot.flip);
+            Robot.flip_active = 1;
+            Robot.state = ROBOT_STATE_DONE;
             break;
-        }
 
         case ROBOT_STATE_START_MOVE_4:
         {
