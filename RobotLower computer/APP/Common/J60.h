@@ -78,7 +78,7 @@ J60关节电机CAN通信协议(标准帧,DLC 8):
 /* 位置控制内置速度规划(七段S曲线)默认参数,调参从这里改 */
 #define J60_POS_CTRL_A_MAX 60.0f /* 加速度上限 */
 #define J60_POS_CTRL_V_MAX 40.0f /* 速度上限 */
-#define J60_POS_CTRL_J 60.0f    /* 加加速度(jerk)上限 */
+#define J60_POS_CTRL_J 200.0f    /* 加加速度(jerk)上限 */
 #define J60_POS_CTRL_KP 12.0f   /* 位置环增益kp */
 #define J60_POS_CTRL_KD 2.5f    /* 速度环增益kd */
 

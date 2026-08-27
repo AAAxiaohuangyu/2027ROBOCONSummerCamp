@@ -112,7 +112,7 @@ void RobotRoboticArmUpdateTask(void *argument)
 
 void RobotStateUpdateTask(void *argument)
 {
-    RobotState_TypeDef state = ROBOT_STATE_FLIIP;
+    Robot.state = ROBOT_STATE_FLIIP;
     Robot.vision.KFS_DIFF = 0;
 
     (void)argument;
@@ -121,15 +121,15 @@ void RobotStateUpdateTask(void *argument)
     {
         if (Robot.zigbee.rx_data.command.mode == 1)
         {
-            state = ROBOT_STATE_MANUAL;
+            Robot.state = ROBOT_STATE_MANUAL;
         }
 
-        switch (state)
+        switch (Robot.state)
         {
         case ROBOT_STATE_START_MOVE_1:
             osDelay(500);
             ChassisSetTranslation(&Robot.chassis, 0.8f, -0.65f);
-            state = ROBOT_STATE_WAIT_MOVE_1;
+            Robot.state = ROBOT_STATE_WAIT_MOVE_1;
             break;
 
         case ROBOT_STATE_WAIT_MOVE_1:
@@ -140,13 +140,13 @@ void RobotStateUpdateTask(void *argument)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
 
             if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
-                state = ROBOT_STATE_START_MOVE_2;
+                Robot.state = ROBOT_STATE_START_MOVE_2;
             break;
         }
 
         case ROBOT_STATE_START_MOVE_2:
-            ChassisSetTranslation(&Robot.chassis, 3.3f, -0.65f);
-            state = ROBOT_STATE_WAIT_MOVE_2;
+            ChassisSetTranslation(&Robot.chassis, 3.38f, -0.65f);
+            Robot.state = ROBOT_STATE_WAIT_MOVE_2;
             break;
 
         case ROBOT_STATE_WAIT_MOVE_2:
@@ -156,27 +156,27 @@ void RobotStateUpdateTask(void *argument)
             if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
             if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
-                state = ROBOT_STATE_START_MOVE_3;
+                Robot.state = ROBOT_STATE_START_MOVE_3;
             break;
         }
 
         case ROBOT_STATE_START_MOVE_3:
         {
-            ChassisSetTranslation(&Robot.chassis, 3.3f, -0.1f);
-            state = ROBOT_STATE_WAIT_MOVE_3;
+            ChassisSetTranslation(&Robot.chassis, 3.38f, -0.1f);
+            Robot.state = ROBOT_STATE_WAIT_MOVE_3;
             break;
         }
 
         case ROBOT_STATE_WAIT_MOVE_3:
         {
             if (ChassisTranslationReached(&Robot.chassis, 4.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                state = ROBOT_STATE_FLIIP;
+                Robot.state = ROBOT_STATE_DONE;
             break;
         }
 
         case ROBOT_STATE_FLIIP:
         {
-            RoboticArmFlipMotion(&Robot.roboticarm,&Robot.flip);
+            //RoboticArmFlipMotion(&Robot.roboticarm,&Robot.flip);
             break;
         }
 
@@ -192,7 +192,7 @@ void RobotStateUpdateTask(void *argument)
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_OUT,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_IOUT);
             ChassisSetTranslation(&Robot.chassis, 0.38f, -2.1f);
-            state = ROBOT_STATE_WAIT_MOVE_4;
+            Robot.state = ROBOT_STATE_WAIT_MOVE_4;
             break;
         }
 
@@ -202,7 +202,7 @@ void RobotStateUpdateTask(void *argument)
             if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
             if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
-                state = RobotSkipMove(5, ROBOT_STATE_START_MOVE_5);
+                Robot.state = RobotSkipMove(5, ROBOT_STATE_START_MOVE_5);
             break;
         }
 
@@ -212,14 +212,14 @@ void RobotStateUpdateTask(void *argument)
                y轴的备用速度规划/跟踪参数组从MOVE_6起才切换 */
             RobotApplyMove5Params();
             ChassisSetTranslation(&Robot.chassis, 0.38f, -3.42f);
-            state = ROBOT_STATE_WAIT_MOVE_5;
+            Robot.state = ROBOT_STATE_WAIT_MOVE_5;
             break;
         }
 
         case ROBOT_STATE_WAIT_MOVE_5:
         {
             if (ChassisTranslationReached(&Robot.chassis, 3.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                state = RobotSkipMove(6, ROBOT_STATE_START_MOVE_6);
+                Robot.state = RobotSkipMove(6, ROBOT_STATE_START_MOVE_6);
             break;
         }
 
@@ -230,14 +230,14 @@ void RobotStateUpdateTask(void *argument)
                y跟踪也切到备用参数组 */
             RobotApplyMove6Params();
             ChassisSetTranslation(&Robot.chassis, 0.38f, -4.6f);
-            state = ROBOT_STATE_WAIT_MOVE_6;
+            Robot.state = ROBOT_STATE_WAIT_MOVE_6;
             break;
         }
 
         case ROBOT_STATE_WAIT_MOVE_6:
         {
             if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                state = RobotSkipMove(7, ROBOT_STATE_START_MOVE_7);
+                Robot.state = RobotSkipMove(7, ROBOT_STATE_START_MOVE_7);
             break;
         }
 
@@ -245,14 +245,14 @@ void RobotStateUpdateTask(void *argument)
         {
             osDelay(1000);
             ChassisSetTranslation(&Robot.chassis, 0.38f, -5.79f);
-            state = ROBOT_STATE_WAIT_MOVE_7;
+            Robot.state = ROBOT_STATE_WAIT_MOVE_7;
             break;
         }
 
         case ROBOT_STATE_WAIT_MOVE_7:
         {
             if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                state = RobotSkipMove(8, ROBOT_STATE_START_MOVE_8);
+                Robot.state = RobotSkipMove(8, ROBOT_STATE_START_MOVE_8);
             break;
         }
 
@@ -260,14 +260,14 @@ void RobotStateUpdateTask(void *argument)
         {
             osDelay(1000);
             ChassisSetTranslation(&Robot.chassis, 0.38f, -6.98f);
-            state = ROBOT_STATE_WAIT_MOVE_8;
+            Robot.state = ROBOT_STATE_WAIT_MOVE_8;
             break;
         }
 
         case ROBOT_STATE_WAIT_MOVE_8:
         {
             if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                state = RobotSkipMove(9, ROBOT_STATE_START_MOVE_9);
+                Robot.state = RobotSkipMove(9, ROBOT_STATE_START_MOVE_9);
             break;
         }
 
@@ -279,7 +279,7 @@ void RobotStateUpdateTask(void *argument)
             osDelay(1000);
             RobotApplyMove9Params();
             ChassisSetRampVelocity(&Robot.chassis, -1.2f);
-            state = ROBOT_STATE_WAIT_MOVE_9;
+            Robot.state = ROBOT_STATE_WAIT_MOVE_9;
             break;
         }
 
@@ -287,7 +287,7 @@ void RobotStateUpdateTask(void *argument)
         {
             if (Robot.encoder.y_m <= ROBOT_STATE_MOVE_9_ENCODER_Y_TARGET_M)
             {
-                state = ROBOT_STATE_MANUAL;
+                Robot.state = ROBOT_STATE_MANUAL;
             }
             break;
         }

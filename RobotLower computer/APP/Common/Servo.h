@@ -7,9 +7,9 @@
 
 #define SERVO_MAX_ANGLE BSP_PI
 #define SERVO_MIN_ANGLE 0.0f
-#define SERVO_TRANS_PARAMETER (1390.0f / BSP_PI)
+#define SERVO_TRANS_PARAMETER (2500.0f / (BSP_PI * 1.5f))
 
-/* 舵机上电时的初始脉宽，当前机械标定为 1000 us。 */
+/* 舵机上电时的初始脉宽，当前机械标定为 500 us。 */
 #define SERVO_INITIAL_PULSE_US       1000U
 #define SERVO_CONTROL_PERIOD 5U
 

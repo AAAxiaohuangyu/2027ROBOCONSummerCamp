@@ -10,7 +10,7 @@ void ServoInit(Servo_TypeDef *servo, TIM_HandleTypeDef *htim,uint32_t channel)
     memset(servo, 0, sizeof(*servo));
     servo->htim = htim;
     servo->channel = channel;
-    __HAL_TIM_SET_COMPARE(htim,channel, SERVO_INITIAL_PULSE_US);
+    __HAL_TIM_SET_COMPARE(htim, channel, SERVO_INITIAL_PULSE_US);
     HAL_TIM_PWM_Start(htim, channel);
     return;
 }

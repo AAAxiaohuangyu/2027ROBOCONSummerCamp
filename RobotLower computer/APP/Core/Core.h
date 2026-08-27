@@ -70,6 +70,7 @@ typedef struct
     VisionHandle_TypeDef vision;
     Yis512_TypeDef yis512;
     FlipState_TypeDef flip;
+    RobotState_TypeDef state;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
