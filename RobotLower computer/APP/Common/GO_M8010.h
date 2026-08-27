@@ -13,7 +13,7 @@
 
 /* 位置控制内置速度规划(七段S曲线)默认参数,调参从这里改 */
 #define GO_M8010_POS_CTRL_A_MAX 120.0f  /* 加速度上限 */
-#define GO_M8010_POS_CTRL_V_MAX 40.0f  /* 速度上限 */
+#define GO_M8010_POS_CTRL_V_MAX 25.0f  /* 速度上限：由 40 降至 25，减慢伸缩机构的位置模式最高速度。 */
 #define GO_M8010_POS_CTRL_J     600.0f /* 加加速度(jerk)上限 */
 #define GO_M8010_POS_CTRL_KP    0.55f /* 位置环增益kp */
 #define GO_M8010_POS_CTRL_KD    0.2f  /* 速度环增益kd */

@@ -121,9 +121,12 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  RobotChassisUpdateTaskHandle = osThreadNew(RobotChassisUpdateTask, NULL, &RobotChassisUpdateTask_attributes);
-  RobotEncoderUpdateTaskHandle = osThreadNew(RobotEncoderUpdateTask, NULL, &RobotEncoderUpdateTask_attributes);
+  /*
+   * Flip 单独试运行：
+   * - RobotStateUpdateTask 的初始状态已经是 ROBOT_STATE_FLIIP，用于推进翻转流程；
+   * - RobotRoboticArmUpdateTask 持续下发 J60、GO 和舵机控制帧并更新反馈；
+   * - 暂不创建底盘与编码器任务，防止试机械臂时底盘电调持续工作。
+   */
   RobotStateUpdateTaskHandle = osThreadNew(RobotStateUpdateTask, NULL, &RobotStateUpdateTask_attributes);
   RobotRoboticArmUpdateTaskHandle = osThreadNew(RobotRoboticArmUpdateTask, NULL, &RobotRoboticArmUpdateTask_attributes);
 

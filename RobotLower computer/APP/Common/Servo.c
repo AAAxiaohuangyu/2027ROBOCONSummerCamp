@@ -10,7 +10,9 @@ void ServoInit(Servo_TypeDef *servo, TIM_HandleTypeDef *htim,uint32_t channel)
     memset(servo, 0, sizeof(*servo));
     servo->htim = htim;
     servo->channel = channel;
-    __HAL_TIM_SET_COMPARE(htim,channel, SERVO_INITIAL_PULSE_US);
+
+    /* memset 后 servo->angle 为 0 rad，按反向映射应输出 2390 us。 */
+    __HAL_TIM_SET_COMPARE(htim, channel, SERVO_ZERO_ANGLE_PULSE_US);
     HAL_TIM_PWM_Start(htim, channel);
     return;
 }
@@ -29,7 +31,14 @@ void ServoAngleUpdate(Servo_TypeDef *servo)
             servo->angle = SERVO_MIN_ANGLE;
         }
 
-        uint32_t compare = (uint32_t)(SERVO_INITIAL_PULSE_US + servo->angle * SERVO_TRANS_PARAMETER);
+        /*
+         * 反向角度映射：
+         *   0 rad  -> 2390 us；
+         *   PI rad -> 1000 us。
+         * 角度增大时 PWM 脉宽减小，使舵机的实际转动方向与原映射相反。
+         */
+        uint32_t compare = (uint32_t)(SERVO_ZERO_ANGLE_PULSE_US -
+                                      servo->angle * SERVO_TRANS_PARAMETER);
 
         __HAL_TIM_SET_COMPARE(servo->htim, servo->channel, compare);
 
