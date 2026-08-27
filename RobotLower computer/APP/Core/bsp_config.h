@@ -47,7 +47,7 @@
 #define ZIGBEE_UART_HANDLE (huart9)
 
 /*JP6 舵机接口*/
-#define SERVO_PWM_TIMER_HANDLE &htim3
+#define SERVO_PWM_TIMER_HANDLE &htim2
 #define SERVO_PWM_CHANNEL TIM_CHANNEL_2
 
 #endif /* __BSP_CONFIG_H__ */
