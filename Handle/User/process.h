@@ -11,7 +11,9 @@
 #define KEY_SCAN_PERIOD_MS      3.0f //按键扫描周期，ms
 #define KEY_PRESS_THRESHOLD     9.0f  //确认按键按下时间阈值,ms
 #define KEY_STOP_PORT           GPIOE
-#define KEY_STOP_PIN            GPIO_PIN_1  //左上，拨动，默认拉低、灯亮，右拨拉高、灯亮
+#define KEY_STOP_PIN            GPIO_PIN_0  //左上，拨动，默认拉低、灯亮，右拨拉高、灯亮
+#define KEY_MODE_PORT           GPIOC
+#define KEY_MODE_PIN            GPIO_PIN_11  //右上，内，拨动，默认拉低、灯亮，右拨拉高、灯亮
 #define KEY_GRIP_PORT           GPIOC
 #define KEY_GRIP_PIN            GPIO_PIN_10  //右上，拨动
 #define KEY_FORWARD_PORT        GPIOA
@@ -25,7 +27,7 @@
 #define KEY_POS_FLIP_PORT       GPIOE
 #define KEY_POS_FLIP_PIN        GPIO_PIN_3 //左上，外
 #define KEY_NEG_FLIP_PORT       GPIOE
-#define KEY_NEG_FLIP_PIN        GPIO_PIN_5 //坐下，内
+#define KEY_NEG_FLIP_PIN        GPIO_PIN_5 //左下，内
 
 #define ADC_NUMBER              ADC1
 #define ADC_ADDRESS             &hadc1
@@ -35,9 +37,18 @@
 #define ADC_SPEED_VX_INDEX      0U
 #define ADC_SPEED_VY_INDEX      1U
 #define ADC_OMEGA_INDEX         2U
-#define ADC_MAX_SPEED_VX        (10.0f) //ADC映射的最大X轴速度
-#define ADC_MAX_SPEED_VY        (10.0f) //ADC映射的最大Y轴速度
-#define ADC_DEAD_ZONE           50U
+#define ADC_MAX_SPEED_VX        (1.5f) //ADC映射的最大X轴速度
+#define ADC_MAX_SPEED_VY        (1.5f) //ADC映射的最大Y轴速度
+#define ADC_OMEGA								(-0.8f)
+#define ADC_OMEGA_ADC_OFFSET    (0) //旋转摇杆ADC零点偏移，单位：ADC计数
+#define ADC_CENTER_VALUE_SPEED  20U
+#define ADC_DEAD_ZONE           400U
+#define JOINT_SPEED_FORWARD     (1.0f)
+#define JOINT_SPEED_BACKWARD    (-1.0f)
+#define JOINT_SPEED_LIFT        (1.0f)
+#define JOINT_SPEED_DOWN        (-1.0f)
+#define JOINT_SPEED_FLIP_POS    (1.0f)
+#define JOINT_SPEED_FLIP_NEG    (-1.0f)
 
 typedef enum{
     KEY_IDLE = 0,
@@ -52,28 +63,27 @@ typedef struct{
     uint32_t chassis_raw_omega;
 }ADCRawData_t;
 
-//经过映射处理的ADC数据
+//经过映射处理的ADC数据，速度字段为float
 typedef struct{
     float chassis_vx;
     float chassis_vy;
-    int32_t chassis_omega;
+    float chassis_omega;
 }ADCData_t;
 
-//由按键确定的控制状态
+//由按键确定的控制状态；六个关节字段为按键对应的float定速值
 typedef struct{
     uint8_t emergency_stop;
+    uint8_t mode;
     uint8_t arm_grip;
-    uint8_t joint_forward;
-    uint8_t joint_backward;
-    uint8_t joint_lift;
-    uint8_t joint_down;
-    uint8_t joint_positive_flip;
-    uint8_t joint_negative_flip;
+    float joint_front_back;
+    float joint_up_down;
+    float joint_flip;
 }KeyData_t;
 
 //按键对应编号
 typedef enum{
     KEY_STOP = 0,
+    KEY_MODE,
     KEY_GRIP,
     KEY_FORWARD,
     KEY_BACKWARD,

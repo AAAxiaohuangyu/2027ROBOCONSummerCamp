@@ -10,7 +10,7 @@
 #define ZIGBEE_RX_BUF_SIZE 64U
 
 /* 接收超时阈值 ms */
-#define ZIGBEE_RX_TIMEOUT_MS 500U
+#define ZIGBEE_RX_TIMEOUT_MS 10U
 
 /* 数据帧格式 */
 #define ZIGBEE_FRAME_SOF0 0xAAU /* 帧头第一字节 */
@@ -20,36 +20,34 @@
 
 /*
  * 有效载荷：
- * chassis.speed_vx        2字节
- * chassis.speed_vy        2字节
- * chassis.omega           2字节
- * joint.front_back        2字节
- * joint.up_down           2字节
- * joint.flip              2字节
+ * chassis.speed_vx        4字节
+ * chassis.speed_vy        4字节
+ * chassis.omega           4字节
+ * joint.front_back        4字节
+ * joint.up_down           4字节
+ * joint.flip              4字节
  * command                 1字节
  *
- * 总计13字节
+ * 总计25字节
  */
-#define ZIGBEE_PAYLOAD_LEN 13U
+#define ZIGBEE_PAYLOAD_LEN 25U
 
 /* 用于接收AT指令初始化时的返回情况 */
 #define ZIGBEE_AT_RX_SIZE 64U
 
 typedef struct
 {
-    int16_t speed_vx; /**< 平动x轴速度 */
-    int16_t speed_vy; /**< 平动y轴速度 */
-    int16_t omega;    /**< 旋转速度 */
+    float speed_vx; /**< 平动x轴速度 */
+    float speed_vy; /**< 平动y轴速度 */
+    float omega;    /**< 旋转速度 */
 } ZigbeeChassisCmd_TypeDef;
 
-/*
-0:停止,1:正方向运动,2负方向运动
-*/
+
 typedef struct
 {
-    int16_t front_back; /**< 前后关节指令 */
-    int16_t up_down;    /**< 上下关节指令 */
-    int16_t flip;       /**< 翻转关节指令 */
+    float front_back; /**< 前后关节速度，正负表示方向 */
+    float up_down;    /**< 上下关节速度，正负表示方向 */
+    float flip;       /**< 正逆翻转速度，正负表示方向 */
 } Joint_TypeDef;
 
 /*
@@ -59,6 +57,7 @@ typedef struct
 {
     uint8_t grab;           /**< 抓取指令 */
     uint8_t emergency_stop; /**< 急停指令 */
+    uint8_t mode;           /* 模式选择，默认0 自动 */
 } Command_TypeDef;
 
 typedef struct
@@ -104,7 +103,6 @@ HAL_StatusTypeDef Zigbee_Receive(ZigbeeHandle_TypeDef *zigbee, ZigbeeData_TypeDe
  * @note   须在周期性任务中调用，建议周期 ≤ 100ms
  */
 void Zigbee_ErrorHandler(ZigbeeHandle_TypeDef *zigbee);
-void Zigbee_SendAT(ZigbeeHandle_TypeDef *zigbee, const char *command);
 
 /* 供上层在HAL_UARTEx_RxEventCallback中调用(huart匹配ZIGBEE_UART_HANDLE时):解析本次DMA空闲线
    事件收到的数据并重新挂起下一次接收;HAL回调全局唯一,不能在本文件内直接实现,由bsp_callback.c

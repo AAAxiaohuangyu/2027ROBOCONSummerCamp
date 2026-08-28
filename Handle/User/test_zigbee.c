@@ -27,9 +27,9 @@ static void test_data_generate(ZigbeeData_TypeDef *data, uint32_t sequence)
     data->chassis.speed_vx = (int16_t)(100 + offset);
     data->chassis.speed_vy = (int16_t)(-50 - offset);
     data->chassis.omega = (int16_t)(sequence % 3U);
-    data->joint.front_back = (int16_t)(10 + offset);
-    data->joint.up_down = (int16_t)(-20 - offset);
-    data->joint.flip = (int16_t)(30 + offset);
+    data->joint.front_back = (float)(10 + offset);
+    data->joint.up_down = (float)(-20 - offset);
+    data->joint.flip = (float)(30 + offset);
     data->command.grab = (uint8_t)((sequence / 2U) & 0x01U);
     data->command.emergency_stop = ((sequence % 100U) == 99U) ? 1U : 0U;
 }
@@ -54,11 +54,8 @@ static uint8_t test_data_compare(const ZigbeeData_TypeDef *tx_data, const Zigbee
     
     if (tx_data->joint.front_back != rx_data->joint.front_back)
         return 0U;
-    
-
     if (tx_data->joint.up_down != rx_data->joint.up_down)
         return 0U;
-
     if (tx_data->joint.flip != rx_data->joint.flip)
 
         return 0U;

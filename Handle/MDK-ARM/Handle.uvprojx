@@ -18,7 +18,7 @@
           <Vendor>STMicroelectronics</Vendor>
           <PackID>Keil.STM32F1xx_DFP.2.3.0</PackID>
           <PackURL>http://www.keil.com/pack/</PackURL>
-          <Cpu>IRAM(0x20000000-0x2000FFFF) IROM(0x8000000-0x807FFFF) CLOCK(8000000) CPUTYPE("Cortex-M3")</Cpu>
+          <Cpu>IRAM(0x20000000-0x2000FFFF) IROM(0x8000000-0x807FFFF)  CLOCK(8000000) CPUTYPE("Cortex-M3")</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
           <StartupFile></StartupFile>
           <FlashDriverDll></FlashDriverDll>
@@ -48,7 +48,7 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>Handle\</OutputDirectory>
+          <OutputDirectory>..\Build\</OutputDirectory>
           <OutputName>Handle</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
@@ -336,7 +336,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;..\User</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../User</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -541,6 +541,21 @@
           <GroupName>User</GroupName>
           <Files>
             <File>
+              <FileName>process.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\process.c</FilePath>
+            </File>
+            <File>
+              <FileName>zigbee.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\zigbee.c</FilePath>
+            </File>
+            <File>
+              <FileName>test_zigbee.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\test_zigbee.c</FilePath>
+            </File>
+            <File>
               <FileName>font.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\font.c</FilePath>
@@ -549,21 +564,6 @@
               <FileName>oled.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\oled.c</FilePath>
-            </File>
-            <File>
-              <FileName>process.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\process.c</FilePath>
-            </File>
-            <File>
-              <FileName>test_zigbee.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\test_zigbee.c</FilePath>
-            </File>
-            <File>
-              <FileName>zigbee.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\zigbee.c</FilePath>
             </File>
           </Files>
         </Group>

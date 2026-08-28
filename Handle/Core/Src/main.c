@@ -27,7 +27,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "zigbee.h"
+#include "process.h"
+#include "font.h"
+#include "oled.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,7 +51,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+static ZigbeeHandle_TypeDef g_zigbee;
+static SendData_t g_handle_data;
+static ZigbeeData_TypeDef g_zigbee_data;
+volatile HAL_StatusTypeDef tx_status = HAL_ERROR;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,13 +104,49 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  Handle_Init();
+  if (Zigbee_Init(&g_zigbee) != HAL_OK)
+  {
+    Error_Handler();
+  }
+	
+	OLED_Init();
+	
+	OLED_NewFrame();
+	OLED_PrintString(5, 0,"stop  mode grip", &font16x16, OLED_COLOR_NORMAL);
+	OLED_PrintString(5, 20,"pFlip up   forw", &font16x16, OLED_COLOR_NORMAL);
+	OLED_PrintString(5, 40,"nFlip down bFor", &font16x16, OLED_COLOR_NORMAL);
+	OLED_ShowFrame();
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		static uint32_t last_process_tick = 0U;
+    uint32_t now = HAL_GetTick();
+
+    /* 50 Hz ????(20 ms):?? ADC/??????? ZigBee ??? */
+    if ((uint32_t)(now - last_process_tick) >= 20U)
+    {
+      last_process_tick = now;
+      HandleOrderProcess(&g_handle_data);
+
+      /* ?????????? ZigBee ????????? 0.001 ??? */
+      g_zigbee_data.chassis.speed_vx = g_handle_data.ChassisData.chassis_vx;
+      g_zigbee_data.chassis.speed_vy = g_handle_data.ChassisData.chassis_vy;
+      g_zigbee_data.chassis.omega = g_handle_data.ChassisData.chassis_omega;
+      g_zigbee_data.joint.front_back = g_handle_data.ArmData.joint_front_back;
+      g_zigbee_data.joint.up_down = g_handle_data.ArmData.joint_up_down;
+      g_zigbee_data.joint.flip = g_handle_data.ArmData.joint_flip;
+      g_zigbee_data.command.grab = g_handle_data.ArmData.arm_grip;
+      g_zigbee_data.command.emergency_stop = g_handle_data.ArmData.emergency_stop;
+      g_zigbee_data.command.mode = g_handle_data.ArmData.mode;
+
+      tx_status = Zigbee_Send(&g_zigbee, &g_zigbee_data);
+      Zigbee_ErrorHandler(&g_zigbee);
+		}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
