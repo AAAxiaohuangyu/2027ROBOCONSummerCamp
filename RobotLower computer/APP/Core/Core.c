@@ -3,6 +3,8 @@
 #include "chassis_config.h"
 #include "ControlAlgorithm.h"
 #include "cmsis_os2.h"
+#include "usart.h"
+#include <string.h>
 
 Robot_TypeDef Robot = {0};
 

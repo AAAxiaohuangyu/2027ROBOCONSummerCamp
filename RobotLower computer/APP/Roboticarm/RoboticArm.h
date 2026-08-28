@@ -40,17 +40,11 @@
 #define STRATEGYALGORITHM_GRAVITY_ACCEL (9.8f) /* 重力加速度,m/s^2 */
 #define GravityCompensationLift (LOAD_MASS * STRATEGYALGORITHM_GRAVITY_ACCEL * ROBOTICARM_LIFT_K)
 
-/* go_motors组内电机下标:0=前后平移机构(控制end_x) */
-enum
-{
-   ROBOTICARM_GO_FORWARD = 0,
-};
-
 typedef struct
 {
-   J60Motor_TypeDef lift_motor;    /* 升降机构电机,控制高度end_z */
-   GOM8010Group_TypeDef go_motors; /* 前后平移GO电机,下标见ROBOTICARM_GO_* */
-   Servo_TypeDef rotate_servo;    /* 杆自转舵机*/
+   J60Motor_TypeDef lift_motor;       /* 升降机构电机,控制高度end_z */
+   GOM8010Motor_TypeDef forward_motor; /* 前后平移GO电机,控制end_x */
+   Servo_TypeDef rotate_servo;        /* 杆自转舵机*/
 
    float end_x;        /* 末端点x坐标(底盘坐标系),由前后机构位置换算得到 */
    float end_y;        /* 末端点y坐标(底盘坐标系),固定为0 */
@@ -80,7 +74,7 @@ void RoboticArmSetRodRotation(RoboticArm_TypeDef *arm, float rotation_target);
 
 /* 周期调用:推进升降/前后两个电机的规划并发送控制帧,同时按最新反馈更新
    arm->end_x/end_y/end_z,并将rotate_servo->angle同步到arm->rod_rotation;
-   调用前需已通过J60MotorParseFeedback/GOM8010GroupRxEvent更新对应电机反馈 */
+   调用前需已通过J60MotorParseFeedback/GOM8010MotorRxEvent更新对应电机反馈 */
 void RoboticArmUpdate(RoboticArm_TypeDef *arm);
 
 /* 使能/失能升降机构(J60);前后机构(GO电机)、自转机构(舵机)无需单独使能 */

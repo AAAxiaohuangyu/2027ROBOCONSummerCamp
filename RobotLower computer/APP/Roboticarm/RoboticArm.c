@@ -6,7 +6,7 @@
 static void
 RoboticArmUpdateStateFromFeedback(RoboticArm_TypeDef *arm)
 {
-    const GOM8010Feedback_TypeDef *forward_feedback = &arm->go_motors.motors[ROBOTICARM_GO_FORWARD].feedback;
+    const GOM8010Feedback_TypeDef *forward_feedback = &arm->forward_motor.feedback;
     float height = ROBOTICARM_LIFT_K * arm->lift_motor.feedback.position;
     float distance = ROBOTICARM_FORWARD_K * forward_feedback->position;
 
@@ -22,8 +22,7 @@ void RoboticArmInit(RoboticArm_TypeDef *arm,
 {
     J60MotorInit(&arm->lift_motor, lift_FDCAN_Handle, lift_id);
 
-    GOM8010GroupInit(&arm->go_motors);
-    GOM8010GroupAddMotor(&arm->go_motors, forward_id, forward_huart);
+    GOM8010MotorInit(&arm->forward_motor, forward_id, forward_huart);
 
     ServoInit(&arm->rotate_servo, htim, channel);
 
@@ -41,7 +40,7 @@ void RoboticArmSetEndPosition(RoboticArm_TypeDef *arm, float end_x_target, float
 
     J60MotorSetTarget(&arm->lift_motor, theta_lift_target);
     J60MotorSetTorqueFeedforward(&arm->lift_motor, lift_torque_feedforward);
-    GOM8010GroupSetTarget(&arm->go_motors, ROBOTICARM_GO_FORWARD, theta_forward_target);
+    GOM8010MotorSetTarget(&arm->forward_motor, theta_forward_target);
 }
 
 void RoboticArmSetRodRotation(RoboticArm_TypeDef *arm, float rotation_target)
@@ -54,7 +53,7 @@ void RoboticArmUpdate(RoboticArm_TypeDef *arm)
     while (1)
     {
         J60MotorUpdate(&arm->lift_motor);
-        GOM8010GroupUpdate(&arm->go_motors);
+        GOM8010MotorUpdate(&arm->forward_motor);
         ServoAngleUpdate(&arm->rotate_servo);
 
         RoboticArmUpdateStateFromFeedback(arm);

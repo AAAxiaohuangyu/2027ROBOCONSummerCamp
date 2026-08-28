@@ -34,8 +34,8 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
 
-        GasPumpOn();
-        CLY_On();
+        //GasPumpOn();
+        //CLY_On();
 
         *flip_state = FLIP_STATE_FORWARD_WAIT;
 

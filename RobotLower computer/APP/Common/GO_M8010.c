@@ -1,5 +1,6 @@
 #include "GO_M8010.h"
 #include <string.h>
+#include "Core.h"
 
 #define SATURATE(_IN, _MIN, _MAX) \
     do {                           \
@@ -101,16 +102,6 @@ static float go_m8010_position_output_to_rotor(float position_output)
 }
 
 /* 转子侧->输出端:与上面互为逆运算 */
-static float go_m8010_torque_rotor_to_output(float torque_rotor)
-{
-    return torque_rotor * GO_M8010_REDUCTION_RATIO;
-}
-
-static float go_m8010_speed_rotor_to_output(float speed_rotor)
-{
-    return speed_rotor / GO_M8010_REDUCTION_RATIO;
-}
-
 static float go_m8010_position_rotor_to_output(float position_rotor)
 {
     return position_rotor / GO_M8010_REDUCTION_RATIO;
@@ -171,134 +162,66 @@ static void GOM8010PackControlFrame(GOM8010Motor_TypeDef *motor)
     go_m8010_put_u16_le(&frame[15], crc);
 }
 
-/* 解析16字节反馈帧:校验帧头与CRC后提取torque/speed/position及状态量;第一帧的原始position作为
-   软件零点(position_offset),之后每帧position均减去该offset */
-static void GOM8010ParseFeedbackFrame(GOM8010Feedback_TypeDef *feedback)
+/* 校验16字节反馈帧并提取位置；第一帧作为软件零点。 */
+static uint8_t GOM8010ParseFeedbackFrame(GOM8010Feedback_TypeDef *feedback, const uint8_t *frame)
 {
-    const uint8_t *frame = feedback->packet.bytes;
     uint16_t received_crc;
-    uint16_t status_force;
-    int16_t torque_raw;
-    int16_t speed_raw;
+    uint16_t calculated_crc;
     int32_t position_raw;
     float position_output;
 
-    feedback->valid = 0U;
-    if ((frame[0] != 0xFDU) || (frame[1] != 0xEEU)) /* 反馈帧帧头 */
-    {
-        feedback->bad_msg++;
-        return;
-    }
+    if ((frame[0] != 0xFDU) || (frame[1] != 0xEEU))
+        return 0U;
 
-    feedback->calc_crc = crc_ccitt(0U, frame, 14U); /* CRC覆盖前14字节 */
+    calculated_crc = crc_ccitt(0U, frame, 14U);
     received_crc = go_m8010_get_u16_le(&frame[14]);
-    if (received_crc != feedback->calc_crc)
-    {
-        feedback->bad_msg++;
-        return;
-    }
+    if (received_crc != calculated_crc)
+        return 0U;
 
-    torque_raw = (int16_t)go_m8010_get_u16_le(&frame[3]);
-    speed_raw = (int16_t)go_m8010_get_u16_le(&frame[5]);
     position_raw = (int32_t)go_m8010_get_u32_le(&frame[7]);
-    status_force = go_m8010_get_u16_le(&frame[12]);
-
-    feedback->mode = (frame[2] >> 4) & 0x07U;
-    feedback->timeout = (frame[2] >> 7) & 0x01U;
-    feedback->temp = (int8_t)frame[11];
-    feedback->error = status_force & 0x07U;          /* 低3位:故障码 */
-    feedback->force = (status_force >> 3) & 0x0FFFU; /* 高12位:末端力传感器读数 */
-    feedback->torque = go_m8010_torque_rotor_to_output((float)torque_raw / 256.0f);
-    feedback->speed = go_m8010_speed_rotor_to_output((float)speed_raw / 256.0f * PI2);
-
     position_output = go_m8010_position_rotor_to_output((float)position_raw / 32768.0f * PI2);
-    if (feedback->update_cnt == 0U)
+    if (feedback->position_initialized == 0U)
+    {
         feedback->position_offset = position_output;
+        feedback->position_initialized = 1U;
+    }
 
     feedback->position = position_output - feedback->position_offset;
-    feedback->update_cnt++;
-    feedback->valid = 1U;
-}
-
-static void GOM8010MotorSendControl(GOM8010Motor_TypeDef *motor)
-{
-    GOM8010PackControlFrame(motor);
-    HAL_UART_Transmit_DMA(motor->huart, motor->control.packet.bytes, GO_M8010_CONTROL_FRAME_SIZE);
+    return 1U;
 }
 
 static void GOM8010MotorParseFeedback(GOM8010Motor_TypeDef *motor, uint16_t size)
 {
-    if (size != GO_M8010_FEEDBACK_FRAME_SIZE)
+    uint16_t offset;
+    const uint8_t *latest_frame = NULL;
+
+    if (size > GO_M8010_RX_DMA_BUFFER_SIZE)
+        size = GO_M8010_RX_DMA_BUFFER_SIZE;
+
+    for (offset = 0U; (offset + GO_M8010_FEEDBACK_FRAME_SIZE) <= size; offset++)
     {
-        motor->feedback.valid = 0U;
-        motor->feedback.bad_msg++;
-        return;
+        if (GOM8010ParseFeedbackFrame(&motor->feedback, &motor->feedback.packet.bytes[offset]) != 0U)
+        {
+            latest_frame = &motor->feedback.packet.bytes[offset];
+        }
     }
 
-    GOM8010ParseFeedbackFrame(&motor->feedback);
+    if (latest_frame != NULL)
+        memmove(motor->feedback.packet.bytes, latest_frame, GO_M8010_FEEDBACK_FRAME_SIZE);
 }
 
-/* 尝试为group内index号电机发起一次请求(打包控制帧+发送+挂起本电机的接收缓冲区)。同一总线
-   上还有其他电机的应答未到/未超时,或刚轮到过本电机、总线上还有别的电机没轮到时,本次跳过不
-   发送,返回0;发送成功返回1 */
-static uint8_t GOM8010GroupRequest(GOM8010Group_TypeDef *group, uint8_t index)
+static void GOM8010MotorStartRx(GOM8010Motor_TypeDef *motor)
 {
-    GOM8010Motor_TypeDef *motor = &group->motors[index];
-    GOM8010BusArbiter_TypeDef *bus = &group->arbiter;
-    uint32_t now;
-
-    if (motor->huart == NULL)
-        return 0U;
-
-    now = HAL_GetTick();
-
-    if (bus->pending_motor != NULL)
-    {
-        if ((now - bus->request_tick) < GO_M8010_BUS_TIMEOUT_MS)
-            return 0U; /* 总线忙,别的电机应答还没到/没超时 */
-
-        /* 上一笔请求应答超时,视为丢失,释放总线让给下一个电机 */
-        bus->pending_motor->feedback.valid = 0U;
-        bus->pending_motor->feedback.bad_msg++;
-        bus->pending_motor = NULL;
-    }
-
-    if (bus->motor_count > 1U && bus->last_motor == motor)
-        return 0U; /* 总线上还有别的电机没轮到,先让给它,避免本电机连续独占总线 */
-
-    GOM8010MotorSendControl(motor);
-    /* 反馈帧长度固定已知,改用定长DMA接收(HAL_UART_Receive_DMA),避免电机内部分两段发送时
-       中间的短暂间隙被误判为空闲线(IDLE)从而提前把一帧切断——凑满GO_M8010_FEEDBACK_FRAME_SIZE
-       字节才会触发HAL_UART_RxCpltCallback,不受发送节奏影响 */
-    if (HAL_UART_Receive_DMA(motor->huart, motor->feedback.packet.bytes, GO_M8010_FEEDBACK_FRAME_SIZE) != HAL_OK)
-        return 0U;
-
-    bus->pending_motor = motor;
-    bus->last_motor = motor;
-    bus->request_tick = now;
-    return 1U;
+    HAL_UARTEx_ReceiveToIdle_DMA(motor->huart, motor->feedback.packet.bytes, GO_M8010_RX_DMA_BUFFER_SIZE);
+    __HAL_DMA_DISABLE_IT(motor->huart->hdmarx, DMA_IT_HT);
 }
 
-void GOM8010GroupInit(GOM8010Group_TypeDef *group)
+void GOM8010MotorInit(GOM8010Motor_TypeDef *motor, uint8_t id, UART_HandleTypeDef *huart)
 {
-    memset(group, 0, sizeof(*group));
-}
-
-uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_HandleTypeDef *huart)
-{
-    uint8_t index;
-    GOM8010Motor_TypeDef *motor;
-
-    if (group->motor_count >= GOM8010_GROUP_MAX_MOTORS)
-        return 0xFFU;
-
-    index = group->motor_count;
-    motor = &group->motors[index];
-
     memset(motor, 0, sizeof(*motor));
     motor->id = id;
     motor->huart = huart;
-    motor->control.mode = 1U; /* 默认FOC闭环(力位速混合控制),GO电机通常无需切换其他模式 */
+    motor->control.mode = 1U;
 
     motor->control.position_param.a_max = GO_M8010_POS_CTRL_A_MAX;
     motor->control.position_param.v_max = GO_M8010_POS_CTRL_V_MAX;
@@ -312,99 +235,69 @@ uint8_t GOM8010GroupAddMotor(GOM8010Group_TypeDef *group, uint8_t id, UART_Handl
     motor->control.ctrl_mode = GOM8010_CTRL_MODE_POSITION;
     motor->control.kp = motor->control.position_param.kp;
     motor->control.kd = motor->control.position_param.kd;
-    motor->control.position_target = 0.0f;
 
-    group->arbiter.motor_count++;
-    group->motor_count++;
-    return index;
+    GOM8010MotorStartRx(motor);
 }
 
-void GOM8010GroupSetTarget(GOM8010Group_TypeDef *group, uint8_t index, float position_target)
+void GOM8010MotorSetTarget(GOM8010Motor_TypeDef *motor, float position_target)
 {
-    GOM8010Control_TypeDef *control = &group->motors[index].control;
-
-    control->ctrl_mode = GOM8010_CTRL_MODE_POSITION;
-    control->position_target = position_target;
-    control->plan.state = init; /* 触发(重新)规划,运动中调用即为打断 */
+    motor->control.ctrl_mode = GOM8010_CTRL_MODE_POSITION;
+    motor->control.position_target = position_target;
+    motor->control.plan.state = init;
 }
 
-void GOM8010GroupSetVelocityTarget(GOM8010Group_TypeDef *group, uint8_t index, float velocity_target)
+void GOM8010MotorSetVelocityTarget(GOM8010Motor_TypeDef *motor, float velocity_target)
 {
-    GOM8010Control_TypeDef *control = &group->motors[index].control;
-
-    control->ctrl_mode = GOM8010_CTRL_MODE_VELOCITY;
-    control->velocity_target = velocity_target;
+    motor->control.ctrl_mode = GOM8010_CTRL_MODE_VELOCITY;
+    motor->control.velocity_target = velocity_target;
 }
 
-void GOM8010GroupSetTorqueFeedforward(GOM8010Group_TypeDef *group, uint8_t index, float torque_feedforward)
+void GOM8010MotorSetTorqueFeedforward(GOM8010Motor_TypeDef *motor, float torque_feedforward)
 {
-    group->motors[index].control.torque_feedforward = torque_feedforward;
+    motor->control.torque_feedforward = torque_feedforward;
 }
 
-void GOM8010GroupUpdate(GOM8010Group_TypeDef *group)
+void GOM8010MotorUpdate(GOM8010Motor_TypeDef *motor)
 {
-    uint8_t i;
+    GOM8010Control_TypeDef *control = &motor->control;
+    float position_actual = motor->feedback.position;
 
-    for (i = 0U; i < group->motor_count; i++)
+    control->mode = 1U;
+    control->timeout = 0U;
+    control->torque = control->torque_feedforward;
+
+    if (control->ctrl_mode == GOM8010_CTRL_MODE_VELOCITY)
     {
-        GOM8010Motor_TypeDef *motor = &group->motors[i];
-        GOM8010Control_TypeDef *control = &motor->control;
-        float position_actual = motor->feedback.position; /* 电机RS485反馈的真实位置 */
-
-        /* 力位速混合控制:torque前馈由上层指定,叠加到kp/kd跟踪输出上 */
-        control->mode = 1u; /* FOC闭环,力位速混合控制(硬件模式,与ctrl_mode无关) */
-        control->timeout = 0u;
-        control->torque = control->torque_feedforward;
-
-        if (control->ctrl_mode == GOM8010_CTRL_MODE_VELOCITY)
-        {
-            /* 定速模式:不做位置规划,kp=0仅由kd跟踪目标速度;position取反馈实际位置,kp=0时不影响输出扭矩 */
-            control->kp = control->velocity_param.kp;
-            control->kd = control->velocity_param.kd;
-            control->position = position_actual;
-            control->speed = control->velocity_target;
-        }
-        else
-        {
-            SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
-
-            control->kp = control->position_param.kp;
-            control->kd = control->position_param.kd;
-            control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
-            control->speed = control->plan.v * control->plan.direction_flag;
-        }
-
-        /* 半双工RS485总线上可能与其他电机共享huart,总线忙时本周期不发送,下一次空闲即发最新目标 */
-        GOM8010GroupRequest(group, i);
+        control->kp = control->velocity_param.kp;
+        control->kd = control->velocity_param.kd;
+        control->position = position_actual;
+        control->speed = control->velocity_target;
     }
+    else
+    {
+        SpeedPlanUpdate(&control->plan, position_actual, control->position_target);
+        control->kp = control->position_param.kp;
+        control->kd = control->position_param.kd;
+        control->position = control->plan.position_initial + control->plan.direction_flag * control->plan.s;
+        control->speed = control->plan.v * control->plan.direction_flag;
+    }
+
+    GOM8010PackControlFrame(motor);
+    HAL_UART_Transmit_DMA(motor->huart, control->packet.bytes, GO_M8010_CONTROL_FRAME_SIZE);
 }
 
-void GOM8010GroupRxEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart, uint16_t size)
+void GOM8010MotorRxEvent(GOM8010Motor_TypeDef *motor, UART_HandleTypeDef *huart, uint16_t size)
 {
-    GOM8010BusArbiter_TypeDef *bus = &group->arbiter;
-
-    if (huart == NULL || bus->pending_motor == NULL || bus->pending_motor->huart == NULL ||
-        bus->pending_motor->huart->Instance != huart->Instance)
-        return; /* 不是本组总线的事件,或总线上没有电机在等应答(意外/迟到事件),丢弃 */
-
-    GOM8010MotorParseFeedback(bus->pending_motor, size);
-    bus->pending_motor = NULL; /* 释放总线,供下一个电机的请求使用 */
+    if (huart == NULL || motor->huart == NULL || motor->huart->Instance != huart->Instance)
+        return;
+    GOM8010MotorParseFeedback(motor, size);
+    GOM8010MotorStartRx(motor);
 }
 
-void GOM8010GroupRxErrorEvent(GOM8010Group_TypeDef *group, UART_HandleTypeDef *huart)
+void GOM8010MotorRxErrorEvent(GOM8010Motor_TypeDef *motor, UART_HandleTypeDef *huart)
 {
-    GOM8010BusArbiter_TypeDef *bus = &group->arbiter;
+    if (huart == NULL || motor->huart == NULL || motor->huart->Instance != huart->Instance)
+        return;
 
-    if (huart == NULL || bus->pending_motor == NULL || bus->pending_motor->huart == NULL ||
-        bus->pending_motor->huart->Instance != huart->Instance)
-        return; /* 不是本组总线的事件,或总线上没有电机在等应答(意外事件),丢弃 */
-
-    /* DMA接收模式下,溢出/帧/噪声等错误均被HAL当作阻塞错误处理:HAL_UART_IRQHandler内部已经
-       中止了本笔DMA接收并将RxState还原为READY(见UART_EndRxTransfer+HAL_DMA_Abort_IT),故此处
-       不需要重新挂起接收——只需提前释放总线,下一次GOM8010GroupUpdate即会为轮到的电机重新发起
-       请求并挂起接收。不在此提前释放的话,也会在GO_M8010_BUS_TIMEOUT_MS后被GOM8010GroupRequest
-       的超时逻辑释放,但会让总线上的其他电机多等这段时间 */
-    bus->pending_motor->feedback.valid = 0U;
-    bus->pending_motor->feedback.bad_msg++;
-    bus->pending_motor = NULL;
+    GOM8010MotorStartRx(motor);
 }

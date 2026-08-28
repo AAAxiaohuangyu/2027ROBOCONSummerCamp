@@ -58,11 +58,17 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
     }
 }
 
-/* UART空闲线收到一帧:按huart实例分发。GO电机反馈帧已改用定长DMA接收(HAL_UART_RxCpltCallback,
-   见下方),不再经本回调,故此处只保留ZigBee/Vision两路仍在用HAL_UARTEx_ReceiveToIdle_DMA(变长)
-   的模块。HAL回调全局唯一,故所有使用该机制的模块都需经本函数分发,不能各自定义 */
+/* UART空闲线或DMA满缓冲收到数据后按huart实例分发。GO电机使用32字节Receive-to-Idle DMA，
+   在回调中扫描帧头和CRC均正确的16字节反馈帧；ZigBee/Vision仍按各自协议解析变长数据。 */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
+    if (Robot.roboticarm.forward_motor.huart != NULL &&
+        huart->Instance == Robot.roboticarm.forward_motor.huart->Instance)
+    {
+        GOM8010MotorRxEvent(&Robot.roboticarm.forward_motor, huart, Size);
+        return;
+    }
+
     if (huart->Instance == ZIGBEE_UART_HANDLE.Instance)
     {
         Zigbee_RxEventHandler(&Robot.zigbee, huart, Size);
@@ -76,19 +82,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     }
 }
 
-/* GO电机反馈帧长度固定已知,改用定长DMA接收(HAL_UART_Receive_DMA)后,一帧收完由该回调
-   触发(而不是走上面基于空闲线的HAL_UARTEx_RxEventCallback),size固定传GO_M8010_FEEDBACK_FRAME_SIZE。
-   ZigBee/Vision仍用HAL_UARTEx_ReceiveToIdle_DMA(变长),不会触发本回调,故此处无需判断huart实例 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    GOM8010GroupRxEvent(&Robot.roboticarm.go_motors, huart, GO_M8010_FEEDBACK_FRAME_SIZE);
-}
-
-/* UART接收出现溢出/帧/噪声等错误:DMA接收模式下HAL会把该错误当作阻塞错误处理,自动中止
-   当前DMA接收并将RxState还原为READY,若不在此重新挂起,对应串口会永久停止接收。
-   ZigBee/Vision在此重新挂起DMA接收;forward/rotate两个GO电机改用DMA接收反馈帧后,同样的
-   错误会中止其挂起的接收,故也需在此按总线仲裁表提前释放总线(GOM8010GroupRxErrorEvent
-   内部按huart实例匹配,不是本组总线的事件会被忽略,故可以无条件调用) */
+/* UART接收出现溢出/帧/噪声等错误:DMA接收模式下HAL会中止当前DMA接收并将RxState还原为READY。
+   ZigBee/Vision和GO电机均在此立即重新挂起DMA接收。 */
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == ZIGBEE_UART_HANDLE.Instance)
@@ -103,5 +98,5 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
         return;
     }
 
-    GOM8010GroupRxErrorEvent(&Robot.roboticarm.go_motors, huart);
+    GOM8010MotorRxErrorEvent(&Robot.roboticarm.forward_motor, huart);
 }
