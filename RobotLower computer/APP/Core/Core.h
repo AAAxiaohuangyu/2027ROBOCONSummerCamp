@@ -9,6 +9,7 @@
 #include "yis512.h"
 #include "Servo.h"
 #include "flip.h"
+#include "Pickup.h"
 
 /* 转弯提前系数(无量纲):RobotStateUpdateTask处于WAIT_MOVE_X状态时,判断是否可以
    切换到START_MOVE_Y所用的容差为该系数乘以x轴当前速度对应的S曲线减速距离
@@ -50,8 +51,7 @@ typedef enum
    ROBOT_STATE_WAIT_MOVE_9,
    ROBOT_STATE_MANUAL,
    ROBOT_STATE_DONE,
-}
-RobotState_TypeDef;
+} RobotState_TypeDef;
 
 /* 顶层状态机周期,单位ms */
 #define ROBOT_STATE_UPDATE_PERIOD_MS (5U)
@@ -69,12 +69,10 @@ typedef struct
     ZigbeeHandle_TypeDef zigbee;
     VisionHandle_TypeDef vision;
     Yis512_TypeDef yis512;
-    FlipState_TypeDef flip;
+    Flip_TypeDef flip;
+    Pickup_TypeDef pickup;
     RobotState_TypeDef state;
     uint32_t time_stamp;
-    /* 由RobotStateUpdateTask根据当前是否处于ROBOT_STATE_FLIIP阶段置位/清零,
-       RobotFlipUpdateTask据此决定本周期是否推进flip状态机 */
-    uint8_t flip_active;
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
@@ -99,8 +97,11 @@ void RobotStateUpdateTask(void *argument);
 
 void RobotServoUpdateTask(void *argument);
 
-/* RTOS任务入口:独立推进flip状态机,仅在Robot.flip_active(由RobotStateUpdateTask的
+/* RTOS任务入口:独立推进flip状态机,仅在Robot.flip.active(由RobotStateUpdateTask的
    ROBOT_STATE_FLIIP阶段置位)为真时才调用RoboticArmFlipMotion */
 void RobotFlipUpdateTask(void *argument);
+
+/* RTOS任务入口:按六个pickup请求标志依次推进对应的抓取状态机。 */
+void RobotPickupUpdateTask(void *argument);
 
 #endif

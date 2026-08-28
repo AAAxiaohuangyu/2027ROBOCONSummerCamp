@@ -79,6 +79,13 @@ const osThreadAttr_t RobotFlipUpdateTask_attributes = {
     .stack_size = 256 * 10,
     .priority = (osPriority_t)osPriorityNormal,
 };
+
+osThreadId_t RobotPickupUpdateTaskHandle;
+const osThreadAttr_t RobotPickupUpdateTask_attributes = {
+    .name = "RobotPickupUpdateTask",
+    .stack_size = 256 * 10,
+    .priority = (osPriority_t)osPriorityNormal,
+};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -134,6 +141,7 @@ void MX_FREERTOS_Init(void) {
   RobotStateUpdateTaskHandle = osThreadNew(RobotStateUpdateTask, NULL, &RobotStateUpdateTask_attributes);
   RobotRoboticArmUpdateTaskHandle = osThreadNew(RobotRoboticArmUpdateTask, NULL, &RobotRoboticArmUpdateTask_attributes);
   RobotFlipUpdateTaskHandle = osThreadNew(RobotFlipUpdateTask, NULL, &RobotFlipUpdateTask_attributes);
+  RobotPickupUpdateTaskHandle = osThreadNew(RobotPickupUpdateTask, NULL, &RobotPickupUpdateTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 

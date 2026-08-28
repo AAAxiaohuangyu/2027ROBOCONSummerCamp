@@ -118,10 +118,96 @@ void RobotFlipUpdateTask(void *argument)
 
     for (;;)
     {
-        if (Robot.flip_active)
+        if (Robot.flip.active)
         {
-            RoboticArmFlipMotion(&Robot.roboticarm, &Robot.chassis, &Robot.flip);
+            RoboticArmFlipMotion(&Robot.roboticarm, &Robot.chassis, &Robot.flip.state);
         }
+        osDelay(ROBOT_STATE_UPDATE_PERIOD_MS);
+    }
+}
+
+void RobotPickupUpdateTask(void *argument)
+{
+    PickupTaskAction_TypeDef action = PICKUP_TASK_ACTION_NONE;
+
+    (void)argument;
+
+    for (;;)
+    {
+        if (action == PICKUP_TASK_ACTION_NONE && Robot.pickup.state == PICKUP_STATE_VOID)
+        {
+            if (Robot.pickup.store_low_low_request)
+            {
+                Robot.pickup.store_low_low_request = 0U;
+                action = PICKUP_TASK_ACTION_STORE_LOW_LOW;
+            }
+            else if (Robot.pickup.store_low_high_request)
+            {
+                Robot.pickup.store_low_high_request = 0U;
+                action = PICKUP_TASK_ACTION_STORE_LOW_HIGH;
+            }
+            else if (Robot.pickup.store_high_low_request)
+            {
+                Robot.pickup.store_high_low_request = 0U;
+                action = PICKUP_TASK_ACTION_STORE_HIGH_LOW;
+            }
+            else if (Robot.pickup.store_high_high_request)
+            {
+                Robot.pickup.store_high_high_request = 0U;
+                action = PICKUP_TASK_ACTION_STORE_HIGH_HIGH;
+            }
+            else if (Robot.pickup.hold_low_request)
+            {
+                Robot.pickup.hold_low_request = 0U;
+                action = PICKUP_TASK_ACTION_HOLD_LOW;
+            }
+            else if (Robot.pickup.hold_high_request)
+            {
+                Robot.pickup.hold_high_request = 0U;
+                action = PICKUP_TASK_ACTION_HOLD_HIGH;
+            }
+
+            if (action != PICKUP_TASK_ACTION_NONE)
+            {
+                Robot.pickup.state = PICKUP_STATE_RAISE;
+            }
+        }
+
+        switch (action)
+        {
+        case PICKUP_TASK_ACTION_STORE_LOW_LOW:
+            RoboticArmPickupStoreLowMotion(&Robot.roboticarm, &Robot.pickup.state, PICKUP_HEIGHT_LOW);
+            break;
+
+        case PICKUP_TASK_ACTION_STORE_LOW_HIGH:
+            RoboticArmPickupStoreLowMotion(&Robot.roboticarm, &Robot.pickup.state, PICKUP_HEIGHT_HIGH);
+            break;
+
+        case PICKUP_TASK_ACTION_STORE_HIGH_LOW:
+            RoboticArmPickupStoreHighMotion(&Robot.roboticarm, &Robot.pickup.state, PICKUP_HEIGHT_LOW);
+            break;
+
+        case PICKUP_TASK_ACTION_STORE_HIGH_HIGH:
+            RoboticArmPickupStoreHighMotion(&Robot.roboticarm, &Robot.pickup.state, PICKUP_HEIGHT_HIGH);
+            break;
+
+        case PICKUP_TASK_ACTION_HOLD_LOW:
+            RoboticArmPickupHoldMotion(&Robot.roboticarm, &Robot.pickup.state, PICKUP_HEIGHT_LOW);
+            break;
+
+        case PICKUP_TASK_ACTION_HOLD_HIGH:
+            RoboticArmPickupHoldMotion(&Robot.roboticarm, &Robot.pickup.state, PICKUP_HEIGHT_HIGH);
+            break;
+
+        default:
+            break;
+        }
+
+        if (action != PICKUP_TASK_ACTION_NONE && Robot.pickup.state == PICKUP_STATE_VOID)
+        {
+            action = PICKUP_TASK_ACTION_NONE;
+        }
+
         osDelay(ROBOT_STATE_UPDATE_PERIOD_MS);
     }
 }
@@ -191,7 +277,7 @@ void RobotStateUpdateTask(void *argument)
         }
 
         case ROBOT_STATE_FLIIP:
-            Robot.flip_active = 1;
+            Robot.flip.active = 1;
             Robot.state = ROBOT_STATE_DONE;
             break;
 

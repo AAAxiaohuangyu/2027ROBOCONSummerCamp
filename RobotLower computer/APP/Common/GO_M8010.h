@@ -11,9 +11,9 @@
 
 #define GO_M8010_REDUCTION_RATIO 6.33f
 
-#define GO_M8010_POS_CTRL_A_MAX 120.0f
-#define GO_M8010_POS_CTRL_V_MAX 25.0f
-#define GO_M8010_POS_CTRL_J     600.0f
+#define GO_M8010_POS_CTRL_A_MAX 15.0f
+#define GO_M8010_POS_CTRL_V_MAX 4.0f
+#define GO_M8010_POS_CTRL_J     25.0f
 #define GO_M8010_POS_CTRL_KP    0.55f
 #define GO_M8010_POS_CTRL_KD    0.2f
 

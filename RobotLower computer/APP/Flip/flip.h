@@ -12,10 +12,10 @@
 
 /* 动作距离及角度，根据实际机械结构修改；旋转量与RoboticArmSetRodRotation/
    RotationReached保持一致，单位为rad(电机转角直接相等，见RoboticArm.h) */
-#define FLIP_UP_DISTANCE_1 (0.48f)
+#define FLIP_UP_DISTANCE_1 (0.58f)
 #define FLIP_FORWARD_DISTANCE_1 (0.15f)
 #define FLIP_FORWARD_DISTANCE_2 (0.35f)
-#define FLIP_UP_DISTANCE_2 (0.08f)
+#define FLIP_UP_DISTANCE_2 (0.02f)
 #define FLIP_ROTATION_ANGLE_1 (-BSP_PI) /* 180度 */
 
 #define FLIP_POSITION_TOLERANCE_X (0.015f)
@@ -46,6 +46,12 @@ typedef enum
     FLIP_STATE_BACK_AND_DOWN,
     FLIP_STATE_DONE
 } FlipState_TypeDef;
+
+typedef struct
+{
+    FlipState_TypeDef state;
+    uint8_t active;
+} Flip_TypeDef;
 
 void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, FlipState_TypeDef *flip_state);
 

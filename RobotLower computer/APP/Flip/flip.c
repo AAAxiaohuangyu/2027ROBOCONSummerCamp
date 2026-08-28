@@ -72,8 +72,8 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         break;
 
     case FLIP_STATE_CHASSIS_MOVE_RIGHT_WAIT:
-        if (ChassisTranslationReached(chassis,0.01f))
-            *flip_state = FLIP_STATE_DONE;
+        if (ChassisTranslationReached(chassis,0.02f))
+            *flip_state = FLIP_STATE_FORWARD2;
 
         break;
 

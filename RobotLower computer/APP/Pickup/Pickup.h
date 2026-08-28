@@ -26,21 +26,44 @@ typedef enum
     PICKUP_STATE_VOID = 0, /* 空闲；主控置为 RAISE 以启动一次抓取。 */
     PICKUP_STATE_RAISE,    /* 原地上升 */
     PICKUP_STATE_FORWARD,  /*移至KFS*/
-    PICKUP_STATE_GRIP,     /* 开启吸盘并根据动作类型选择后续路径。 */
-    PICKUP_STATE_RETRACT,  /* 保持抓取高度平移至储存区上方。 */
-    PICKUP_STATE_PLACE,    /* 降至低位或高位储存坐标。 */
-    PICKUP_STATE_RELEASE,  /* 仅储存动作关闭吸盘，释放 KFS。 */
-    PICKUP_STATE_RESET,    /* 放置完成后返回复位点。 */
-    PICKUP_STATE_HOLD      /* 吸盘保持开启，等待主控切换到后续任务。 */
+    PICKUP_STATE_DOWN,
+    PICKUP_STATE_GRIP,    /* 开启吸盘并根据动作类型选择后续路径。 */
+    PICKUP_STATE_RETRACT, /* 保持抓取高度平移至储存区上方。 */
+    PICKUP_STATE_PLACE,   /* 降至低位或高位储存坐标。 */
+    PICKUP_STATE_RELEASE, /* 仅储存动作关闭吸盘，释放 KFS。 */
+    PICKUP_STATE_RESET,   /* 放置完成后返回复位点。 */
+    PICKUP_STATE_HOLD     /* 吸盘保持开启，等待主控切换到后续任务。 */
 } PickupState_TypeDef;
+
+typedef enum
+{
+    PICKUP_TASK_ACTION_NONE = 0,
+    PICKUP_TASK_ACTION_STORE_LOW_LOW,
+    PICKUP_TASK_ACTION_STORE_LOW_HIGH,
+    PICKUP_TASK_ACTION_STORE_HIGH_LOW,
+    PICKUP_TASK_ACTION_STORE_HIGH_HIGH,
+    PICKUP_TASK_ACTION_HOLD_LOW,
+    PICKUP_TASK_ACTION_HOLD_HIGH
+} PickupTaskAction_TypeDef;
+
+typedef struct
+{
+    PickupState_TypeDef state;
+    volatile uint8_t store_low_low_request;
+    volatile uint8_t store_low_high_request;
+    volatile uint8_t store_high_low_request;
+    volatile uint8_t store_high_high_request;
+    volatile uint8_t hold_low_request;
+    volatile uint8_t hold_high_request;
+} Pickup_TypeDef;
 
 #define PICKUP_HEIGHT_LOW (0U)
 #define PICKUP_HEIGHT_HIGH (1U)
 
 /*
- * 主控负责 KFS 计数；每次动作开始前将 pickup_state 置为 RAISE，随后周期调用对应入口。
- * StoreLow 和 StoreHigh 都在放置后复位为 VOID；Hold 在吸附后停在 HOLD，
- * 不会调用 RoboticArmReleaseMotion，需由后续任务显式处理该 KFS。
+ 主控负责 KFS 计数；每次动作开始前将 pickup_state 置为 RAISE，随后周期调用对应入口。
+ StoreLow 和 StoreHigh 都在放置后复位为 VOID；Hold 在吸附后停在 HOLD，
+ 不会调用 RoboticArmReleaseMotion，需由后续任务显式处理该 KFS。
  */
 void RoboticArmPickupStoreLowMotion(RoboticArm_TypeDef *arm,
                                     PickupState_TypeDef *pickup_state,
