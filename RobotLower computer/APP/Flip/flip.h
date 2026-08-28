@@ -8,15 +8,15 @@
 /* 吸盘初始左边即旋转角度 */
 #define flip_start_x (0.0f)
 #define flip_start_z (0.0f)
-#define flip_start_rotation (0.0f)
+#define flip_start_rotation (BSP_PI)
 
 /* 动作距离及角度，根据实际机械结构修改；旋转量与RoboticArmSetRodRotation/
    RotationReached保持一致，单位为rad(电机转角直接相等，见RoboticArm.h) */
 #define FLIP_UP_DISTANCE_1 (0.48f)
 #define FLIP_FORWARD_DISTANCE_1 (0.15f)
 #define FLIP_FORWARD_DISTANCE_2 (0.35f)
-#define FLIP_UP_DISTANCE_2 (0.03f)
-#define FLIP_ROTATION_ANGLE_1 (BSP_PI) /* 180度 */
+#define FLIP_UP_DISTANCE_2 (0.08f)
+#define FLIP_ROTATION_ANGLE_1 (-BSP_PI) /* 180度 */
 
 #define FLIP_POSITION_TOLERANCE_X (0.015f)
 #define FLIP_POSITION_TOLERANCE_Z (0.015f)

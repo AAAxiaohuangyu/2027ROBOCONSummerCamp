@@ -34,8 +34,8 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
 
-        //GasPumpOn();
-        //CLY_On();
+        GasPumpOn();
+        CLY_On();
 
         *flip_state = FLIP_STATE_FORWARD_WAIT;
 
@@ -65,7 +65,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         break;
 
     case FLIP_STATE_CHASSIS_MOVE_RIGHT:
-        ChassisSetTranslation(chassis, 0.0f, -0.4f);
+        ChassisSetTranslation(chassis, 0.0f, -0.6f);
         //ChassisSetTranslation(chassis, 3.38f, -0.5f);
         *flip_state = FLIP_STATE_CHASSIS_MOVE_RIGHT_WAIT;
 
@@ -73,7 +73,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
 
     case FLIP_STATE_CHASSIS_MOVE_RIGHT_WAIT:
         if (ChassisTranslationReached(chassis,0.01f))
-            *flip_state = FLIP_STATE_FORWARD2;
+            *flip_state = FLIP_STATE_DONE;
 
         break;
 
@@ -123,7 +123,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         break;
 
     case FLIP_STATE_DONE:
-        GasPumpOff();
+        //GasPumpOff();
         break;
     default:
         break;
