@@ -1,6 +1,0 @@
---c99 -c --cpu Cortex-M7.fp.dp -g -O2 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../APP/Common -I ../APP/Core -I ../APP/Flip -I ../APP/Pickup -I ../APP/Chassis -I ../APP/Roboticarm -I ../APP/Vision
--I.\RTE\_RobotLower_computer
--IF:\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include
--IF:\ARM\PACK\Keil\STM32H7xx_DFP\3.1.1\Drivers\CMSIS\Device\ST\STM32H7xx\Include
--D__UVISION_VERSION="524" -D_RTE_ -DSTM32H723xx -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx
--o "robotlower computer\dma.o" --omf_browse "robotlower computer\dma.crf" --depend "robotlower computer\dma.d" "../Core/Src/dma.c"

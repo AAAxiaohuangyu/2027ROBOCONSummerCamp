@@ -189,6 +189,10 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         arm->target_x = PICKUP_TARGET_RESET_X;
         arm->target_z = pickup_start_z;
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
+        *pickup_state = PICKUP_STATE_RESET_WAIT;
+        break;
+
+    case PICKUP_STATE_RESET_WAIT:
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
         {
             *pickup_state = PICKUP_STATE_RESET1;
@@ -208,6 +212,10 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         arm->target_x = pickup_start_x;
         arm->target_z = pickup_start_z;
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
+        *pickup_state = PICKUP_STATE_RESET2_WAIT;
+        break;
+
+    case PICKUP_STATE_RESET2_WAIT:
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
         {
             *pickup_state = PICKUP_STATE_VOID;

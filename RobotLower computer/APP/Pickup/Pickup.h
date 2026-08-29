@@ -46,8 +46,10 @@ typedef enum
     PICKUP_STATE_STORE_LOW2_WAIT,
     PICKUP_STATE_RELEASE, /* 仅储存动作关闭吸盘，释放 KFS。 */
     PICKUP_STATE_RESET,   /* 放置完成后返回复位点。 */
+    PICKUP_STATE_RESET_WAIT,
     PICKUP_STATE_RESET1,
     PICKUP_STATE_RESET2,
+    PICKUP_STATE_RESET2_WAIT,
     PICKUP_STATE_HOLD /* 吸盘保持开启，等待主控切换到后续任务。 */
 } PickupState_TypeDef;
 
