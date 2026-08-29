@@ -31,7 +31,7 @@ static float PickupGetStorageZ(PickupOperation_TypeDef operation)
 static void PickupRun(RoboticArm_TypeDef *arm,
                       PickupState_TypeDef *pickup_state,
                       uint8_t pickup_height,
-                      PickupOperation_TypeDef operation)
+                      PickupOperation_TypeDef operation, uint8_t *complete)
 {
     switch (*pickup_state)
     {
@@ -40,9 +40,15 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_RAISE:
+        arm->target_rotation = BSP_PI;
+
+        RoboticArmSetRodRotation(arm, arm->target_rotation);
+
         arm->target_x = pickup_start_x;
         arm->target_z = PickupGetTargetZ(pickup_height);
+
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
+
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
             *pickup_state = PICKUP_STATE_FORWARD;
         break;
@@ -51,14 +57,16 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         arm->target_x = PICKUP_TARGET_X;
         arm->target_z = PickupGetTargetZ(pickup_height);
         GasPumpOn();
+        CLY_On();
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X_ALT, PICKUP_POSITION_TOLERANCE_Z_ALT))
             *pickup_state = PICKUP_STATE_GRIP;
         break;
 
     case PICKUP_STATE_GRIP:
-        /* 第 3 件不进入储存区，保持真空；前两件分别存入底层和高层。 */
-        CLY_On();
+
+        *pickup_state = PICKUP_STATE_VOID;
+
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
         {
             if (operation == PICKUP_OPERATION_HOLD)
@@ -101,7 +109,10 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         arm->target_z = pickup_start_z;
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
+        {
             *pickup_state = PICKUP_STATE_VOID;
+            *complete++;
+        }
         break;
 
     case PICKUP_STATE_HOLD:
@@ -110,7 +121,10 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         arm->target_z = pickup_hold_z;
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
+        {
             *pickup_state = PICKUP_STATE_VOID;
+            *complete++;
+        }
         break;
 
     default:
@@ -122,24 +136,24 @@ static void PickupRun(RoboticArm_TypeDef *arm,
 
 void RoboticArmPickupStoreLowMotion(RoboticArm_TypeDef *arm,
                                     PickupState_TypeDef *pickup_state,
-                                    uint8_t pickup_height)
+                                    uint8_t pickup_height, uint8_t *complete)
 {
     /* 主控选择的第一种存放动作：使用储存区底层 z。 */
-    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_STORE_LOW);
+    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_STORE_LOW,complete);
 }
 
 void RoboticArmPickupStoreHighMotion(RoboticArm_TypeDef *arm,
                                      PickupState_TypeDef *pickup_state,
-                                     uint8_t pickup_height)
+                                     uint8_t pickup_height,uint8_t *complete)
 {
     /* 主控选择的第二种存放动作：使用底层 z 加堆叠高度。 */
-    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_STORE_HIGH);
+    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_STORE_HIGH,complete);
 }
 
 void RoboticArmPickupHoldMotion(RoboticArm_TypeDef *arm,
                                 PickupState_TypeDef *pickup_state,
-                                uint8_t pickup_height)
+                                uint8_t pickup_height, uint8_t *complete)
 {
     /* 主控选择的第三种动作：吸附后保持真空，不执行放置或复位。 */
-    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_HOLD);
+    PickupRun(arm, pickup_state, pickup_height, PICKUP_OPERATION_HOLD,complete);
 }

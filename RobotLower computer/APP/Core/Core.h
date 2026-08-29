@@ -49,6 +49,7 @@ typedef enum
    ROBOT_STATE_WAIT_MOVE_8,
    ROBOT_STATE_START_MOVE_9,
    ROBOT_STATE_WAIT_MOVE_9,
+   ROBOT_STATE_PICKUP,
    ROBOT_STATE_MANUAL,
    ROBOT_STATE_DONE,
 } RobotState_TypeDef;
@@ -101,7 +102,8 @@ void RobotServoUpdateTask(void *argument);
    ROBOT_STATE_FLIIP阶段置位)为真时才调用RoboticArmFlipMotion */
 void RobotFlipUpdateTask(void *argument);
 
-/* RTOS任务入口:按六个pickup请求标志依次推进对应的抓取状态机。 */
+/* RTOS任务入口:仅在Robot.pickup.active为真时，按action推进抓取状态机；
+   到达VOID终态后置Robot.pickup.complete。 */
 void RobotPickupUpdateTask(void *argument);
 
 #endif

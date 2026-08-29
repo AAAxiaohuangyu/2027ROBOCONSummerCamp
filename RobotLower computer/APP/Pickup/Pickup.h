@@ -8,15 +8,15 @@
 #define pickup_start_z (0.0f)        /* 机械臂复位点 z。 */
 #define pickup_hold_x (0.0f)         /*上斜坡机械臂位置保持x*/
 #define pickup_hold_z (0.0f)         /*上斜坡机械臂位置保持z*/
-#define PICKUP_TARGET_X (0.0f)       /* KFS 抓取位置 x。 */
+#define PICKUP_TARGET_X (0.55f)       /* KFS 抓取位置 x。 */
 #define PICKUP_TARGET_Z_LOW (0.0f)   /* 低位 KFS 的吸取 z。 */
-#define PICKUP_TARGET_Z_HIGH (0.0f)  /* 高位 KFS 的吸取 z。 */
+#define PICKUP_TARGET_Z_HIGH (0.27f)  /* 高位 KFS 的吸取 z。 */
 #define PICKUP_STORAGE_X (0.0f)      /* 储存区中心 x。 */
 #define PICKUP_STORAGE_Z_LOW (0.0f)  /* 储存区底层 KFS 的放置 z。 */
 #define PICKUP_STORAGE_Z_HIGH (0.0f) /* 储存区上层KFS放置z */
 
-#define PICKUP_POSITION_TOLERANCE_X (0.005f)
-#define PICKUP_POSITION_TOLERANCE_Z (0.005f)
+#define PICKUP_POSITION_TOLERANCE_X (0.01f)
+#define PICKUP_POSITION_TOLERANCE_Z (0.01f)
 
 #define PICKUP_POSITION_TOLERANCE_X_ALT (0.005f)
 #define PICKUP_POSITION_TOLERANCE_Z_ALT (0.005f)
@@ -49,30 +49,27 @@ typedef enum
 typedef struct
 {
     PickupState_TypeDef state;
-    volatile uint8_t store_low_low_request;
-    volatile uint8_t store_low_high_request;
-    volatile uint8_t store_high_low_request;
-    volatile uint8_t store_high_high_request;
-    volatile uint8_t hold_low_request;
-    volatile uint8_t hold_high_request;
+    PickupTaskAction_TypeDef action;
+    uint8_t active;
+    uint8_t complete;
 } Pickup_TypeDef;
 
 #define PICKUP_HEIGHT_LOW (0U)
 #define PICKUP_HEIGHT_HIGH (1U)
 
 /*
- 主控负责 KFS 计数；每次动作开始前将 pickup_state 置为 RAISE，随后周期调用对应入口。
- StoreLow 和 StoreHigh 都在放置后复位为 VOID；Hold 在吸附后停在 HOLD，
- 不会调用 RoboticArmReleaseMotion，需由后续任务显式处理该 KFS。
+ 顶层主控在启动一次动作前设置 action、state=RAISE、complete=0，再置 active=1；
+ Pickup 任务只在 active 为真时推进。Store 和 Hold 到达 VOID 后由任务置 complete=1；
+ Hold 保持真空并移动至保持位置，但不会调用 RoboticArmReleaseMotion。
  */
 void RoboticArmPickupStoreLowMotion(RoboticArm_TypeDef *arm,
                                     PickupState_TypeDef *pickup_state,
-                                    uint8_t pickup_height);
+                                    uint8_t pickup_height, uint8_t *complete);
 void RoboticArmPickupStoreHighMotion(RoboticArm_TypeDef *arm,
                                      PickupState_TypeDef *pickup_state,
-                                     uint8_t pickup_height);
+                                     uint8_t pickup_height, uint8_t *complete);
 void RoboticArmPickupHoldMotion(RoboticArm_TypeDef *arm,
                                 PickupState_TypeDef *pickup_state,
-                                uint8_t pickup_height);
+                                uint8_t pickup_height, uint8_t *complete);
 
 #endif
