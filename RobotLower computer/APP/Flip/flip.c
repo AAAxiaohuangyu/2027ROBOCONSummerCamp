@@ -8,11 +8,11 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
     switch (*flip_state)
     {
     case FLIP_STATE_UP:
-        RoboticArmSetRodRotation(arm,BSP_PI);
+        RoboticArmSetRodRotation(arm, BSP_PI);
 
         arm->target_x = flip_start_x;
         arm->target_z = flip_start_z +
-                   FLIP_UP_DISTANCE_1;
+                        FLIP_UP_DISTANCE_1;
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
 
@@ -28,9 +28,9 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
 
     case FLIP_STATE_FORWARD:
         arm->target_x = flip_start_x +
-                   FLIP_FORWARD_DISTANCE_1;
+                        FLIP_FORWARD_DISTANCE_1;
         arm->target_z = flip_start_z +
-                   FLIP_UP_DISTANCE_1;
+                        FLIP_UP_DISTANCE_1;
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
 
@@ -53,7 +53,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         arm->target_x = flip_start_x +
                         FLIP_FORWARD_DISTANCE_1;
         arm->target_z = flip_start_z +
-                        FLIP_UP_DISTANCE_1+FLIP_UP_DISTANCE_2;
+                        FLIP_UP_DISTANCE_1 + FLIP_UP_DISTANCE_2;
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
         *flip_state = FLIP_STATE_UP2_WAIT;
@@ -65,14 +65,13 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         break;
 
     case FLIP_STATE_CHASSIS_MOVE_RIGHT:
-        ChassisSetTranslation(chassis, 0.0f, -0.6f);
-        //ChassisSetTranslation(chassis, 3.38f, -0.5f);
+        ChassisSetTranslation(chassis, 3.38f, -0.7f);
         *flip_state = FLIP_STATE_CHASSIS_MOVE_RIGHT_WAIT;
 
         break;
 
     case FLIP_STATE_CHASSIS_MOVE_RIGHT_WAIT:
-        if (ChassisTranslationReached(chassis,0.02f))
+        if (ChassisTranslationReached(chassis, 0.03f))
             *flip_state = FLIP_STATE_FORWARD2;
 
         break;
@@ -96,18 +95,41 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
 
     case FLIP_STATE_ROTATE:
         arm->target_rotation = flip_start_rotation +
-                          FLIP_ROTATION_ANGLE_1;
+                               FLIP_ROTATION_ANGLE_1;
 
         RoboticArmSetRodRotation(arm, arm->target_rotation);
 
-        if (RotationReached(arm, arm->target_rotation, FLIP_ROTATION_TOLERANCE))
-            *flip_state = FLIP_STATE_DONE;
+        osDelay(2000);
+        *flip_state = FLIP_STATE_CHASSIS_MOVE_LEFT;
 
         break;
 
+    case FLIP_STATE_CHASSIS_MOVE_LEFT:
+        ChassisSetTranslation(chassis, 3.38f, -0.1f);
+        *flip_state = FLIP_STATE_CHASSIS_MOVE_LEFT_WAIT;
+
+        break;
+
+    case FLIP_STATE_CHASSIS_MOVE_LEFT_WAIT:
+        if (ChassisTranslationReached(chassis, 0.03f))
+            *flip_state = FLIP_STATE_ROTATE2;
+
+        break;
+
+    case FLIP_STATE_ROTATE2:
+        arm->target_rotation = flip_start_rotation +
+                               FLIP_ROTATION_ANGLE_1+FLIP_ROTATION_ANGLE_2;
+
+        RoboticArmSetRodRotation(arm, arm->target_rotation);
+
+        osDelay(1000);
+        *flip_state = FLIP_STATE_RELEASE;
+
     case FLIP_STATE_RELEASE:
         CLY_Off();
-        *flip_state = FLIP_STATE_BACK_AND_DOWN;
+        osDelay(1000);
+        CLY_On();
+        *flip_state = FLIP_STATE_DONE;
 
         break;
 
@@ -123,7 +145,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         break;
 
     case FLIP_STATE_DONE:
-        //GasPumpOff();
+        // GasPumpOff();
         break;
     default:
         break;

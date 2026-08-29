@@ -214,7 +214,7 @@ void RobotPickupUpdateTask(void *argument)
 
 void RobotStateUpdateTask(void *argument)
 {
-    Robot.state = ROBOT_STATE_FLIIP;
+    Robot.state = ROBOT_STATE_START_MOVE_1;
     Robot.vision.KFS_DIFF = 0;
 
     (void)argument;
@@ -272,7 +272,7 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_WAIT_MOVE_3:
         {
             if (ChassisTranslationReached(&Robot.chassis, 4.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                Robot.state = ROBOT_STATE_DONE;
+                Robot.state = ROBOT_STATE_FLIIP;
             break;
         }
 
