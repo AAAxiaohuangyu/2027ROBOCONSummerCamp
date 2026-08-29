@@ -63,7 +63,8 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_BACKWARD:
-        arm->target_x = PICKUP_TARGET_X - PICKUP_TARGET_X_BACK;
+        osDelay(500);
+        arm->target_x -= PICKUP_TARGET_X_BACK;
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
         *pickup_state = PICKUP_STATE_BACKWARD_WAIT;
         break;
@@ -87,7 +88,7 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_ROTATION:
-        arm->target_rotation = 0.8f;
+        arm->target_rotation = 0.6f;
 
         RoboticArmSetRodRotation(arm, arm->target_rotation);
 
@@ -112,7 +113,7 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_STORE_LOW:
-        arm->target_x = pickup_start_x;
+        arm->target_x = pickup_start_x + 0.03f;
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
 
