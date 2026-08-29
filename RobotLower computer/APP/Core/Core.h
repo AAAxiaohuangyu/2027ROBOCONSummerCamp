@@ -73,6 +73,7 @@ typedef struct
     Flip_TypeDef flip;
     Pickup_TypeDef pickup;
     RobotState_TypeDef state;
+    RobotState_TypeDef pickup_previous_state;
     uint32_t time_stamp;
 } Robot_TypeDef;
 
@@ -103,8 +104,8 @@ void RobotServoUpdateTask(void *argument);
    ROBOT_STATE_FLIIP阶段置位)为真时才调用RoboticArmFlipMotion */
 void RobotFlipUpdateTask(void *argument);
 
-/* RTOS任务入口:仅在Robot.pickup.active为真时，按action推进抓取状态机；
-   到达VOID终态后置Robot.pickup.complete。 */
+/* RTOS任务入口:仅在Robot.pickup.active为真时，按action推进抓取状态机；动作完成后
+   进入VOID并递增Robot.pickup.complete，主状态机随后关闭active并切换到下一阶段。 */
 void RobotPickupUpdateTask(void *argument);
 
 #endif

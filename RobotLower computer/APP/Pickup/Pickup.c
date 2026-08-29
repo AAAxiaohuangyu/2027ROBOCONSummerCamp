@@ -202,7 +202,7 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
         {
             *pickup_state = PICKUP_STATE_VOID;
-            *complete++;
+            (*complete)++;
         }
         break;
 
@@ -214,7 +214,7 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
         {
             *pickup_state = PICKUP_STATE_VOID;
-            *complete++;
+            (*complete)++;
         }
         break;
 

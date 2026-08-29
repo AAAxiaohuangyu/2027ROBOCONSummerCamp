@@ -74,9 +74,8 @@ typedef struct
 #define PICKUP_HEIGHT_HIGH (1U)
 
 /*
- 顶层主控在启动一次动作前设置 action、state=RAISE、complete=0，再置 active=1；
- Pickup 任务只在 active 为真时推进。Store 和 Hold 到达 VOID 后由任务置 complete=1；
- Hold 保持真空并移动至保持位置，但不会调用 RoboticArmReleaseMotion。
+ 主控在启动一次动作前设置 action、state=RAISE，再置 active=1；complete 的 0/1/2
+ 分别表示放低位、放高位、hold。动作到达 VOID 后由状态机递增 complete。
  */
 void RoboticArmPickupStoreLowMotion(RoboticArm_TypeDef *arm,
                                     PickupState_TypeDef *pickup_state,

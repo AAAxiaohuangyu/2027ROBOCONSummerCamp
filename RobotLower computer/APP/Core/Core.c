@@ -65,6 +65,46 @@ static RobotState_TypeDef RobotSkipMove(uint8_t move_num, RobotState_TypeDef nex
     return next_state;
 }
 
+static uint8_t RobotPickupHeight(RobotState_TypeDef previous_state)
+{
+    return (previous_state == ROBOT_STATE_WAIT_MOVE_5 ||
+            previous_state == ROBOT_STATE_WAIT_MOVE_7) ? PICKUP_HEIGHT_HIGH : PICKUP_HEIGHT_LOW;
+}
+
+static PickupTaskAction_TypeDef RobotPickupAction(RobotState_TypeDef previous_state, uint8_t complete)
+{
+    uint8_t pickup_height = RobotPickupHeight(previous_state);
+
+    switch (complete)
+    {
+    case 0:
+        return pickup_height == PICKUP_HEIGHT_HIGH ? PICKUP_TASK_ACTION_STORE_LOW_HIGH : PICKUP_TASK_ACTION_STORE_LOW_LOW;
+    case 1:
+        return pickup_height == PICKUP_HEIGHT_HIGH ? PICKUP_TASK_ACTION_STORE_HIGH_HIGH : PICKUP_TASK_ACTION_STORE_HIGH_LOW;
+    case 2:
+        return pickup_height == PICKUP_HEIGHT_HIGH ? PICKUP_TASK_ACTION_HOLD_HIGH : PICKUP_TASK_ACTION_HOLD_LOW;
+    default:
+        return PICKUP_TASK_ACTION_NONE;
+    }
+}
+
+static RobotState_TypeDef RobotPickupNextState(RobotState_TypeDef previous_state)
+{
+    switch (previous_state)
+    {
+    case ROBOT_STATE_WAIT_MOVE_5:
+        return RobotSkipMove(6, ROBOT_STATE_START_MOVE_6);
+    case ROBOT_STATE_WAIT_MOVE_6:
+        return RobotSkipMove(7, ROBOT_STATE_START_MOVE_7);
+    case ROBOT_STATE_WAIT_MOVE_7:
+        return RobotSkipMove(8, ROBOT_STATE_START_MOVE_8);
+    case ROBOT_STATE_WAIT_MOVE_8:
+        return RobotSkipMove(9, ROBOT_STATE_START_MOVE_9);
+    default:
+        return ROBOT_STATE_MANUAL;
+    }
+}
+
 void RobotInit(void)
 {
     HAL_Delay(1000);
@@ -172,10 +212,13 @@ void RobotPickupUpdateTask(void *argument)
 
 void RobotStateUpdateTask(void *argument)
 {
-    Robot.state = ROBOT_STATE_PICKUP;
-    Robot.vision.KFS_DIFF = 0;
+    Robot.state = ROBOT_STATE_START_MOVE_1;
+    Robot.pickup_previous_state = ROBOT_STATE_START_MOVE_1;
+    Robot.vision.KFS_DIFF = 1;
 
-    Robot.pickup.state = PICKUP_STATE_RAISE;
+    Robot.pickup.state = PICKUP_STATE_VOID;
+    Robot.pickup.active = 0;
+    Robot.pickup.complete = 0;
 
     (void)argument;
 
@@ -267,8 +310,7 @@ void RobotStateUpdateTask(void *argument)
             if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
             if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
-                Robot.state = ROBOT_STATE_DONE;
-                //Robot.state = RobotSkipMove(5, ROBOT_STATE_START_MOVE_5);
+                Robot.state = RobotSkipMove(5, ROBOT_STATE_START_MOVE_5);
             break;
         }
 
@@ -285,13 +327,15 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_WAIT_MOVE_5:
         {
             if (ChassisTranslationReached(&Robot.chassis, 3.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                Robot.state = RobotSkipMove(6, ROBOT_STATE_START_MOVE_6);
+            {
+                Robot.pickup_previous_state = ROBOT_STATE_WAIT_MOVE_5;
+                Robot.state = ROBOT_STATE_PICKUP;
+            }
             break;
         }
 
         case ROBOT_STATE_START_MOVE_6:
         {
-            osDelay(1000);
             /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
                y跟踪也切到备用参数组 */
             RobotApplyMove6Params();
@@ -303,13 +347,15 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_WAIT_MOVE_6:
         {
             if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                Robot.state = RobotSkipMove(7, ROBOT_STATE_START_MOVE_7);
+            {
+                Robot.pickup_previous_state = ROBOT_STATE_WAIT_MOVE_6;
+                Robot.state = ROBOT_STATE_PICKUP;
+            }
             break;
         }
 
         case ROBOT_STATE_START_MOVE_7:
         {
-            osDelay(1000);
             ChassisSetTranslation(&Robot.chassis, 0.38f, -5.79f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_7;
             break;
@@ -318,13 +364,15 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_WAIT_MOVE_7:
         {
             if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                Robot.state = RobotSkipMove(8, ROBOT_STATE_START_MOVE_8);
+            {
+                Robot.pickup_previous_state = ROBOT_STATE_WAIT_MOVE_7;
+                Robot.state = ROBOT_STATE_PICKUP;
+            }
             break;
         }
 
         case ROBOT_STATE_START_MOVE_8:
         {
-            osDelay(1000);
             ChassisSetTranslation(&Robot.chassis, 0.38f, -6.98f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_8;
             break;
@@ -333,7 +381,10 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_WAIT_MOVE_8:
         {
             if (ChassisTranslationReached(&Robot.chassis, 2.0f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
-                Robot.state = RobotSkipMove(9, ROBOT_STATE_START_MOVE_9);
+            {
+                Robot.pickup_previous_state = ROBOT_STATE_WAIT_MOVE_8;
+                Robot.state = ROBOT_STATE_PICKUP;
+            }
             break;
         }
 
@@ -359,8 +410,17 @@ void RobotStateUpdateTask(void *argument)
         }
 
         case ROBOT_STATE_PICKUP:
-            Robot.pickup.action = PICKUP_TASK_ACTION_STORE_HIGH_LOW;
-            Robot.pickup.active = 1;
+            if (Robot.pickup.active == 0)
+            {
+                Robot.pickup.action = RobotPickupAction(Robot.pickup_previous_state, Robot.pickup.complete);
+                Robot.pickup.state = PICKUP_STATE_RAISE;
+                Robot.pickup.active = 1;
+            }
+            else if (Robot.pickup.state == PICKUP_STATE_VOID)
+            {
+                Robot.pickup.active = 0;
+                Robot.state = RobotPickupNextState(Robot.pickup_previous_state);
+            }
             break;
 
         case ROBOT_STATE_MANUAL:
