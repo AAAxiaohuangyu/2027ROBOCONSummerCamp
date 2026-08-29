@@ -2,6 +2,7 @@
 #include "GasPumpCLY.h"
 #include "cmsis_os2.h"
 #include "chassis.h"
+#include "Core.h"
 
 void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, FlipState_TypeDef *flip_state,uint8_t *complete)
 {
@@ -65,7 +66,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         break;
 
     case FLIP_STATE_CHASSIS_MOVE_RIGHT:
-        ChassisSetTranslation(chassis, 3.38f, -0.7f);
+        ChassisSetTranslation(chassis, 3.38f, -0.7f * RobotChassisYSign);
         *flip_state = FLIP_STATE_CHASSIS_MOVE_RIGHT_WAIT;
 
         break;
@@ -105,7 +106,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         break;
 
     case FLIP_STATE_CHASSIS_MOVE_LEFT:
-        ChassisSetTranslation(chassis, 3.38f, -0.1f);
+        ChassisSetTranslation(chassis, 3.38f, -0.1f * RobotChassisYSign);
         *flip_state = FLIP_STATE_CHASSIS_MOVE_LEFT_WAIT;
 
         break;
@@ -137,7 +138,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         arm->target_rotation = 0.0f;
         RoboticArmSetRodRotation(arm, arm->target_rotation);
         osDelay(700);
-        ChassisSetTranslation(chassis, 3.38f, -0.7f);
+        ChassisSetTranslation(chassis, 3.38f, -0.7f * RobotChassisYSign);
         *flip_state = FLIP_STATE_CHASSIS_MOVE_RIGHT2_WAIT;
 
         break;

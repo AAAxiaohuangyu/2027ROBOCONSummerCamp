@@ -77,6 +77,7 @@ typedef struct
 } Robot_TypeDef;
 
 extern Robot_TypeDef Robot;
+extern float RobotChassisYSign;
 
 /* 初始化机械臂、底盘、编码器、YIS512、ZigBee与视觉模块,配置好FDCAN过滤器/FIFO与
    UART空闲线DMA接收,供RTOS启动前调用一次;ZigBee/视觉之后的持续接收完全由

@@ -7,6 +7,7 @@
 #include <string.h>
 
 Robot_TypeDef Robot = {0};
+float RobotChassisYSign = 1.0f;
 
 /* MOVE_5~MOVE_8阶段x跟踪固定切到第三套参数组,MOVE_6~MOVE_8阶段y轴固定切到备用
    速度规划/跟踪参数组;这两次切换本应分别发生在START_MOVE_5/START_MOVE_6状态,
@@ -189,7 +190,7 @@ void RobotStateUpdateTask(void *argument)
         {
         case ROBOT_STATE_START_MOVE_1:
             osDelay(500);
-            ChassisSetTranslation(&Robot.chassis, 0.8f, -0.65f);
+            ChassisSetTranslation(&Robot.chassis, 0.8f, -0.65f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_1;
             break;
 
@@ -206,7 +207,7 @@ void RobotStateUpdateTask(void *argument)
         }
 
         case ROBOT_STATE_START_MOVE_2:
-            ChassisSetTranslation(&Robot.chassis, 3.38f, -0.65f);
+            ChassisSetTranslation(&Robot.chassis, 3.38f, -0.65f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_2;
             break;
 
@@ -223,7 +224,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_3:
         {
-            ChassisSetTranslation(&Robot.chassis, 3.38f, -0.1f);
+            ChassisSetTranslation(&Robot.chassis, 3.38f, -0.1f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_3;
             break;
         }
@@ -255,7 +256,7 @@ void RobotStateUpdateTask(void *argument)
                     CHASSIS_TRACK_TRANSLATION_X_ALT_KD,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_OUT,
                     CHASSIS_TRACK_TRANSLATION_X_ALT_MAX_IOUT);
-            ChassisSetTranslation(&Robot.chassis, 0.38f, -2.1f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -2.1f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_4;
             break;
         }
@@ -276,7 +277,7 @@ void RobotStateUpdateTask(void *argument)
             /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x跟踪切到第三套参数组;
                y轴的备用速度规划/跟踪参数组从MOVE_6起才切换 */
             RobotApplyMove5Params();
-            ChassisSetTranslation(&Robot.chassis, 0.38f, -3.42f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -3.42f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_5;
             break;
         }
@@ -294,7 +295,7 @@ void RobotStateUpdateTask(void *argument)
             /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
                y跟踪也切到备用参数组 */
             RobotApplyMove6Params();
-            ChassisSetTranslation(&Robot.chassis, 0.38f, -4.6f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -4.6f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_6;
             break;
         }
@@ -309,7 +310,7 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_START_MOVE_7:
         {
             osDelay(1000);
-            ChassisSetTranslation(&Robot.chassis, 0.38f, -5.79f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -5.79f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_7;
             break;
         }
@@ -324,7 +325,7 @@ void RobotStateUpdateTask(void *argument)
         case ROBOT_STATE_START_MOVE_8:
         {
             osDelay(1000);
-            ChassisSetTranslation(&Robot.chassis, 0.38f, -6.98f);
+            ChassisSetTranslation(&Robot.chassis, 0.38f, -6.98f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_8;
             break;
         }
