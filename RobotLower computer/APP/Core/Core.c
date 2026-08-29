@@ -214,7 +214,7 @@ void RobotStateUpdateTask(void *argument)
 {
     Robot.state = ROBOT_STATE_START_MOVE_1;
     Robot.pickup_previous_state = ROBOT_STATE_START_MOVE_1;
-    Robot.vision.KFS_DIFF = 1;
+    Robot.vision.KFS_DIFF = 2;
 
     Robot.pickup.state = PICKUP_STATE_VOID;
     Robot.pickup.active = 0;

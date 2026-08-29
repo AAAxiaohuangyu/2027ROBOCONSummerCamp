@@ -71,7 +71,16 @@ static void PickupRun(RoboticArm_TypeDef *arm,
 
     case PICKUP_STATE_BACKWARD_WAIT:
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
-            *pickup_state = PICKUP_STATE_RAISE2;
+        {
+            if (operation == PICKUP_OPERATION_HOLD)
+            {
+                *pickup_state = PICKUP_STATE_HOLD;
+            }
+            else
+            {
+                *pickup_state = PICKUP_STATE_RAISE2;
+            }
+        }
         break;
 
     case PICKUP_STATE_RAISE2:
@@ -209,7 +218,6 @@ static void PickupRun(RoboticArm_TypeDef *arm,
     case PICKUP_STATE_HOLD:
         /* 保持吸盘开启；由后续任务显式释放第三个 KFS。 */
         arm->target_x = pickup_hold_x;
-        arm->target_z = pickup_hold_z;
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
         {

@@ -1,0 +1,6 @@
+--cpu Cortex-M7.fp.dp -g --apcs=interwork -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include
+-I.\RTE\_RobotLower_computer
+-IF:\ARM\PACK\ARM\CMSIS\5.0.1\CMSIS\Include
+-IF:\ARM\PACK\Keil\STM32H7xx_DFP\3.1.1\Drivers\CMSIS\Device\ST\STM32H7xx\Include
+--pd "__UVISION_VERSION SETA 524" --pd "_RTE_ SETA 1" --pd "STM32H723xx SETA 1"
+--list startup_stm32h723xx.lst --xref -o "robotlower computer\startup_stm32h723xx.o" --depend "robotlower computer\startup_stm32h723xx.d" "startup_stm32h723xx.s"
