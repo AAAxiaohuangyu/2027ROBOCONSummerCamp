@@ -9,7 +9,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
     switch (*flip_state)
     {
     case FLIP_STATE_UP:
-        RoboticArmSetRodRotation(arm, BSP_PI);
+        RoboticArmSetRodRotation(arm, (BSP_PI-0.2f));
 
         arm->target_x = flip_start_x;
         arm->target_z = flip_start_z +

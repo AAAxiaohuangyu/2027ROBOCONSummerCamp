@@ -8,7 +8,7 @@
 #define pickup_start_z (0.0f)        /* 机械臂复位点 z。 */
 #define pickup_hold_x (0.0f)         /*上斜坡机械臂位置保持x*/
 #define pickup_hold_z (0.0f)         /*上斜坡机械臂位置保持z*/
-#define PICKUP_TARGET_X (0.6f)       /* KFS 抓取位置 x。 */
+#define PICKUP_TARGET_X (0.68f)       /* KFS 抓取位置 x。 */
 #define PICKUP_TARGET_Z_LOW (0.0f)   /* 低位 KFS 的吸取 z。 */
 #define PICKUP_TARGET_Z_HIGH (0.24f)  /* 高位 KFS 的吸取 z。 */
 #define PICKUP_STORAGE_X (0.0f)      /* 储存区中心 x。 */
