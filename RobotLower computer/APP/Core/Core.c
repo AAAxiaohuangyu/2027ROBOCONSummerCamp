@@ -356,7 +356,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_7:
         {
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -5.79f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.34f, -5.77f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_7;
             break;
         }
@@ -373,7 +373,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_8:
         {
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -6.98f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.34f, -6.97f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_8;
             break;
         }
@@ -390,17 +390,31 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_9:
         {
-            /* x、偏航沿用 MOVE_8 已下发的目标继续跟踪(不重新调用
-               ChassisSetTranslation/ChassisSetYaw),x跟踪切到第四套参数组,
-               仅 y 轴切到固定速度冲坡 */
-            osDelay(1000);
-            RobotApplyMove9Params();
-            ChassisSetRampVelocity(&Robot.chassis, -1.2f);
+            osDelay(500);
+            ChassisSetTranslation(&Robot.chassis, 0.1f, -6.98f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_9;
             break;
         }
 
         case ROBOT_STATE_WAIT_MOVE_9:
+        {
+            if (ChassisTranslationReached(&Robot.chassis, 3.5f * ROBOT_CHASSIS_POSITION_TOLERANCE_M))
+            {
+                Robot.state = ROBOT_STATE_START_MOVE_9_2;
+            }
+            break;
+        }
+
+        case ROBOT_STATE_START_MOVE_9_2:
+        {
+            osDelay(500);
+            RobotApplyMove9Params();
+            ChassisSetRampVelocity(&Robot.chassis, -1.2f);
+            Robot.state = ROBOT_STATE_WAIT_MOVE_9_2;
+            break;
+        }
+
+        case ROBOT_STATE_WAIT_MOVE_9_2:
         {
             if (Robot.encoder.y_m <= ROBOT_STATE_MOVE_9_ENCODER_Y_TARGET_M)
             {

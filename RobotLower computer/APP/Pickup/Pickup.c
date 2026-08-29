@@ -31,7 +31,7 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         break;
 
     case PICKUP_STATE_RAISE:
-        arm->target_rotation = (BSP_PI - 0.2f);
+        arm->target_rotation = (BSP_PI - 0.21f);
 
         RoboticArmSetRodRotation(arm, arm->target_rotation);
 

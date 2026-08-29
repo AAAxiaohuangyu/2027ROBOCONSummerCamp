@@ -13,12 +13,12 @@
 #define PICKUP_TARGET_Z_HIGH (0.24f)  /* 高位 KFS 的吸取 z。 */
 #define PICKUP_STORAGE_X (0.0f)      /* 储存区中心 x。 */
 #define PICKUP_STORAGE_Z_LOW (0.0f)  /* 储存区底层 KFS 的放置 z。 */
-#define PICKUP_STORAGE_Z_HIGH (0.4f) /* 储存区上层KFS放置z */
+#define PICKUP_STORAGE_Z_HIGH (0.5f) /* 储存区上层KFS放置z */
 
 #define PICKUP_TARGET_X_BACK (0.35f)
 #define PICKUP_TARGET_Z_DOWN (0.15f)
 #define PICKUP_TARGET_Z2 (0.13f)
-#define PICKUP_TARGET_RESET_X (0.12f)
+#define PICKUP_TARGET_RESET_X (0.07f)
 
 #define PICKUP_POSITION_TOLERANCE_X (0.01f)
 #define PICKUP_POSITION_TOLERANCE_Z (0.01f)
