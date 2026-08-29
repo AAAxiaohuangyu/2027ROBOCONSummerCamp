@@ -3,7 +3,7 @@
 #include "cmsis_os2.h"
 #include "chassis.h"
 
-void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, FlipState_TypeDef *flip_state)
+void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, FlipState_TypeDef *flip_state,uint8_t *complete)
 {
     switch (*flip_state)
     {
@@ -129,23 +129,36 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         CLY_Off();
         osDelay(1000);
         CLY_On();
+        *flip_state = FLIP_STATE_CHASSIS_MOVE_RIGHT2;
+
+        break;
+
+    case FLIP_STATE_CHASSIS_MOVE_RIGHT2:
+        arm->target_rotation = 0.0f;
+        RoboticArmSetRodRotation(arm, arm->target_rotation);
+        osDelay(700);
+        ChassisSetTranslation(chassis, 3.38f, -0.7f);
+        *flip_state = FLIP_STATE_CHASSIS_MOVE_RIGHT2_WAIT;
+
+        break;
+
+    case FLIP_STATE_CHASSIS_MOVE_RIGHT2_WAIT:
+        if (ChassisTranslationReached(chassis, 0.03f))
+            *flip_state = FLIP_STATE_ROBOTICARM_BACK;
+
+        break;
+
+    case FLIP_STATE_ROBOTICARM_BACK:
+        arm->target_x = flip_start_x;
+        arm->target_z = flip_start_z;
+        RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
         *flip_state = FLIP_STATE_DONE;
 
         break;
 
-    case FLIP_STATE_BACK_AND_DOWN:
-        arm->target_x = flip_start_x;
-        arm->target_z = flip_start_z;
-
-        RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
-
-        if (PositionReached(arm, arm->target_x, arm->target_z, FLIP_POSITION_TOLERANCE_X, FLIP_POSITION_TOLERANCE_Z))
-            *flip_state = FLIP_STATE_DONE;
-
-        break;
-
     case FLIP_STATE_DONE:
-        // GasPumpOff();
+        GasPumpOff();
+        *complete = 1;
         break;
     default:
         break;

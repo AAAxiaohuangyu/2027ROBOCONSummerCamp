@@ -120,7 +120,7 @@ void RobotFlipUpdateTask(void *argument)
     {
         if (Robot.flip.active)
         {
-            RoboticArmFlipMotion(&Robot.roboticarm, &Robot.chassis, &Robot.flip.state);
+            RoboticArmFlipMotion(&Robot.roboticarm, &Robot.chassis, &Robot.flip.state, &Robot.flip.complete);
         }
         osDelay(ROBOT_STATE_UPDATE_PERIOD_MS);
     }
@@ -278,12 +278,16 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_FLIIP:
             Robot.flip.active = 1;
-            Robot.state = ROBOT_STATE_DONE;
+            if (Robot.flip.complete == 1)
+            {
+                Robot.state = ROBOT_STATE_START_MOVE_4;
+            }
             break;
 
         case ROBOT_STATE_START_MOVE_4:
         {
-            osDelay(800);
+            Robot.flip.active = 0;
+            osDelay(100);
             /* MOVE_4/WAIT_MOVE_4阶段x方向回退幅度大,临时切到备用跟踪参数组,
                离开该阶段(START_MOVE_5)后切回默认组 */
             PIDInit(&Robot.chassis.displacement_plan.translation_x.track_pid,
@@ -303,7 +307,8 @@ void RobotStateUpdateTask(void *argument)
             if (corner_tolerance < ROBOT_CHASSIS_POSITION_TOLERANCE_M)
                 corner_tolerance = ROBOT_CHASSIS_POSITION_TOLERANCE_M;
             if (ChassisTranslationReached(&Robot.chassis, corner_tolerance))
-                Robot.state = RobotSkipMove(5, ROBOT_STATE_START_MOVE_5);
+                Robot.state = ROBOT_STATE_DONE;
+                //Robot.state = RobotSkipMove(5, ROBOT_STATE_START_MOVE_5);
             break;
         }
 

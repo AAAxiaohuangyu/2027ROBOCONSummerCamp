@@ -15,7 +15,7 @@
 #define FLIP_UP_DISTANCE_1 (0.5f)
 #define FLIP_FORWARD_DISTANCE_1 (0.25f)
 #define FLIP_FORWARD_DISTANCE_2 (0.31f)
-#define FLIP_UP_DISTANCE_2 (0.08f)
+#define FLIP_UP_DISTANCE_2 (0.1f)
 #define FLIP_ROTATION_ANGLE_1 (-2.2f)
 #define FLIP_ROTATION_ANGLE_2 (-0.4f)
 
@@ -44,7 +44,9 @@ typedef enum
     FLIP_STATE_CHASSIS_MOVE_LEFT_WAIT,
     FLIP_STATE_ROTATE2,
     FLIP_STATE_RELEASE,
-    FLIP_STATE_BACK_AND_DOWN,
+    FLIP_STATE_CHASSIS_MOVE_RIGHT2,
+    FLIP_STATE_CHASSIS_MOVE_RIGHT2_WAIT,
+    FLIP_STATE_ROBOTICARM_BACK,
     FLIP_STATE_DONE
 } FlipState_TypeDef;
 
@@ -52,8 +54,9 @@ typedef struct
 {
     FlipState_TypeDef state;
     uint8_t active;
+    uint8_t complete;
 } Flip_TypeDef;
 
-void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, FlipState_TypeDef *flip_state);
+void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, FlipState_TypeDef *flip_state,uint8_t *flip_active);
 
 #endif
