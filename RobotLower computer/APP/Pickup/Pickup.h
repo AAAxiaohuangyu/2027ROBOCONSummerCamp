@@ -13,11 +13,12 @@
 #define PICKUP_TARGET_Z_HIGH (0.24f)  /* 高位 KFS 的吸取 z。 */
 #define PICKUP_STORAGE_X (0.0f)      /* 储存区中心 x。 */
 #define PICKUP_STORAGE_Z_LOW (0.0f)  /* 储存区底层 KFS 的放置 z。 */
-#define PICKUP_STORAGE_Z_HIGH (0.0f) /* 储存区上层KFS放置z */
+#define PICKUP_STORAGE_Z_HIGH (0.4f) /* 储存区上层KFS放置z */
 
-#define PICKUP_TARGET_X_BACK (0.3f)
+#define PICKUP_TARGET_X_BACK (0.35f)
 #define PICKUP_TARGET_Z_DOWN (0.15f)
-#define PICKUP_TARGET_Z2 (0.18f)
+#define PICKUP_TARGET_Z2 (0.13f)
+#define PICKUP_TARGET_RESET_X (0.12f)
 
 #define PICKUP_POSITION_TOLERANCE_X (0.01f)
 #define PICKUP_POSITION_TOLERANCE_Z (0.01f)
@@ -37,13 +38,17 @@ typedef enum
     PICKUP_STATE_GRIP, /* 根据动作类型选择后续路径。 */
     PICKUP_STATE_STORE_HIGH,
     PICKUP_STATE_STORE_HIGH_WAIT,
+    PICKUP_STATE_STORE_HIGH2,
+    PICKUP_STATE_STORE_HIGH2_WAIT,
     PICKUP_STATE_STORE_LOW,
     PICKUP_STATE_STORE_LOW_WAIT,
     PICKUP_STATE_STORE_LOW2,
     PICKUP_STATE_STORE_LOW2_WAIT,
     PICKUP_STATE_RELEASE, /* 仅储存动作关闭吸盘，释放 KFS。 */
     PICKUP_STATE_RESET,   /* 放置完成后返回复位点。 */
-    PICKUP_STATE_HOLD     /* 吸盘保持开启，等待主控切换到后续任务。 */
+    PICKUP_STATE_RESET1,
+    PICKUP_STATE_RESET2,
+    PICKUP_STATE_HOLD /* 吸盘保持开启，等待主控切换到后续任务。 */
 } PickupState_TypeDef;
 
 typedef enum

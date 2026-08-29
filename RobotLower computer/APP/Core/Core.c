@@ -359,7 +359,7 @@ void RobotStateUpdateTask(void *argument)
         }
 
         case ROBOT_STATE_PICKUP:
-            Robot.pickup.action = PICKUP_TASK_ACTION_STORE_LOW_HIGH;
+            Robot.pickup.action = PICKUP_TASK_ACTION_STORE_HIGH_LOW;
             Robot.pickup.active = 1;
             break;
 
