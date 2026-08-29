@@ -1,5 +1,6 @@
 #include "Pickup.h"
 #include "GasPumpCLY.h"
+#include "cmsis_os2.h"
 
 typedef enum
 {
@@ -16,16 +17,6 @@ static float PickupGetTargetZ(uint8_t pickup_height)
     }
 
     return PICKUP_TARGET_Z_LOW;
-}
-
-static float PickupGetStorageZ(PickupOperation_TypeDef operation)
-{
-    if (operation == PICKUP_OPERATION_STORE_HIGH)
-    {
-        return PICKUP_STORAGE_Z_HIGH;
-    }
-
-    return PICKUP_STORAGE_Z_LOW;
 }
 
 static void PickupRun(RoboticArm_TypeDef *arm,
@@ -49,6 +40,10 @@ static void PickupRun(RoboticArm_TypeDef *arm,
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
 
+        *pickup_state = PICKUP_STATE_RAISE_WAIT;
+        break;
+
+    case PICKUP_STATE_RAISE_WAIT:
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
             *pickup_state = PICKUP_STATE_FORWARD;
         break;
@@ -59,40 +54,75 @@ static void PickupRun(RoboticArm_TypeDef *arm,
         GasPumpOn();
         CLY_On();
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
+        *pickup_state = PICKUP_STATE_FORWARD_WAIT;
+        break;
+
+    case PICKUP_STATE_FORWARD_WAIT:
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X_ALT, PICKUP_POSITION_TOLERANCE_Z_ALT))
-            *pickup_state = PICKUP_STATE_GRIP;
+            *pickup_state = PICKUP_STATE_RAISE2;
+        break;
+
+    case PICKUP_STATE_RAISE2:
+        arm->target_z += PICKUP_TARGET_Z2;
+
+        RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
+
+        *pickup_state = PICKUP_STATE_RAISE2_WAIT;
+        break;
+
+    case PICKUP_STATE_RAISE2_WAIT:
+        if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
+            *pickup_state = PICKUP_STATE_ROTATION;
+        break;
+
+    case PICKUP_STATE_ROTATION:
+        arm->target_rotation = 0.0f;
+
+        RoboticArmSetRodRotation(arm, arm->target_rotation);
+
+        osDelay(1000);
+        *pickup_state = PICKUP_STATE_GRIP;
         break;
 
     case PICKUP_STATE_GRIP:
-
-        *pickup_state = PICKUP_STATE_VOID;
-
-        if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
+        if (operation == PICKUP_OPERATION_HOLD)
         {
-            if (operation == PICKUP_OPERATION_HOLD)
-            {
-                /* 第三个 KFS 停在抓取点，吸盘持续开启。 */
-                *pickup_state = PICKUP_STATE_HOLD;
-            }
-            else
-            {
-                *pickup_state = PICKUP_STATE_RETRACT;
-            }
+            /* 第三个 KFS 停在抓取点，吸盘持续开启。 */
+            *pickup_state = PICKUP_STATE_HOLD;
+        }
+        else if (operation == PICKUP_OPERATION_STORE_HIGH)
+        {
+            *pickup_state = PICKUP_STATE_STORE_HIGH;
+        }
+        else if (operation == PICKUP_OPERATION_STORE_LOW)
+        {
+            *pickup_state = PICKUP_STATE_STORE_LOW;
         }
         break;
 
-    case PICKUP_STATE_RETRACT:
-        /* 保持抓取高度移动到存放区域上方。 */
-        arm->target_x = PICKUP_STORAGE_X;
+    case PICKUP_STATE_STORE_LOW:
+        arm->target_x = pickup_start_x;
+
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
-        if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
-            *pickup_state = PICKUP_STATE_PLACE;
+
+        *pickup_state = PICKUP_STATE_STORE_LOW_WAIT;
         break;
 
-    case PICKUP_STATE_PLACE:
-        /* 第 1、2 件分别落在堆叠底层和上层。 */
-        arm->target_z = PickupGetStorageZ(operation);
+    case PICKUP_STATE_STORE_LOW_WAIT:
+        if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
+            *pickup_state = PICKUP_STATE_RELEASE;
+        break;
+
+    case PICKUP_STATE_STORE_HIGH:
+        arm->target_x = pickup_start_x;
+        arm->target_z = pickup_start_z;
+
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
+
+        *pickup_state = PICKUP_STATE_STORE_HIGH_WAIT;
+        break;
+
+    case PICKUP_STATE_STORE_HIGH_WAIT:
         if (PositionReached(arm, arm->target_x, arm->target_z, PICKUP_POSITION_TOLERANCE_X, PICKUP_POSITION_TOLERANCE_Z))
             *pickup_state = PICKUP_STATE_RELEASE;
         break;
@@ -100,7 +130,9 @@ static void PickupRun(RoboticArm_TypeDef *arm,
     case PICKUP_STATE_RELEASE:
         /* 仅在存放位置确认到位后松开 KFS。 */
         CLY_Off();
-        *pickup_state = PICKUP_STATE_RESET;
+        osDelay(1000);
+        CLY_On();
+        *pickup_state = PICKUP_STATE_VOID;
         break;
 
     case PICKUP_STATE_RESET:
