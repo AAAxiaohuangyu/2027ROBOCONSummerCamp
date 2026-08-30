@@ -9,13 +9,16 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
     switch (*flip_state)
     {
     case FLIP_STATE_UP:
-        RoboticArmSetRodRotation(arm, (BSP_PI-0.21f));
+        RoboticArmSetRodRotation(arm, (BSP_PI-0.185f));
 
         arm->target_x = flip_start_x;
         arm->target_z = flip_start_z +
                         FLIP_UP_DISTANCE_1;
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
+
+        GasPumpOn();
+        CLY_On();
 
         *flip_state = FLIP_STATE_UP_WAIT;
 
@@ -35,8 +38,6 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
 
         RoboticArmSetEndPosition(arm, arm->target_x, arm->target_z, GravityCompensationLift);
 
-        GasPumpOn();
-        CLY_On();
 
         *flip_state = FLIP_STATE_FORWARD_WAIT;
 

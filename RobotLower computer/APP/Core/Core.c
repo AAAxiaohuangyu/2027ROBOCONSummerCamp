@@ -68,7 +68,9 @@ static RobotState_TypeDef RobotSkipMove(uint8_t move_num, RobotState_TypeDef nex
 static uint8_t RobotPickupHeight(RobotState_TypeDef previous_state)
 {
     return (previous_state == ROBOT_STATE_WAIT_MOVE_5 ||
-            previous_state == ROBOT_STATE_WAIT_MOVE_7) ? PICKUP_HEIGHT_HIGH : PICKUP_HEIGHT_LOW;
+            previous_state == ROBOT_STATE_WAIT_MOVE_7)
+               ? PICKUP_HEIGHT_HIGH
+               : PICKUP_HEIGHT_LOW;
 }
 
 static PickupTaskAction_TypeDef RobotPickupAction(RobotState_TypeDef previous_state, uint8_t complete)
@@ -178,7 +180,7 @@ void RobotPickupUpdateTask(void *argument)
             switch (Robot.pickup.action)
             {
             case PICKUP_TASK_ACTION_STORE_LOW_LOW:
-                RoboticArmPickupStoreLowMotion(&Robot.roboticarm, &Robot.pickup.state, PICKUP_HEIGHT_LOW,&Robot.pickup.complete);
+                RoboticArmPickupStoreLowMotion(&Robot.roboticarm, &Robot.pickup.state, PICKUP_HEIGHT_LOW, &Robot.pickup.complete);
                 break;
 
             case PICKUP_TASK_ACTION_STORE_LOW_HIGH:
@@ -214,7 +216,7 @@ void RobotStateUpdateTask(void *argument)
 {
     Robot.state = ROBOT_STATE_START_MOVE_1;
     Robot.pickup_previous_state = ROBOT_STATE_START_MOVE_1;
-    Robot.vision.KFS_DIFF = 2;
+    Robot.vision.KFS_DIFF = 1;
 
     Robot.pickup.state = PICKUP_STATE_VOID;
     Robot.pickup.active = 0;
@@ -339,7 +341,7 @@ void RobotStateUpdateTask(void *argument)
             /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
                y跟踪也切到备用参数组 */
             RobotApplyMove6Params();
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -4.6f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.34f, -4.59f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_6;
             break;
         }
@@ -409,7 +411,7 @@ void RobotStateUpdateTask(void *argument)
         {
             osDelay(500);
             RobotApplyMove9Params();
-            ChassisSetRampVelocity(&Robot.chassis, -1.2f);
+            ChassisSetRampVelocity(&Robot.chassis, (-1.2f * RobotChassisYSign));
             Robot.state = ROBOT_STATE_WAIT_MOVE_9_2;
             break;
         }

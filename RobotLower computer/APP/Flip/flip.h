@@ -12,7 +12,7 @@
 
 /* 动作距离及角度，根据实际机械结构修改；旋转量与RoboticArmSetRodRotation/
    RotationReached保持一致，单位为rad(电机转角直接相等，见RoboticArm.h) */
-#define FLIP_UP_DISTANCE_1 (0.5f)
+#define FLIP_UP_DISTANCE_1 (0.485f)
 #define FLIP_FORWARD_DISTANCE_1 (0.25f)
 #define FLIP_FORWARD_DISTANCE_2 (0.31f)
 #define FLIP_UP_DISTANCE_2 (0.1f)
