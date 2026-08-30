@@ -217,7 +217,7 @@ void RobotStateUpdateTask(void *argument)
 {
     Robot.state = ROBOT_STATE_TEMP;
     Robot.pickup_previous_state = ROBOT_STATE_START_MOVE_1;
-    Robot.vision.KFS_DIFF = 1;
+    Robot.vision.KFS_DIFF = 2;
 
     Robot.pickup.state = PICKUP_STATE_VOID;
     Robot.pickup.active = 0;
@@ -328,7 +328,7 @@ void RobotStateUpdateTask(void *argument)
             /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x跟踪切到第三套参数组;
                y轴的备用速度规划/跟踪参数组从MOVE_6起才切换 */
             RobotApplyMove5Params();
-            ChassisSetTranslation(&Robot.chassis, 0.44f, -3.27f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.42f, -3.22f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_5;
             break;
         }
@@ -348,7 +348,7 @@ void RobotStateUpdateTask(void *argument)
             /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
                y跟踪也切到备用参数组 */
             RobotApplyMove6Params();
-            ChassisSetTranslation(&Robot.chassis, 0.44f, -4.44f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.42f, -4.44f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_6;
             break;
         }
@@ -365,7 +365,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_7:
         {
-            ChassisSetTranslation(&Robot.chassis, 0.44f, -5.62f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.42f, -5.57f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_7;
             break;
         }
@@ -382,7 +382,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_8:
         {
-            ChassisSetTranslation(&Robot.chassis, 0.44f, -6.82f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.42f, -6.82f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_8;
             break;
         }
