@@ -131,7 +131,7 @@ void RoboticArmFlipMotion(RoboticArm_TypeDef *arm, Chassis_TypeDef *chassis, Fli
         CLY_Off();
         osDelay(1000);
         CLY_On();
-        *flip_state = FLIP_STATE_CHASSIS_MOVE_RIGHT2;
+        *flip_state = FLIP_STATE_DONE;
 
         break;
 

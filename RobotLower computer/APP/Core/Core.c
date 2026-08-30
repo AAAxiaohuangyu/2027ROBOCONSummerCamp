@@ -7,7 +7,7 @@
 #include <string.h>
 
 Robot_TypeDef Robot = {0};
-float RobotChassisYSign = 1.0f;
+float RobotChassisYSign = -1.0f;
 
 /* MOVE_5~MOVE_8阶段x跟踪固定切到第三套参数组,MOVE_6~MOVE_8阶段y轴固定切到备用
    速度规划/跟踪参数组;这两次切换本应分别发生在START_MOVE_5/START_MOVE_6状态,
@@ -285,7 +285,7 @@ void RobotStateUpdateTask(void *argument)
             Robot.flip.active = 1;
             if (Robot.flip.complete == 1)
             {
-                Robot.state = ROBOT_STATE_START_MOVE_4;
+                Robot.state = ROBOT_STATE_DONE;
             }
             break;
 
@@ -321,7 +321,7 @@ void RobotStateUpdateTask(void *argument)
             /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x跟踪切到第三套参数组;
                y轴的备用速度规划/跟踪参数组从MOVE_6起才切换 */
             RobotApplyMove5Params();
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -3.42f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.34f, -3.27f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_5;
             break;
         }
@@ -341,7 +341,7 @@ void RobotStateUpdateTask(void *argument)
             /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
                y跟踪也切到备用参数组 */
             RobotApplyMove6Params();
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -4.59f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.34f, -4.44f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_6;
             break;
         }
@@ -358,7 +358,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_7:
         {
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -5.77f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.34f, -5.62f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_7;
             break;
         }
@@ -375,7 +375,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_8:
         {
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -6.97f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.34f, -6.82f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_8;
             break;
         }
