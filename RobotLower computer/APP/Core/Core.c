@@ -4,6 +4,7 @@
 #include "ControlAlgorithm.h"
 #include "cmsis_os2.h"
 #include "usart.h"
+#include "GasPumpCLY.h"
 #include <string.h>
 
 Robot_TypeDef Robot = {0};
@@ -214,7 +215,7 @@ void RobotPickupUpdateTask(void *argument)
 
 void RobotStateUpdateTask(void *argument)
 {
-    Robot.state = ROBOT_STATE_START_MOVE_1;
+    Robot.state = ROBOT_STATE_TEMP;
     Robot.pickup_previous_state = ROBOT_STATE_START_MOVE_1;
     Robot.vision.KFS_DIFF = 1;
 
@@ -285,7 +286,7 @@ void RobotStateUpdateTask(void *argument)
             Robot.flip.active = 1;
             if (Robot.flip.complete == 1)
             {
-                Robot.state = ROBOT_STATE_DONE;
+                Robot.state = ROBOT_STATE_START_MOVE_4;
             }
             break;
 
@@ -316,12 +317,18 @@ void RobotStateUpdateTask(void *argument)
             break;
         }
 
+        case ROBOT_STATE_TEMP:
+        {
+            Robot.state = RobotSkipMove(5, ROBOT_STATE_START_MOVE_5);
+            break;
+        }
+
         case ROBOT_STATE_START_MOVE_5:
         {
             /* 离开MOVE_4/WAIT_MOVE_4,MOVE_5~MOVE_8阶段x跟踪切到第三套参数组;
                y轴的备用速度规划/跟踪参数组从MOVE_6起才切换 */
             RobotApplyMove5Params();
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -3.27f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.44f, -3.27f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_5;
             break;
         }
@@ -341,7 +348,7 @@ void RobotStateUpdateTask(void *argument)
             /* MOVE_6~MOVE_8阶段y轴切到备用S曲线速度规划参数组(x轴规划器不受影响)、
                y跟踪也切到备用参数组 */
             RobotApplyMove6Params();
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -4.44f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.44f, -4.44f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_6;
             break;
         }
@@ -358,7 +365,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_7:
         {
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -5.62f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.44f, -5.62f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_7;
             break;
         }
@@ -375,7 +382,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_START_MOVE_8:
         {
-            ChassisSetTranslation(&Robot.chassis, 0.34f, -6.82f * RobotChassisYSign);
+            ChassisSetTranslation(&Robot.chassis, 0.44f, -6.82f * RobotChassisYSign);
             Robot.state = ROBOT_STATE_WAIT_MOVE_8;
             break;
         }
@@ -418,7 +425,7 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_WAIT_MOVE_9_2:
         {
-            if (Robot.encoder.y_m <= ROBOT_STATE_MOVE_9_ENCODER_Y_TARGET_M)
+            if (Robot.encoder.y_m >= ROBOT_STATE_MOVE_9_ENCODER_Y_TARGET_M)
             {
                 Robot.state = ROBOT_STATE_MANUAL;
             }
@@ -441,11 +448,25 @@ void RobotStateUpdateTask(void *argument)
 
         case ROBOT_STATE_MANUAL:
         {
-            ChassisSetVelocity(&Robot.chassis, Robot.zigbee.rx_data.chassis.speed_vx, Robot.zigbee.rx_data.chassis.speed_vy, Robot.zigbee.rx_data.chassis.omega);
-
             if (Robot.zigbee.rx_data.command.emergency_stop == 1)
             {
                 ChassisStop(&Robot.chassis);
+                GOM8010MotorSetVelocityTarget(&Robot.roboticarm.forward_motor, 0.0f);
+                J60MotorSetVelocityTarget(&Robot.roboticarm.lift_motor, 0.0f);
+                break;
+            }
+
+            ChassisSetVelocity(&Robot.chassis, Robot.zigbee.rx_data.chassis.speed_vx, Robot.zigbee.rx_data.chassis.speed_vy, Robot.zigbee.rx_data.chassis.omega);
+            GOM8010MotorSetVelocityTarget(&Robot.roboticarm.forward_motor, Robot.zigbee.rx_data.joint.front_back);
+            J60MotorSetVelocityTarget(&Robot.roboticarm.lift_motor, Robot.zigbee.rx_data.joint.up_down);
+
+            if (Robot.zigbee.rx_data.command.grab == 1)
+            {
+                CLY_On();
+            }
+            else
+            {
+                CLY_Off();
             }
 
             break;

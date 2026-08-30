@@ -20,7 +20,7 @@
 
 /* MOVE_9(上斜坡)：码盘 y 轴世界系累计位置(Robot.encoder.y_m,与 chassis->pose.y_m
    同一坐标系)到达该值附近即认为冲坡到位,暂定,需实测标定后手动修改 */
-#define ROBOT_STATE_MOVE_9_ENCODER_Y_TARGET_M (-10.38f)
+#define ROBOT_STATE_MOVE_9_ENCODER_Y_TARGET_M (10.38f)
 
 /* RobotStateUpdateTask状态机各状态:START_*只在进入时下发一次ChassisSetTranslation
    (该函数每次调用都会令S曲线重新规划,跑向同一目标期间不能重复调用;x/y现为世界系绝对
@@ -51,6 +51,7 @@ typedef enum
    ROBOT_STATE_WAIT_MOVE_9,
    ROBOT_STATE_START_MOVE_9_2,
    ROBOT_STATE_WAIT_MOVE_9_2,
+   ROBOT_STATE_TEMP,
    ROBOT_STATE_PICKUP,
    ROBOT_STATE_MANUAL,
    ROBOT_STATE_DONE,
